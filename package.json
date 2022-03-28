@@ -5,7 +5,8 @@
   "useWorkspaces": true,
   "workspaces": [
     "ui",
-    "_agstate/agoric-servers"
+    "_agstate/agoric-servers",
+    "contract"
   ],
   "devDependencies": {
     "@endo/init": "^0.5.33",
