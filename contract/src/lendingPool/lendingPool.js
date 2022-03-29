@@ -32,7 +32,7 @@ import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 
-import { makeVaultManager } from './vaultManager.js';
+import { makePoolManager } from './vaultManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
 import { makeVaultParamManager, makeElectorateParamManager } from './params.js';
@@ -52,23 +52,78 @@ export const start = async (zcf, privateArgs) => {
     electionManager,
     main: { [CONTRACT_ELECTORATE]: electorateParam },
     loanTimingParams,
-    bootstrappedAssets: bootstrappedAssetBrands
+    bootstrappedAssets: bootstrappedAssetIssuers
   } = zcf.getTerms();
 
-  const protocolTokenMintsP = bootstrappedAssetBrands.map(async brand => {
-    const protocolTokenName = `Ag${await E(brand).getAllegedName()}`;
-    return await zcf.makeZCFMint(protocolTokenName, AssetKind.NAT);
-  })
+  const poolTypes = makeScalarMap('brand');
+  const poolParamManagers = makeScalarMap('brand');
 
-  const protocolTokenMints = await Promise.all(protocolTokenMintsP);
+  // const protocolTokenMintsP = bootstrappedAssetIssuers.map(async issuer => {
+  //   const protocolTokenName = `Ag${await E(issuer).getAllegedName()}`;
+  //   return await zcf.makeZCFMint(protocolTokenName, AssetKind.NAT);
+  // })
+  //
+  // const protocolTokenMints = await Promise.all(protocolTokenMintsP);
+
+  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => {
+    await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
+    const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
+    const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
+    // We create only one vault per collateralType.
+    assert(
+      !poolTypes.has(underlyingBrand),
+      `Collateral brand ${underlyingBrand} has already been added`,
+    );
+
+    /** a powerful object; can modify parameters */
+    const poolParamManager = makeVaultParamManager(rates);
+    poolParamManagers.init(underlyingBrand, poolParamManager);
+
+    //TODO Create liquadition for dynamic underdlying assets
+    // const { creatorFacet: liquidationFacet } = await E(zoe).startInstance(
+    //   liquidationInstall,
+    //   harden({ RUN: runIssuer, Collateral: underlyingIssuer }),
+    //   harden({ amm: ammPublicFacet }),
+    // );
+    // const liquidationStrategy = makeLiquidationStrategy(liquidationFacet); ??/
+
+    const startTimeStamp = await E(timerService).getCurrentTimestamp();
+
+    const pm = makePoolManager(
+      zcf,
+      protocolMint,
+      underlyingBrand,
+      priceAuthority,
+      loanTimingParams,
+      poolParamManager.getParams,
+      // reallocateWithFee,
+      timerService,
+      // liquidationStrategy, TODO figure out what to with this later
+      startTimeStamp,
+    );
+    poolTypes.init(underlyingBrand, pm);
+    return pm;
+  };
 
   const getProtocolTokenList = () => {
     return protocolTokenMints.map(mint => mint.getIssuerRecord().brand.getAllegedName());
   }
 
+  const hasKeyword = keyword => {
+    return zcf.assertUniqueKeyword(keyword);
+  }
+
+  const hasPool = brand => {
+    const result = poolTypes.has(brand) && poolParamManagers.has(brand);
+    console.log('RESULT', result);
+    return result;
+  }
+
   const publicFacet = Far('lending pool public facet', {
     helloWorld: () => 'Hello World',
-    getProtocolTokenList
+    getProtocolTokenList,
+    hasPool,
+    hasKeyword
   });
 
   const getParamMgrRetriever = () =>
@@ -83,13 +138,14 @@ export const start = async (zcf, privateArgs) => {
     });
 
   /** @type {VaultFactory} */
-  const vaultFactory = Far('vaultFactory machine', {
-    helloFromCreator: () => 'Hello From the creator'
+  const lendingPool = Far('lendingPool machine', {
+    helloFromCreator: () => 'Hello From the creator',
+    addPoolType
   });
 
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {
     getParamMgrRetriever,
-    getLimitedCreatorFacet: () => vaultFactory,
+    getLimitedCreatorFacet: () => lendingPool,
   });
 
   return harden({

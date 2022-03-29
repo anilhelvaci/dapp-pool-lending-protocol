@@ -3,7 +3,6 @@ import { makeTracer } from '../../src/makeTracer.js';
 const trace = makeTracer('TestST');
 
 import { test } from '@agoric/swingset-vat/tools/prepare-test-env-ava.js';
-trace('test', test);
 import '@agoric/zoe/exported.js';
 
 import { resolve as importMetaResolve } from 'import-meta-resolve';
@@ -484,4 +483,44 @@ test('initial', async t => {
   t.is(await  E(await E(lendingPoolCreatorFacet).getLimitedCreatorFacet()).helloFromCreator(), 'Hello From the creator');
   t.is(await E(lendingPoolPublicFacet).helloWorld(), 'Hello World');
   t.deepEqual(await E(lendingPoolPublicFacet).getProtocolTokenList(), ['AgVAN', 'AgPAN', 'AgSOW']);
+});
+
+test('add-pool', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+  } = setupAssets();
+  const loanTiming = {
+    chargingPeriod: 2n,
+    recordingPeriod: 10n,
+  };
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets
+  );
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  const rates = makeRates(vanBrand);
+  const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates);
+
+  t.is(await E(lendingPoolPublicFacet).hasPool(vanBrand), true);
+  await t.throwsAsync(E(lendingPoolPublicFacet).hasKeyword('AgVAN'));
 });

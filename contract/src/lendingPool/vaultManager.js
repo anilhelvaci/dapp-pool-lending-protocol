@@ -63,16 +63,16 @@ const trace = makeTracer('VM');
  * @param {Timestamp} startTimeStamp
  * @returns {VaultManager}
  */
-export const makeVaultManager = (
+export const makePoolManager = (
   zcf,
   debtMint,
   collateralBrand,
   priceAuthority,
   timingParams,
   getLoanParams,
-  reallocateWithFee,
+  reallocateWithFee = undefined,
   timerService,
-  liquidationStrategy,
+  // liquidationStrategy,
   startTimeStamp,
 ) => {
   const { brand: debtBrand } = debtMint.getIssuerRecord();
