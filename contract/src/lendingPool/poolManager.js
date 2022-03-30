@@ -49,8 +49,9 @@ const trace = makeTracer('VM');
  * the collateral is provided in exchange for borrowed RUN.
  *
  * @param {ContractFacet} zcf
- * @param {ZCFMint} debtMint
+ * @param {ZCFMint} protocolMint
  * @param {Brand} collateralBrand
+ * @param {string} underlyingKeyword
  * @param {ERef<PriceAuthority>} priceAuthority
  * @param {{
  *  ChargingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
@@ -65,17 +66,20 @@ const trace = makeTracer('VM');
  */
 export const makePoolManager = (
   zcf,
-  debtMint,
+  protocolMint,
   collateralBrand,
+  underlyingKeyword,
   priceAuthority,
   timingParams,
   getLoanParams,
-  reallocateWithFee = undefined,
+  // reallocateWithFee = undefined,
   timerService,
   // liquidationStrategy,
   startTimeStamp,
 ) => {
-  const { brand: debtBrand } = debtMint.getIssuerRecord();
+  const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
+  const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
+  const { zcfSeat: protocolAssetSeat } = zcf.makeEmptySeatKit();
 
   /** @type {GetVaultParams} */
   const shared = {
@@ -86,6 +90,10 @@ export const makePoolManager = (
     getInterestRate: () => getLoanParams()[INTEREST_RATE_KEY].value,
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
+    getProtocolBrand: () => protocolBrand,
+    getProtocolIssuer: () => protocolIssuer,
+    getProtocolLiquidity: () => totalProtocolSupply.value,
+    getUnderlyingLiquidity: () => underlyingAssetSeat.getCurrentAllocation().Underlying.value,
     async getCollateralQuote() {
       // get a quote for one unit of the collateral
       const displayInfo = await E(collateralBrand).getDisplayInfo();
@@ -117,9 +125,10 @@ export const makePoolManager = (
   /** @type {MutableQuote=} */
   let outstandingQuote;
   /** @type {Amount<NatValue>} */
-  let totalDebt = AmountMath.makeEmpty(debtBrand, 'nat');
+  let totalDebt = AmountMath.makeEmpty(protocolBrand, 'nat');
+  let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
   /** @type {Ratio}} */
-  let compoundedInterest = makeRatio(100n, debtBrand); // starts at 1.0, no interest
+  let compoundedInterest = makeRatio(100n, protocolBrand); // starts at 1.0, no interest
 
   /**
    * timestamp of most recent update to interest
@@ -160,7 +169,7 @@ export const makePoolManager = (
           await liquidate(
             zcf,
             vault,
-            debtMint.burnLosses,
+            protocolMint.burnLosses,
             liquidationStrategy,
             collateralBrand,
           );
@@ -265,8 +274,8 @@ export const makePoolManager = (
     ({ compoundedInterest, latestInterestUpdate, totalDebt } =
       await chargeInterest(
         {
-          mint: debtMint,
-          reallocateWithFee,
+          mint: protocolMint,
+          undefined,
           poolIncrementSeat,
           seatAllocationKeyword: 'RUN',
         },
@@ -323,6 +332,7 @@ export const makePoolManager = (
     trace('updateVaultPriority complete', { totalDebt });
   };
 
+  console.log('[TIMING_PARAMS]', timingParams[RECORDING_PERIOD_KEY].value);
   const periodNotifier = E(timerService).makeNotifier(
     0n,
     timingParams[RECORDING_PERIOD_KEY].value,
@@ -336,6 +346,7 @@ export const makePoolManager = (
         console.error('🚨 vaultManager failed to charge interest', e),
       ),
     fail: reason => {
+      console.log('[FAIL]', reason.stack);
       zcf.shutdownWithFailure(
         assert.error(X`Unable to continue without a timer: ${reason}`),
       );
@@ -353,7 +364,7 @@ export const makePoolManager = (
   const managerFacet = harden({
     ...shared,
     applyDebtDelta,
-    reallocateWithFee,
+    // reallocateWithFee,
     getCollateralBrand: () => collateralBrand,
     getCompoundedInterest: () => compoundedInterest,
     updateVaultPriority,
@@ -374,7 +385,7 @@ export const makePoolManager = (
       managerFacet,
       assetNotifer,
       vaultId,
-      debtMint,
+      protocolMint,
       priceAuthority,
     );
 
@@ -394,10 +405,46 @@ export const makePoolManager = (
     }
   };
 
+  const makeDepositInvitation = () => {
+    /** @param {ZCFSeat} fundHolderSeat*/
+    const depositHook = async fundHolderSeat => {
+      console.log('[DEPSOSIT]: Icerdeyim');
+      assertProposalShape(fundHolderSeat, {
+        give: { Underlying: null },
+        want: { Protocol: null },
+      });
+
+      const {
+        give: { Underlying: fundAmount },
+        want: { Protocol: protocolAmount },
+      } = fundHolderSeat.getProposal();
+      console.log('[FUND_AMOUNT]', fundAmount);
+      console.log('[PROTOCOL_AMOUNT]', protocolAmount);
+      protocolMint.mintGains(harden({ Protocol: protocolAmount }), protocolAssetSeat);
+      totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmount);
+      console.log('[TOTAL_PROTOCOL_SUPPLY]', totalProtocolSupply);
+      fundHolderSeat.incrementBy(
+        protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmount })),
+      );
+
+      underlyingAssetSeat.incrementBy(
+        fundHolderSeat.decrementBy(harden({ Underlying: fundAmount })),
+      )
+
+      zcf.reallocate(fundHolderSeat, underlyingAssetSeat, protocolAssetSeat);
+      fundHolderSeat.exit();
+
+      return 'Finished';
+    }
+
+    return zcf.makeInvitation(depositHook, 'depositFund');
+  }
+
   /** @type {VaultManager} */
   return Far('vault manager', {
     ...shared,
     makeVaultKit,
+    makeDepositInvitation,
     liquidateAll,
   });
 };

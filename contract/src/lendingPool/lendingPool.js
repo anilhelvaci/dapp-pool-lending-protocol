@@ -32,7 +32,7 @@ import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 
-import { makePoolManager } from './vaultManager.js';
+import { makePoolManager } from './poolManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
 import { makeVaultParamManager, makeElectorateParamManager } from './params.js';
@@ -57,13 +57,7 @@ export const start = async (zcf, privateArgs) => {
 
   const poolTypes = makeScalarMap('brand');
   const poolParamManagers = makeScalarMap('brand');
-
-  // const protocolTokenMintsP = bootstrappedAssetIssuers.map(async issuer => {
-  //   const protocolTokenName = `Ag${await E(issuer).getAllegedName()}`;
-  //   return await zcf.makeZCFMint(protocolTokenName, AssetKind.NAT);
-  // })
-  //
-  // const protocolTokenMints = await Promise.all(protocolTokenMintsP);
+  console.log('[LENDING_POOL]');
 
   const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => {
     await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
@@ -93,6 +87,7 @@ export const start = async (zcf, privateArgs) => {
       zcf,
       protocolMint,
       underlyingBrand,
+      underlyingKeyword,
       priceAuthority,
       loanTimingParams,
       poolParamManager.getParams,
@@ -105,25 +100,20 @@ export const start = async (zcf, privateArgs) => {
     return pm;
   };
 
-  const getProtocolTokenList = () => {
-    return protocolTokenMints.map(mint => mint.getIssuerRecord().brand.getAllegedName());
-  }
-
   const hasKeyword = keyword => {
     return zcf.assertUniqueKeyword(keyword);
   }
 
   const hasPool = brand => {
     const result = poolTypes.has(brand) && poolParamManagers.has(brand);
-    console.log('RESULT', result);
     return result;
   }
 
   const publicFacet = Far('lending pool public facet', {
     helloWorld: () => 'Hello World',
-    getProtocolTokenList,
     hasPool,
-    hasKeyword
+    hasKeyword,
+    getPool: (brand) => poolTypes.get(brand)
   });
 
   const getParamMgrRetriever = () =>

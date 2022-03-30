@@ -79,7 +79,7 @@ const validTransitions = {
 
 /**
  * @typedef {Readonly<{
- * assetNotifier: Notifier<import('./vaultManager').AssetState>,
+ * assetNotifier: Notifier<import('./poolManager.js').AssetState>,
  * idInManager: VaultId,
  * manager: InnerVaultManagerBase & GetVaultParams,
  * priceAuthority: ERef<PriceAuthority>,
@@ -103,7 +103,7 @@ const validTransitions = {
 /**
  * @param {ContractFacet} zcf
  * @param {InnerVaultManagerBase & GetVaultParams} manager
- * @param {Notifier<import('./vaultManager').AssetState>} assetNotifier
+ * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
  * @param {VaultId} idInManager
  * @param {ZCFMint} mint
  * @param {ERef<PriceAuthority>} priceAuthority

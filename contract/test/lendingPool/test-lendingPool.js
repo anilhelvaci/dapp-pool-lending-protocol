@@ -523,4 +523,74 @@ test('add-pool', async t => {
 
   t.is(await E(lendingPoolPublicFacet).hasPool(vanBrand), true);
   await t.throwsAsync(E(lendingPoolPublicFacet).hasKeyword('AgVAN'));
+  t.deepEqual(await E(lendingPoolPublicFacet).getPool(vanBrand), pm);
+});
+
+test('deposit', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+  } = setupAssets();
+  const loanTiming = {
+    chargingPeriod: 2n,
+    recordingPeriod: 10n,
+  };
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet, zoe } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets
+  );
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  const rates = makeRates(vanBrand);
+  const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates);
+  const protocolBrand = await E(pm).getProtocolBrand();
+  const protocolIssuer = await E(pm).getProtocolIssuer();
+  console.log('[BRAND]:', protocolBrand);
+  console.log('[ISSUER]:', protocolIssuer);
+  const proposal = harden({
+    give: { Underlying: AmountMath.make(vanBrand, 50n) },
+    want: { Protocol: AmountMath.make(protocolBrand, 50n) },
+  });
+
+  const paymentKeywordRecord = harden({
+    Underlying: vanMint.mintPayment(AmountMath.make(vanBrand, 50n)),
+  });
+
+  const invitation = await E(pm).makeDepositInvitation();
+  const seat = await E(zoe).offer(
+    invitation,
+    proposal,
+    paymentKeywordRecord
+  );
+
+  const protocolTokenReceived = await E(seat).getPayouts();
+  const protocolReceived = protocolTokenReceived.Protocol;
+  t.truthy(
+    AmountMath.isEqual(
+      await E(protocolIssuer).getAmountOf(protocolReceived),
+      AmountMath.make(protocolBrand, 50n),
+    ),
+  );
+
+
+  t.is(await E(pm).getProtocolLiquidity(), 50n);
+  t.is(await E(pm).getUnderlyingLiquidity(), 50n);
 });
