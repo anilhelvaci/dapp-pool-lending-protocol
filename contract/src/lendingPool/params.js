@@ -16,6 +16,7 @@ export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
 export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
 export const INTEREST_RATE_KEY = 'InterestRate';
 export const LOAN_FEE_KEY = 'LoanFee';
+export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
 
 /**
  * @param {Amount} electorateInvitationAmount
@@ -65,6 +66,20 @@ const makeVaultParamManager = rates => {
     .addBrandedRatio(LIQUIDATION_MARGIN_KEY, rates.liquidationMargin)
     .addBrandedRatio(INTEREST_RATE_KEY, rates.interestRate)
     .addBrandedRatio(LOAN_FEE_KEY, rates.loanFee)
+    .build();
+};
+
+/**
+ * @param {Rates} rates
+ * @returns {VaultParamManager}
+ */
+const makePoolParamManager = rates => {
+  // @ts-expect-error until makeParamManagerBuilder can be generic */
+  return makeParamManagerBuilder()
+    .addBrandedRatio(LIQUIDATION_MARGIN_KEY, rates.liquidationMargin)
+    .addBrandedRatio(INTEREST_RATE_KEY, rates.interestRate)
+    .addBrandedRatio(LOAN_FEE_KEY, rates.loanFee)
+    .addBrandedRatio(INITIAL_EXCHANGE_RATE_KEY, rates.initialExchangeRate)
     .build();
 };
 
@@ -125,6 +140,7 @@ const makeGovernedTerms = (
 };
 
 harden(makeVaultParamManager);
+harden(makePoolParamManager);
 harden(makeElectorateParamManager);
 harden(makeGovernedTerms);
 harden(makeLoanParams);
@@ -133,6 +149,7 @@ harden(makeElectorateParams);
 export {
   makeElectorateParamManager,
   makeVaultParamManager,
+  makePoolParamManager,
   makeGovernedTerms,
   makeLoanParams,
   makeElectorateParams,

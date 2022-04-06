@@ -12,6 +12,7 @@ import {
   ceilDivideBy,
   makeRatio,
 } from '@agoric/zoe/src/contractSupport/index.js';
+import { assert, details as X, q } from '@agoric/assert';
 import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
@@ -24,13 +25,13 @@ import { makeTracer } from '../makeTracer.js';
 import {
   RECORDING_PERIOD_KEY,
   LIQUIDATION_MARGIN_KEY,
+  INITIAL_EXCHANGE_RATE_KEY,
   LOAN_FEE_KEY,
   INTEREST_RATE_KEY,
   CHARGING_PERIOD_KEY,
 } from './params.js';
 import { chargeInterest } from '../interest.js';
-
-const { details: X } = assert;
+import { calculateExchangeRate } from '../protocolMath.js';
 
 const trace = makeTracer('VM');
 
@@ -80,6 +81,8 @@ export const makePoolManager = (
   const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
   const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
   const { zcfSeat: protocolAssetSeat } = zcf.makeEmptySeatKit();
+  let totalDebt = AmountMath.makeEmpty(protocolBrand, 'nat');
+  let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
 
   /** @type {GetVaultParams} */
   const shared = {
@@ -88,6 +91,12 @@ export const makePoolManager = (
     // loans must initially have at least 1.2x collateralization
     getLoanFee: () => getLoanParams()[LOAN_FEE_KEY].value,
     getInterestRate: () => getLoanParams()[INTEREST_RATE_KEY].value,
+    getInitialExchangeRate: () => getLoanParams()[INITIAL_EXCHANGE_RATE_KEY].value,
+    getExchangeRate: () => getExchangeRate(),
+    getProtocolAmountOut: (depositAmount) => {
+      const exchangeRate = getExchangeRate();
+      return ceilDivideBy(depositAmount, exchangeRate);
+    },
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
     getProtocolBrand: () => protocolBrand,
@@ -125,8 +134,7 @@ export const makePoolManager = (
   /** @type {MutableQuote=} */
   let outstandingQuote;
   /** @type {Amount<NatValue>} */
-  let totalDebt = AmountMath.makeEmpty(protocolBrand, 'nat');
-  let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
+
   /** @type {Ratio}} */
   let compoundedInterest = makeRatio(100n, protocolBrand); // starts at 1.0, no interest
 
@@ -136,6 +144,12 @@ export const makePoolManager = (
    * @type {bigint}
    */
   let latestInterestUpdate = startTimeStamp;
+
+  const getExchangeRate = () => {
+    console.log('[TOTAL_PROTOCOL_SUPPLY_EMPTY]', AmountMath.isEmpty(totalProtocolSupply));
+    return AmountMath.isEmpty(totalProtocolSupply) ? shared.getInitialExchangeRate()
+      : calculateExchangeRate(underlyingAssetSeat.getCurrentAllocation().Underlying, totalDebt, totalProtocolSupply);
+  }
 
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
     harden({
@@ -420,6 +434,8 @@ export const makePoolManager = (
       } = fundHolderSeat.getProposal();
       console.log('[FUND_AMOUNT]', fundAmount);
       console.log('[PROTOCOL_AMOUNT]', protocolAmount);
+      console.log('[PROTOCOL_AMOUNT_COMPARE]', AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)));
+      assert(AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)), X`The amounts should be equal`);
       protocolMint.mintGains(harden({ Protocol: protocolAmount }), protocolAssetSeat);
       totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmount);
       console.log('[TOTAL_PROTOCOL_SUPPLY]', totalProtocolSupply);

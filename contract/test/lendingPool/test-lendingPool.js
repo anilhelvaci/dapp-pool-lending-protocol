@@ -565,13 +565,15 @@ test('deposit', async t => {
   const protocolIssuer = await E(pm).getProtocolIssuer();
   console.log('[BRAND]:', protocolBrand);
   console.log('[ISSUER]:', protocolIssuer);
+  const underlyingAmountIn = AmountMath.make(vanBrand, 111111111n);
+  const protocolAmountOut = await E(pm).getProtocolAmountOut(underlyingAmountIn);
   const proposal = harden({
-    give: { Underlying: AmountMath.make(vanBrand, 50n) },
-    want: { Protocol: AmountMath.make(protocolBrand, 50n) },
+    give: { Underlying: underlyingAmountIn },
+    want: { Protocol: protocolAmountOut },
   });
 
   const paymentKeywordRecord = harden({
-    Underlying: vanMint.mintPayment(AmountMath.make(vanBrand, 50n)),
+    Underlying: vanMint.mintPayment(underlyingAmountIn),
   });
 
   const invitation = await E(pm).makeDepositInvitation();
@@ -586,11 +588,72 @@ test('deposit', async t => {
   t.truthy(
     AmountMath.isEqual(
       await E(protocolIssuer).getAmountOf(protocolReceived),
-      AmountMath.make(protocolBrand, 50n),
+      AmountMath.make(protocolBrand, 5555555550n),
     ),
   );
 
 
-  t.is(await E(pm).getProtocolLiquidity(), 50n);
-  t.is(await E(pm).getUnderlyingLiquidity(), 50n);
+  t.is(await E(pm).getProtocolLiquidity(), 5555555550n);
+  t.is(await E(pm).getUnderlyingLiquidity(), 111111111n);
+});
+
+test('deposit - false protocolAmountOut', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+  } = setupAssets();
+  const loanTiming = {
+    chargingPeriod: 2n,
+    recordingPeriod: 10n,
+  };
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet, zoe } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets
+  );
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  const rates = makeRates(vanBrand);
+  const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates);
+  const protocolBrand = await E(pm).getProtocolBrand();
+  const protocolIssuer = await E(pm).getProtocolIssuer();
+  console.log('[BRAND]:', protocolBrand);
+  console.log('[ISSUER]:', protocolIssuer);
+  const underlyingAmountIn = AmountMath.make(vanBrand, 111111111n);
+  const protocolAmountOut = AmountMath.make(protocolBrand, 1111111111111111111111111111111n);
+  const proposal = harden({
+    give: { Underlying: underlyingAmountIn },
+    want: { Protocol: protocolAmountOut },
+  });
+
+  const paymentKeywordRecord = harden({
+    Underlying: vanMint.mintPayment(underlyingAmountIn),
+  });
+
+  const invitation = await E(pm).makeDepositInvitation();
+  const seat = E(zoe).offer(
+    invitation,
+    proposal,
+    paymentKeywordRecord
+  );
+
+  await t.throwsAsync( E(seat).getOfferResult()
+  , {message: 'The amounts should be equal'});
 });

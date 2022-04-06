@@ -20,7 +20,7 @@ import '@agoric/zoe/src/contracts/exported.js';
 
 import { E } from '@agoric/eventual-send';
 import '@agoric/governance/src/exported';
-import { AssetKind } from '@agoric/ertp';
+import { AmountMath, AssetKind } from '@agoric/ertp';
 
 import { makeScalarMap, keyEQ } from '@agoric/store';
 import {
@@ -35,9 +35,11 @@ import { CONTRACT_ELECTORATE } from '@agoric/governance';
 import { makePoolManager } from './poolManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
-import { makeVaultParamManager, makeElectorateParamManager } from './params.js';
+import { makePoolParamManager, makeElectorateParamManager } from './params.js';
 
 const { details: X } = assert;
+
+const BASIS_POINTS = 10000n;
 
 /**
  * @param {ContractFacet} zcf
@@ -62,6 +64,7 @@ export const start = async (zcf, privateArgs) => {
   const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => {
     await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
     const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
+    const { brand: protocolBrand } = protocolMint.getIssuerRecord();
     const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
     // We create only one vault per collateralType.
     assert(
@@ -69,8 +72,14 @@ export const start = async (zcf, privateArgs) => {
       `Collateral brand ${underlyingBrand} has already been added`,
     );
 
+    const initialExchangeRate = makeRatioFromAmounts(AmountMath.make(underlyingBrand, 200n),
+      AmountMath.make(protocolBrand, BASIS_POINTS));
+    const ratesUpdated = harden({
+      ...rates,
+      initialExchangeRate
+    });
     /** a powerful object; can modify parameters */
-    const poolParamManager = makeVaultParamManager(rates);
+    const poolParamManager = makePoolParamManager(ratesUpdated);
     poolParamManagers.init(underlyingBrand, poolParamManager);
 
     //TODO Create liquadition for dynamic underdlying assets

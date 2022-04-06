@@ -26,6 +26,8 @@
  * @property {Ratio} interestRate - annual interest rate charged on loans
  * @property {Ratio} loanFee - The fee (in BasisPoints) charged when opening
  * or increasing a loan.
+ * @property {Ratio} initialExchangeRate - Exchange rate between underlying
+ * asset and the protocol token when protocol token supply is zero.
  */
 
 /**
@@ -115,6 +117,9 @@
  * @property {() => Ratio} getLoanFee
  * @property {() => Promise<PriceQuote>} getCollateralQuote
  * @property {() => Ratio} getInterestRate - The annual interest rate on a loan
+ * @property {() => Ratio} getInitialExchangeRate
+ * @property {() => Ratio} getExchangeRate
+ * @property {(depositAmount: Amount) => Amount} getProtocolAmountOut
  * @property {() => RelativeTime} getChargingPeriod - The period (in seconds) at
  *   which interest is charged to the loan.
  * @property {() => RelativeTime} getRecordingPeriod - The period (in seconds)
