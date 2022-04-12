@@ -678,7 +678,7 @@ export const makeInnerVault = (
     await assertSufficientCollateral(collateralAmount, stagedDebt);
 
     const { vaultSeat } = state;
-    mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat);
+    mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat); // TODO Don't mint here, just give from the pool
 
     seat.incrementBy(vaultSeat.decrementBy(harden({ RUN: wantedRun })));
     vaultSeat.incrementBy(

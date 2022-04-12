@@ -61,7 +61,7 @@ export const start = async (zcf, privateArgs) => {
   const poolParamManagers = makeScalarMap('brand');
   console.log('[LENDING_POOL]');
 
-  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => {
+  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => { // TODO priceAuth as an argument
     await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
     const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
     const { brand: protocolBrand } = protocolMint.getIssuerRecord();

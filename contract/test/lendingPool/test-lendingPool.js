@@ -80,11 +80,13 @@ function setupAssets() {
   const vanKit = makeIssuerKit('VAN');
   const sowKit = makeIssuerKit('SOW');
   const panKit = makeIssuerKit('PAN');
+  const usdKit = makeIssuerKit('USD');
 
   return harden({
     vanKit,
     sowKit,
-    panKit
+    panKit,
+    usdKit
   });
 }
 
@@ -438,6 +440,7 @@ async function setupServices(
     ammFacets,
     runKit: { issuer: runIssuer, brand: runBrand },
     priceAuthority,
+    timer
   };
 }
 // #endregion
@@ -656,4 +659,86 @@ test('deposit - false protocolAmountOut', async t => {
 
   await t.throwsAsync( E(seat).getOfferResult()
   , {message: 'The amounts should be equal'});
+});
+
+test('borrow', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
+  } = setupAssets();
+  const loanTiming = {
+    chargingPeriod: 2n,
+    recordingPeriod: 10n,
+  };
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet, zoe, timer } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets
+  );
+
+  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    priceList: [105, 15],
+    timer,
+    quoteMint,
+    unitAmountIn: AmountMath.make(vanBrand, 100),
+    quoteInterval: 10n
+  });
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  const rates = makeRates(vanBrand);
+  const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates);
+  const protocolBrand = await E(pm).getProtocolBrand();
+  const protocolIssuer = await E(pm).getProtocolIssuer();
+  console.log('[BRAND]:', protocolBrand);
+  console.log('[ISSUER]:', protocolIssuer);
+  const underlyingAmountIn = AmountMath.make(vanBrand, 111111111n);
+  const protocolAmountOut = await E(pm).getProtocolAmountOut(underlyingAmountIn);
+  const proposal = harden({
+    give: { Underlying: underlyingAmountIn },
+    want: { Protocol: protocolAmountOut },
+  });
+
+  const paymentKeywordRecord = harden({
+    Underlying: vanMint.mintPayment(underlyingAmountIn),
+  });
+
+  const invitation = await E(pm).makeDepositInvitation();
+  const seat = await E(zoe).offer(
+    invitation,
+    proposal,
+    paymentKeywordRecord
+  );
+
+  const protocolTokenReceived = await E(seat).getPayouts();
+  const protocolReceived = protocolTokenReceived.Protocol;
+  t.truthy(
+    AmountMath.isEqual(
+      await E(protocolIssuer).getAmountOf(protocolReceived),
+      AmountMath.make(protocolBrand, 5555555550n),
+    ),
+  );
+
+
+  t.is(await E(pm).getProtocolLiquidity(), 5555555550n);
+  t.is(await E(pm).getUnderlyingLiquidity(), 111111111n);
 });
