@@ -52,8 +52,11 @@ const trace = makeTracer('VM');
  * @param {ContractFacet} zcf
  * @param {ZCFMint} protocolMint
  * @param {Brand} collateralBrand
+ * @param {Brand} underlyingBrand
+ * @param {Brand} thirdCurrencyBrand
  * @param {string} underlyingKeyword
  * @param {ERef<PriceAuthority>} priceAuthority
+ * @param {ERef<PriceManager>} priceManager
  * @param {{
  *  ChargingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  *  RecordingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
@@ -69,8 +72,11 @@ export const makePoolManager = (
   zcf,
   protocolMint,
   collateralBrand,
+  underlyingBrand,
+  thirdCurrencyBrand,
   underlyingKeyword,
   priceAuthority,
+  priceManager,
   timingParams,
   getLoanParams,
   // reallocateWithFee = undefined,
@@ -81,7 +87,7 @@ export const makePoolManager = (
   const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
   const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
   const { zcfSeat: protocolAssetSeat } = zcf.makeEmptySeatKit();
-  let totalDebt = AmountMath.makeEmpty(protocolBrand, 'nat');
+  let totalDebt = AmountMath.makeEmpty(underlyingBrand, 'nat');
   let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
 
   /** @type {GetVaultParams} */
@@ -97,12 +103,15 @@ export const makePoolManager = (
       const exchangeRate = getExchangeRate();
       return ceilDivideBy(depositAmount, exchangeRate);
     },
+    getPriceAuthorityForBrand: brand => E(priceManager).getPriceAuthority(brand),
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
     getProtocolBrand: () => protocolBrand,
     getProtocolIssuer: () => protocolIssuer,
     getProtocolLiquidity: () => totalProtocolSupply.value,
     getUnderlyingLiquidity: () => underlyingAssetSeat.getCurrentAllocation().Underlying.value,
+    enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
+    getThirdCurrencyBrand: () => thirdCurrencyBrand,
     async getCollateralQuote() {
       // get a quote for one unit of the collateral
       const displayInfo = await E(collateralBrand).getDisplayInfo();
@@ -145,11 +154,24 @@ export const makePoolManager = (
    */
   let latestInterestUpdate = startTimeStamp;
 
+  /**
+   * @param {Amount} proposedDebtAmount
+   */
+  const assertEnoughLiquidtyExists = (proposedDebtAmount) => {
+    const totalLiquidity = underlyingAssetSeat.getAmountAllocated('Underlying', underlyingBrand);
+    assert(
+      AmountMath.isGTE(totalLiquidity,
+        proposedDebtAmount,
+        underlyingBrand),
+      X`Requested ${q(proposedDebtAmount)} exceeds the total liquidity ${q(totalLiquidity)}`,
+    );
+  };
+
   const getExchangeRate = () => {
     console.log('[TOTAL_PROTOCOL_SUPPLY_EMPTY]', AmountMath.isEmpty(totalProtocolSupply));
     return AmountMath.isEmpty(totalProtocolSupply) ? shared.getInitialExchangeRate()
       : calculateExchangeRate(underlyingAssetSeat.getCurrentAllocation().Underlying, totalDebt, totalProtocolSupply);
-  }
+  };
 
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
     harden({
@@ -209,6 +231,7 @@ export const makePoolManager = (
   const reschedulePriceCheck = async () => {
     assert(prioritizedVaults);
     const highestDebtRatio = prioritizedVaults.highestRatio();
+    trace('[HIGHEST_DEBT_RATIO]', highestDebtRatio);
     if (!highestDebtRatio) {
       // if there aren't any open vaults, we don't need an outstanding RFQ.
       return;
@@ -380,6 +403,7 @@ export const makePoolManager = (
     applyDebtDelta,
     // reallocateWithFee,
     getCollateralBrand: () => collateralBrand,
+    getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
     updateVaultPriority,
   });
@@ -412,6 +436,52 @@ export const makePoolManager = (
       seat.exit();
       return vaultKit;
     } catch (err) {
+      // remove it from prioritizedVaults
+      // XXX openLoan shouldn't assume it's already in the prioritizedVaults
+      prioritizedVaults.removeVault(addedVaultKey);
+      throw err;
+    }
+  };
+
+  /** @param {ZCFSeat} seat
+   * @param {Ratio} exchangeRate
+   * */
+  const makeBorrowKit = async (seat, exchangeRate) => {
+    trace('Inside makeBorrowKit', seat, exchangeRate);
+    assertProposalShape(seat, {
+      give: { Collateral: null },
+      want: { Debt: null },
+    });
+
+    vaultCounter += 1;
+    const vaultId = String(vaultCounter);
+
+    const {
+      want: { Debt: proposedDebtAmount },
+    } = seat.getProposal();
+
+    assertEnoughLiquidtyExists(proposedDebtAmount);
+
+    const innerVault = makeInnerVault(
+      zcf,
+      managerFacet,
+      assetNotifer,
+      vaultId,
+      underlyingBrand,
+      priceManager,
+    );
+
+    // TODO Don't record the vault until it gets opened
+    assert(prioritizedVaults);
+    const addedVaultKey = prioritizedVaults.addVault(vaultId, innerVault);
+
+    try {
+      const vaultKit = await innerVault.initVaultKit(seat, underlyingAssetSeat, exchangeRate);
+      seat.exit();
+      trace('VaultKit', vaultKit);
+      return vaultKit;
+    } catch (err) {
+      trace('PoolError', err);
       // remove it from prioritizedVaults
       // XXX openLoan shouldn't assume it's already in the prioritizedVaults
       prioritizedVaults.removeVault(addedVaultKey);
@@ -460,6 +530,7 @@ export const makePoolManager = (
   return Far('vault manager', {
     ...shared,
     makeVaultKit,
+    makeBorrowKit,
     makeDepositInvitation,
     liquidateAll,
   });

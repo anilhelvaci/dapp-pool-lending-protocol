@@ -75,6 +75,7 @@ const validTransitions = {
  * @property {ReallocateWithFee} reallocateWithFee
  * @property {() => Ratio} getCompoundedInterest - coefficient on existing debt to calculate new debt
  * @property {(oldDebt: Amount, oldCollateral: Amount, vaultId: VaultId) => void} updateVaultPriority
+ * @property {() => Brand} getThirdCurrencyBrand
  */
 
 /**
@@ -105,20 +106,20 @@ const validTransitions = {
  * @param {InnerVaultManagerBase & GetVaultParams} manager
  * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
  * @param {VaultId} idInManager
- * @param {ZCFMint} mint
- * @param {ERef<PriceAuthority>} priceAuthority
+ * @param {Brand} debtBrand
+ * @param {ERef<PriceManager>} priceManager
  */
 export const makeInnerVault = (
   zcf,
   manager,
   assetNotifier,
   idInManager,
-  mint,
-  priceAuthority,
+  debtBrand,
+  priceManager,
 ) => {
   // CONSTANTS
   const collateralBrand = manager.getCollateralBrand();
-  const { brand: debtBrand } = mint.getIssuerRecord();
+  // const { brand: debtBrand } = mint.getIssuerRecord();
 
   /**
    * State object to support virtualization when available
@@ -131,8 +132,8 @@ export const makeInnerVault = (
     manager,
     outerUpdater: null,
     phase: VaultPhase.ACTIVE,
-    priceAuthority,
-    mint,
+    priceManager,
+    // mint,
     zcf,
 
     // vaultSeat will hold the collateral until the loan is retired. The
@@ -247,10 +248,17 @@ export const makeInnerVault = (
     );
   };
 
-  const maxDebtFor = async collateralAmount => {
-    const quoteAmount = await E(priceAuthority).quoteGiven(
-      collateralAmount,
-      debtBrand,
+  /**
+   * @param {Amount} collateralAmount
+   * @param {Ratio} exchangeRate
+   * @returns {Promise<*>}
+   */
+  const maxDebtFor = async (collateralAmount, exchangeRate) => {
+    const correspondingUnderlyingCollateral = calculateCollateralUnderlyingIn(collateralAmount, exchangeRate);
+    const collateralPriceAuthority = await E(priceManager).getPriceAuthority(correspondingUnderlyingCollateral.brand);
+    const quoteAmount = await E(collateralPriceAuthority).quoteGiven(
+      correspondingUnderlyingCollateral,
+      manager.getThirdCurrencyBrand(),
     );
     // floorDivide because we want the debt ceiling lower
     return floorDivideBy(
@@ -259,14 +267,49 @@ export const makeInnerVault = (
     );
   };
 
+  /**
+   * @param {Amount} protocolCollateralAmount
+   * @param {Ratio} exchangeRate
+   */
+  const calculateCollateralUnderlyingIn = (protocolCollateralAmount, exchangeRate) => {
+    return floorMultiplyBy(
+      protocolCollateralAmount,
+      exchangeRate
+    )
+  };
+
+  /**
+   * @param {Amount} proposedUnderlyingDebt
+   * @returns {Promise<undefined>}
+   */
+  const getRequestedDebtValue = async (proposedUnderlyingDebt) => {
+    const underlyingPriceAuthority = await E(priceManager).getPriceAuthority(debtBrand);
+    const quoteAmount = await E(underlyingPriceAuthority).quoteGiven(
+      proposedUnderlyingDebt,
+      manager.getThirdCurrencyBrand(),
+    );
+    return quoteAmount;
+  }
+
+  /**
+   * @param {Amount} collateralAmount - Should be a protocolToken
+   * @param {Amount} proposedUnderlyingDebt - Should be in the underlying brand of this pool
+   * @param {Amount} exchangeRate - The exchange rate between the protocolToken presented
+   * as collateral and the underlying asset of that protocolToken
+   * @returns {Promise<*>}
+   */
   const assertSufficientCollateral = async (
     collateralAmount,
-    proposedRunDebt,
+    proposedUnderlyingDebt,
+    exchangeRate
   ) => {
-    const maxRun = await maxDebtFor(collateralAmount);
+    const maxDebtValueAmount = await maxDebtFor(collateralAmount, exchangeRate);
+    const requestedDebtQuote = await getRequestedDebtValue(proposedUnderlyingDebt);
     assert(
-      AmountMath.isGTE(maxRun, proposedRunDebt, debtBrand),
-      X`Requested ${q(proposedRunDebt)} exceeds max ${q(maxRun)}`,
+      AmountMath.isGTE(maxDebtValueAmount,
+        getAmountOut(requestedDebtQuote),
+        manager.getThirdCurrencyBrand()),
+      X`Requested ${q(proposedUnderlyingDebt)} exceeds max ${q(maxDebtValueAmount)}`,
     );
   };
 
@@ -645,10 +688,12 @@ export const makeInnerVault = (
   };
 
   /**
-   * @param {ZCFSeat} seat
+   * @param {ZCFSeat} borrowerSeat
+   * @param {ZCFSeat} poolSeat
    * @param {InnerVault} innerVault
+   * @param {Ratio} exchangeRate
    */
-  const initVaultKit = async (seat, innerVault) => {
+  const initVaultKit = async (borrowerSeat, poolSeat, innerVault, exchangeRate) => {
     assert(
       AmountMath.isEmpty(state.debtSnapshot),
       X`vault must be empty initially`,
@@ -661,32 +706,33 @@ export const makeInnerVault = (
     // contract abandons
     const {
       give: { Collateral: collateralAmount },
-      want: { RUN: wantedRun },
-    } = seat.getProposal();
+      want: { Debt: proposedDebtAmount },
+    } = borrowerSeat.getProposal();
 
     // todo trigger process() check right away, in case the price dropped while we ran
 
-    const fee = ceilMultiplyBy(wantedRun, manager.getLoanFee());
-    if (AmountMath.isEmpty(fee)) {
-      throw seat.fail(
-        Error('loan requested is too small; cannot accrue interest'),
-      );
-    }
-    trace(idInManager, 'initVault', { wantedRun, fee }, getCollateralAmount());
-
-    const stagedDebt = AmountMath.add(wantedRun, fee);
-    await assertSufficientCollateral(collateralAmount, stagedDebt);
+    // We don't want any fees
+    // const fee = ceilMultiplyBy(wantedRun, manager.getLoanFee());
+    // if (AmountMath.isEmpty(fee)) {
+    //   throw seat.fail(
+    //     Error('loan requested is too small; cannot accrue interest'),
+    //   );
+    // }
+    // trace(idInManager, 'initVault', { wantedRun, fee }, getCollateralAmount());
+    //
+    // const stagedDebt = AmountMath.add(wantedRun, fee);
+    await assertSufficientCollateral(collateralAmount, proposedDebtAmount, exchangeRate);
 
     const { vaultSeat } = state;
-    mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat); // TODO Don't mint here, just give from the pool
+    // mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat); // TODO Don't mint here, just give from the pool
 
-    seat.incrementBy(vaultSeat.decrementBy(harden({ RUN: wantedRun })));
+    borrowerSeat.incrementBy(poolSeat.decrementBy(harden({ Underlying: proposedDebtAmount })));
     vaultSeat.incrementBy(
-      seat.decrementBy(harden({ Collateral: collateralAmount })),
+      borrowerSeat.decrementBy(harden({ Collateral: collateralAmount })),
     );
-    manager.reallocateWithFee(fee, vaultSeat, seat);
+    zcf.reallocate(borrowerSeat, vaultSeat, poolSeat);
 
-    updateDebtAccounting(oldDebt, oldCollateral, stagedDebt);
+    updateDebtAccounting(oldDebt, oldCollateral, proposedDebtAmount);
 
     const vaultKit = makeVaultKit(innerVault, state.assetNotifier);
     state.outerUpdater = vaultKit.vaultUpdater;
@@ -714,7 +760,7 @@ export const makeInnerVault = (
   const innerVault = Far('innerVault', {
     getVaultSeat: () => state.vaultSeat,
 
-    initVaultKit: seat => initVaultKit(seat, innerVault),
+    initVaultKit: (seat, poolSeat, exchangeRate) => initVaultKit(seat, poolSeat, innerVault, exchangeRate),
     liquidating,
     liquidated,
 
@@ -735,7 +781,8 @@ export const makeInnerVault = (
     getNormalizedDebt,
   });
 
-  return innerVault;
+  // return { innerVault, testMethods: { maxDebtFor, assertSufficientCollateral } };
+  return innerVault
 };
 
 /** @typedef {ReturnType<typeof makeInnerVault>} InnerVault */

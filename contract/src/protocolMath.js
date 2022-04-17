@@ -15,6 +15,7 @@ import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 const { multiply, floorDivide, ceilDivide, add, subtract } = natSafeMath;
 
 export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalSupplyAmount) => {
+  console.log('[PARAMETERS]', totalCashAmount, totalBorrowAmount, totalSupplyAmount);
   assert(totalCashAmount.brand === totalBorrowAmount.brand,
     X`${totalCashAmount.brand} and ${totalBorrowAmount} should be the same`);
 

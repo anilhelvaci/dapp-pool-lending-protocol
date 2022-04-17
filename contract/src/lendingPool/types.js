@@ -218,3 +218,11 @@
  */
 
 /** @typedef {import('./vault').InnerVault} InnerVault */
+
+/**
+ * @typedef {Object} ERef<PriceManager>
+ * @property {() => void } addNewPriceAuthority
+ * @property {() => void} addNewSupportedAssetPublicFacet
+ * @property {() => PriceAuthority} getPriceAuthority
+ * @property {() => VaultManager} getsupportedAssetPublicFacets
+ */

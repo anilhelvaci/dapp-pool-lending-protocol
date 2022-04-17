@@ -101,7 +101,7 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
 };
 
 /**
- * @param {ERef<PriceAuthority>} priceAuthority
+ * @param {ERef<PriceManager>} priceManager
  * @param {LoanTiming} loanTiming
  * @param {Installation} liquidationInstall
  * @param {ERef<TimerService>} timerService
@@ -110,9 +110,10 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
  * @param {XYKAMMPublicFacet} ammPublicFacet
  * @param {[]} bootstrappedAssets
  * @param {bigint=} bootstrapPaymentValue
+ * @param {Brand} compareCurrencyBrand
  */
 const makeGovernedTerms = (
-  priceAuthority,
+  priceManager,
   loanTiming,
   liquidationInstall,
   timerService,
@@ -121,6 +122,7 @@ const makeGovernedTerms = (
   ammPublicFacet,
   bootstrappedAssets,
   bootstrapPaymentValue = 0n,
+  compareCurrencyBrand
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
 
@@ -128,14 +130,15 @@ const makeGovernedTerms = (
 
   return harden({
     ammPublicFacet,
-    priceAuthority,
+    priceManager,
     loanParams: rateParamMgr.getParams(),
     loanTimingParams: timingParamMgr.getParams(),
     timerService,
     liquidationInstall,
     main: makeElectorateParams(invitationAmount),
     bootstrapPaymentValue,
-    bootstrappedAssets
+    bootstrappedAssets,
+    compareCurrencyBrand
   });
 };
 

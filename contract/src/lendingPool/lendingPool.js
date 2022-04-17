@@ -36,6 +36,7 @@ import { makePoolManager } from './poolManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
 import { makePoolParamManager, makeElectorateParamManager } from './params.js';
+import { assert } from '@agoric/assert';
 
 const { details: X } = assert;
 
@@ -48,20 +49,24 @@ const BASIS_POINTS = 10000n;
 export const start = async (zcf, privateArgs) => {
   const {
     ammPublicFacet,
-    priceAuthority,
+    priceManager,
     timerService,
     liquidationInstall,
     electionManager,
     main: { [CONTRACT_ELECTORATE]: electorateParam },
     loanTimingParams,
-    bootstrappedAssets: bootstrappedAssetIssuers
+    bootstrappedAssets: bootstrappedAssetIssuers,
+    compareCurrencyBrand
   } = zcf.getTerms();
+
+  console.log('[PRICE_MANAGER]', priceManager);
+  console.log('[COMPARE_CURRENCY_BRAND]', compareCurrencyBrand);
 
   const poolTypes = makeScalarMap('brand');
   const poolParamManagers = makeScalarMap('brand');
   console.log('[LENDING_POOL]');
 
-  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates) => { // TODO priceAuth as an argument
+  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => { // TODO priceAuth as an argument
     await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
     const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
     const { brand: protocolBrand } = protocolMint.getIssuerRecord();
@@ -96,8 +101,11 @@ export const start = async (zcf, privateArgs) => {
       zcf,
       protocolMint,
       underlyingBrand,
+      underlyingBrand,
+      compareCurrencyBrand,
       underlyingKeyword,
       priceAuthority,
+      priceManager,
       loanTimingParams,
       poolParamManager.getParams,
       // reallocateWithFee,
@@ -106,8 +114,45 @@ export const start = async (zcf, privateArgs) => {
       startTimeStamp,
     );
     poolTypes.init(underlyingBrand, pm);
+    await E(priceManager).addNewPriceAuthority(underlyingBrand, priceAuthority);
     return pm;
   };
+
+  const makeBorrowInvitation = () => {
+    /** @param {ZCFSeat} borrowerSeat
+     * @param {Object} offerArgs
+     * */
+    const borrowHook = async (borrowerSeat, offerArgs) => {
+      assertProposalShape(borrowerSeat, {
+        give: { Collateral: null },
+        want: { Debt: null },
+      });
+
+      assert(typeof offerArgs == 'object');
+      assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'));
+      const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
+      assert(
+        poolTypes.has(collateralUnderlyingBrand),
+        X`Not a supported collateral type ${collateralUnderlyingBrand}`,
+      );
+      const collateralPool = poolTypes.get(collateralUnderlyingBrand);
+
+      // This is the exchange between the collateral presented as protocolToken
+      // and underlying asset corresponding to that protocol token
+      const currentCollateralExchangeRate = await E(collateralPool).getExchangeRate();
+      const {
+        want: { Debt: { brand: borrowBrand } }
+      } = borrowerSeat.getProposal();
+      assert(
+        poolTypes.has(borrowBrand),
+        X`Not a supported collateral type ${borrowBrand}`,
+      );
+      const pool = poolTypes.get(borrowBrand);
+      return pool.makeBorrowKit(borrowerSeat, currentCollateralExchangeRate);
+    };
+
+    return zcf.makeInvitation(borrowHook, 'Borrow');
+  }
 
   const hasKeyword = keyword => {
     return zcf.assertUniqueKeyword(keyword);
@@ -122,7 +167,8 @@ export const start = async (zcf, privateArgs) => {
     helloWorld: () => 'Hello World',
     hasPool,
     hasKeyword,
-    getPool: (brand) => poolTypes.get(brand)
+    getPool: (brand) => poolTypes.get(brand),
+    makeBorrowInvitation
   });
 
   const getParamMgrRetriever = () =>
