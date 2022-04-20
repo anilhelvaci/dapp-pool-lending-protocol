@@ -12,6 +12,7 @@ import {
 
 export const CHARGING_PERIOD_KEY = 'ChargingPeriod';
 export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
+export const PRICE_CHECK_PERIOD_KEY = 'PriceCheckPeriod'
 
 export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
 export const INTEREST_RATE_KEY = 'InterestRate';
@@ -53,6 +54,7 @@ const makeLoanTimingManager = initialValues => {
   return makeParamManagerBuilder()
     .addNat(CHARGING_PERIOD_KEY, initialValues.chargingPeriod)
     .addNat(RECORDING_PERIOD_KEY, initialValues.recordingPeriod)
+    .addNat(PRICE_CHECK_PERIOD_KEY, initialValues.priceCheckPeriod)
     .build();
 };
 

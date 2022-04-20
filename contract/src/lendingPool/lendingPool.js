@@ -96,6 +96,7 @@ export const start = async (zcf, privateArgs) => {
     // const liquidationStrategy = makeLiquidationStrategy(liquidationFacet); ??/
 
     const startTimeStamp = await E(timerService).getCurrentTimestamp();
+    const priceAuthNotifier = await E(priceManager).addNewWrappedPriceAuthority(underlyingBrand, priceAuthority, compareCurrencyBrand);
 
     const pm = makePoolManager(
       zcf,
@@ -105,6 +106,7 @@ export const start = async (zcf, privateArgs) => {
       compareCurrencyBrand,
       underlyingKeyword,
       priceAuthority,
+      priceAuthNotifier,
       priceManager,
       loanTimingParams,
       poolParamManager.getParams,
@@ -114,7 +116,7 @@ export const start = async (zcf, privateArgs) => {
       startTimeStamp,
     );
     poolTypes.init(underlyingBrand, pm);
-    await E(priceManager).addNewPriceAuthority(underlyingBrand, priceAuthority);
+
     return pm;
   };
 

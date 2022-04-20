@@ -107,7 +107,8 @@ const validTransitions = {
  * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
  * @param {VaultId} idInManager
  * @param {Brand} debtBrand
- * @param {ERef<PriceManager>} priceManager
+ * @param {ERef<PriceAuthority>} debtPriceAuthority
+ * @param {ERef<PriceAuthority>} collateralPriceAuthority
  */
 export const makeInnerVault = (
   zcf,
@@ -115,7 +116,8 @@ export const makeInnerVault = (
   assetNotifier,
   idInManager,
   debtBrand,
-  priceManager,
+  debtPriceAuthority,
+  collateralPriceAuthority
 ) => {
   // CONSTANTS
   const collateralBrand = manager.getCollateralBrand();
@@ -132,7 +134,8 @@ export const makeInnerVault = (
     manager,
     outerUpdater: null,
     phase: VaultPhase.ACTIVE,
-    priceManager,
+    debtPriceAuthority,
+    collateralPriceAuthority,
     // mint,
     zcf,
 
@@ -200,7 +203,7 @@ export const makeInnerVault = (
     // update vault manager which tracks total debt
     manager.applyDebtDelta(oldDebt, newDebt);
     // update position of this vault in liquidation priority queue
-    manager.updateVaultPriority(oldDebt, oldCollateral, idInManager);
+    // manager.updateVaultPriority(oldDebt, oldCollateral, idInManager);
   };
 
   /**
@@ -222,6 +225,16 @@ export const makeInnerVault = (
       manager.getCompoundedInterest(),
     );
   };
+
+  const getCurrentDebtValueInCompareCurrencyForm = async () => {
+    const currentDebt = getCurrentDebt();
+    const quoteAmount = await E(debtPriceAuthority).quoteGiven(
+      currentDebt,
+      manager.getThirdCurrencyBrand(),
+    );
+
+    return getAmountOut(quoteAmount);
+  }
 
   /**
    * The normalization puts all debts on a common time-independent scale since
@@ -255,7 +268,6 @@ export const makeInnerVault = (
    */
   const maxDebtFor = async (collateralAmount, exchangeRate) => {
     const correspondingUnderlyingCollateral = calculateCollateralUnderlyingIn(collateralAmount, exchangeRate);
-    const collateralPriceAuthority = await E(priceManager).getPriceAuthority(correspondingUnderlyingCollateral.brand);
     const quoteAmount = await E(collateralPriceAuthority).quoteGiven(
       correspondingUnderlyingCollateral,
       manager.getThirdCurrencyBrand(),
@@ -283,8 +295,7 @@ export const makeInnerVault = (
    * @returns {Promise<undefined>}
    */
   const getRequestedDebtValue = async (proposedUnderlyingDebt) => {
-    const underlyingPriceAuthority = await E(priceManager).getPriceAuthority(debtBrand);
-    const quoteAmount = await E(underlyingPriceAuthority).quoteGiven(
+    const quoteAmount = await E(debtPriceAuthority).quoteGiven(
       proposedUnderlyingDebt,
       manager.getThirdCurrencyBrand(),
     );
@@ -324,6 +335,16 @@ export const makeInnerVault = (
       ? AmountMath.makeEmpty(collateralBrand)
       : getCollateralAllocated(vaultSeat);
   };
+
+  const getCurrentCollateralValueInCompareCurrencyForm = async () => {
+    const collateralAmount = getCollateralAmount();
+    const quote = await E(debtPriceAuthority).quoteGiven(
+      collateralAmount,
+      manager.getThirdCurrencyBrand(),
+    );
+
+    return getAmountOut(quote);
+  }
 
   /**
    *
@@ -708,6 +729,10 @@ export const makeInnerVault = (
       give: { Collateral: collateralAmount },
       want: { Debt: proposedDebtAmount },
     } = borrowerSeat.getProposal();
+    console.log('[COLLATERAL_AMOUNT]', collateralAmount);
+    console.log('[DEBT_AMOUNT]', proposedDebtAmount);
+    console.log('[POOL_SEAT]', poolSeat.getCurrentAllocation());
+
 
     // todo trigger process() check right away, in case the price dropped while we ran
 
@@ -726,7 +751,8 @@ export const makeInnerVault = (
     const { vaultSeat } = state;
     // mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat); // TODO Don't mint here, just give from the pool
 
-    borrowerSeat.incrementBy(poolSeat.decrementBy(harden({ Underlying: proposedDebtAmount })));
+    const underlyingKeywordRecord = poolSeat.decrementBy(harden({ Underlying: proposedDebtAmount }));
+    borrowerSeat.incrementBy(harden({Debt: underlyingKeywordRecord.Underlying}));
     vaultSeat.incrementBy(
       borrowerSeat.decrementBy(harden({ Collateral: collateralAmount })),
     );
@@ -777,7 +803,9 @@ export const makeInnerVault = (
 
     // for status/debugging
     getCollateralAmount,
+    getCurrentCollateralValueInCompareCurrencyForm,
     getCurrentDebt,
+    getCurrentDebtValueInCompareCurrencyForm,
     getNormalizedDebt,
   });
 

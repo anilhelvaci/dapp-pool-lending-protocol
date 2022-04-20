@@ -31,8 +31,8 @@ const calculateDebtToCollateral = (debtAmount, collateralAmount) => {
  */
 export const currentDebtToCollateral = vault =>
   calculateDebtToCollateral(
-    vault.getCurrentDebt(),
-    vault.getCollateralAmount(),
+    vault.getCurrentDebtValueInCompareCurrencyForm(),
+    vault.getCurrentCollateralValueInCompareCurrencyForm(),
   );
 
 /** @typedef {{debtToCollateral: Ratio, vault: InnerVault}} VaultRecord */
