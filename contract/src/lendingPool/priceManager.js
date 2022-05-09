@@ -21,10 +21,10 @@ export const makePriceManager = (options) => {
     const displayInfo = await E(brandIn).getDisplayInfo();
     const decimalPlaces = displayInfo?.decimalPlaces || 0n;
     console.log('[DISPLAY_INFO]', displayInfo);
-    const notfier = priceAuthority.makeQuoteNotifier(AmountMath.make(brandIn, 10n ** Nat(decimalPlaces)), compareBrand);
-    priceAuthorities.init(brandIn, harden({ priceAuthority, notfier }));
+    const notifier = priceAuthority.makeQuoteNotifier(AmountMath.make(brandIn, 10n ** Nat(decimalPlaces)), compareBrand);
+    priceAuthorities.init(brandIn, harden({ priceAuthority, notifier }));
     console.log('[PRICE_AUTHS]', priceAuthorities.keys());
-    return notfier;
+    return notifier;
   }
 
   const addNewSupportedAssetPublicFacet = (key, value) => {

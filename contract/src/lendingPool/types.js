@@ -28,6 +28,8 @@
  * or increasing a loan.
  * @property {Ratio} initialExchangeRate - Exchange rate between underlying
  * asset and the protocol token when protocol token supply is zero.
+ * @property {Ratio} baseRate
+ * @property {Ratio} multipilierRate
  */
 
 /**
@@ -124,6 +126,7 @@
  *   which interest is charged to the loan.
  * @property {() => RelativeTime} getRecordingPeriod - The period (in seconds)
  *   at which interest is recorded to the loan.
+ * @property {() => Ratio} getCurrentBorrowingRate
  */
 
 /**

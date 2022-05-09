@@ -623,7 +623,7 @@ export const makeInnerVault = (
 
     const targetCollateralAmount = targetCollateralLevels(clientSeat).vault;
     // max debt supported by current Collateral as modified by proposal
-    const maxDebtForOriginalTarget = await maxDebtFor(targetCollateralAmount);
+    const maxDebtForOriginalTarget = await maxDebtFor(targetCollateralAmount, manager.getExchangeRate()); // TODO adjustment here
     assert(
       oldUpdater === state.outerUpdater,
       X`Transfer during vault adjustment`,
@@ -642,7 +642,7 @@ export const makeInnerVault = (
     // Calculate the fee, the amount to mint and the resulting debt. We'll
     // verify that the target debt doesn't violate the collateralization ratio,
     // then mint, reallocate, and burn.
-    const { fee, toMint, newDebt } = loanFee(proposal, debtAfter);
+    // const { fee, toMint, newDebt } = loanFee(proposal, debtAfter);
 
     // Get new balances after calling the priceAuthority, so we can compare
     // to the debt limit based on the new values.

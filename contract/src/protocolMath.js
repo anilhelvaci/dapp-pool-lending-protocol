@@ -14,16 +14,20 @@ import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 
 const { multiply, floorDivide, ceilDivide, add, subtract } = natSafeMath;
 
+const BASIS_POINTS = 10000n;
+
 export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalSupplyAmount) => {
-  console.log('[PARAMETERS]', totalCashAmount, totalBorrowAmount, totalSupplyAmount);
   assert(totalCashAmount.brand === totalBorrowAmount.brand,
     X`${totalCashAmount.brand} and ${totalBorrowAmount} should be the same`);
 
   const numeratorAmount = AmountMath.add(totalCashAmount, totalBorrowAmount);
 
-  return makeRatioFromAmounts(
-    numeratorAmount,
-    totalSupplyAmount
+  return quantize(
+    makeRatioFromAmounts(
+      numeratorAmount,
+      totalSupplyAmount
+    ),
+    BASIS_POINTS
   )
 };
 
@@ -33,18 +37,24 @@ export const calculateUtilizationRate = (totalCashAmount, totalBorrowAmount) => 
 
   const denominatorAmount = AmountMath.add(totalCashAmount, totalBorrowAmount);
 
-  return makeRatioFromAmounts(
-    totalBorrowAmount,
-    denominatorAmount
+  return quantize(
+    makeRatioFromAmounts(
+      totalBorrowAmount,
+      denominatorAmount
+    ),
+    BASIS_POINTS
   );
 }
 
-export const calculateBorrowingRate = (multiplierRatioPerPeriod, baseRatePerBlock, utilizationRate) => {
-  assertIsRatio(multiplierRatioPerPeriod);
-  assertIsRatio(baseRatePerBlock);
+export const calculateBorrowingRate = (multiplierRatio, baseRate, utilizationRate) => {
+  assertIsRatio(multiplierRatio);
+  assertIsRatio(baseRate);
   assertIsRatio(utilizationRate);
 
-  return addRatios(baseRatePerBlock, multiplyRatios(utilizationRate, multiplierRatioPerPeriod));
+  return quantize(
+    addRatios(baseRate, multiplyRatios(utilizationRate, multiplierRatio)),
+    BASIS_POINTS
+  );
 };
 
 /**

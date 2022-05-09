@@ -15,9 +15,13 @@ import {
   makeRatio,
   makeRatioFromAmounts,
   ceilMultiplyBy,
-  ceilDivideBy
+  ceilDivideBy,
+  floorDivideBy,
+  floorMultiplyBy,
+  getAmountOut
 } from '@agoric/zoe/src/contractSupport/index.js';
 import { makePromiseKit } from '@endo/promise-kit';
+import { observeNotifier } from '@agoric/notifier';
 import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 import { makeGovernedTerms } from '../../src/lendingPool/params.js';
 import { assertAmountsEqual } from '@agoric/zoe/test/zoeTestHelpers.js';
@@ -26,6 +30,7 @@ import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 import { Nat } from '@agoric/nat';
 import { makeInnerVault } from '../../src/lendingPool/vault.js';
+import { depositMoney, addPool } from './helpers.js';
 
 import {
   setUpZoeForTest,
@@ -116,7 +121,11 @@ function makeRates(underlyingBrand, compareBrand) {
     // periodic interest rate (per charging period)
     interestRate: makeRatio(100n, underlyingBrand, BASIS_POINTS),
     // charge to create or increase loan balance
-    loanFee: makeRatio(500n, underlyingBrand, BASIS_POINTS),
+    loanFee: makeRatio(500n, underlyingBrand, BASIS_POINTS), // delete
+    // base rate for dynamic borrowing rate
+    baseRate: makeRatio(250n, underlyingBrand, BASIS_POINTS),
+    // multipilier rate for utilizitaion rate
+    multipilierRate: makeRatio(20n, underlyingBrand),
   });
 }
 
@@ -509,6 +518,7 @@ test('initial', async t => {
 test('add-pool', async t => {
   const {
     vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
   } = setupAssets();
   const loanTiming = {
     chargingPeriod: 2n,
@@ -540,7 +550,7 @@ test('add-pool', async t => {
 
   const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
 
-  const rates = makeRates(vanBrand);
+  const rates = makeRates(vanBrand, usdBrand);
   const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates, undefined);
 
   t.is(await E(lendingPoolPublicFacet).hasPool(vanBrand), true);
@@ -618,6 +628,8 @@ test('deposit', async t => {
     paymentKeywordRecord
   );
 
+  const message = await E(seat).getOfferResult();
+
   const protocolTokenReceived = await E(seat).getPayouts();
   const protocolReceived = protocolTokenReceived.Protocol;
   t.truthy(
@@ -630,11 +642,13 @@ test('deposit', async t => {
 
   t.is(await E(pm).getProtocolLiquidity(), 5555555550n);
   t.is(await E(pm).getUnderlyingLiquidity(), 111111111n);
+  t.is(message, "Finished");
 });
 
 test('deposit - false protocolAmountOut', async t => {
   const {
     vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
   } = setupAssets();
   const loanTiming = {
     chargingPeriod: 2n,
@@ -666,7 +680,7 @@ test('deposit - false protocolAmountOut', async t => {
 
   const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
 
-  const rates = makeRates(vanBrand);
+  const rates = makeRates(vanBrand, usdBrand);
   const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates);
   const protocolBrand = await E(pm).getProtocolBrand();
   const protocolIssuer = await E(pm).getProtocolIssuer();
@@ -700,11 +714,14 @@ test('borrow', async t => {
     usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
     panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
   } = setupAssets();
+  const secondsPerDay = SECONDS_PER_YEAR / 365n;
   const loanTiming = {
-    chargingPeriod: 2n,
-    recordingPeriod: 10n,
-    priceCheckPeriod: 10n
+    chargingPeriod: secondsPerDay,
+    recordingPeriod: secondsPerDay * 5n,
+    priceCheckPeriod: secondsPerDay * 5n * 2n
   };
+  // charge interest on every tick
+  // const manualTimer = buildManualTimer(console.log, 0n, secondsPerDay * 7n);
 
   const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
   const vanLiquidity = {
@@ -720,7 +737,7 @@ test('borrow', async t => {
     AmountMath.make(vanBrand, 900n),
     vanBrand,
     { committeeName: 'TheCabal', committeeSize: 5 },
-    buildManualTimer(console.log),
+    buildManualTimer(console.log, 0n, secondsPerDay * 5n),
     undefined,
     vanLiquidity,
     500n,
@@ -732,21 +749,21 @@ test('borrow', async t => {
   const vanUsdPriceAuthority = makeScriptedPriceAuthority({
     actualBrandIn: vanBrand,
     actualBrandOut: usdBrand,
-    priceList: [105n, 15n],
+    priceList: [105n, 103n, 101n],
     timer,
     quoteMint,
     unitAmountIn: AmountMath.make(vanBrand, 100n),
-    quoteInterval: 10n
+    quoteInterval: secondsPerDay * 5n
   });
 
   const panUsdPriceAuthority = makeScriptedPriceAuthority({
     actualBrandIn: panBrand,
     actualBrandOut: usdBrand,
-    priceList: [500n, 300n],
+    priceList: [500n, 490n, 470n],
     timer,
     quoteMint,
     unitAmountIn: AmountMath.make(panBrand, 100n),
-    quoteInterval: 10n,
+    quoteInterval: secondsPerDay * 5n,
   });
 
   const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
@@ -833,17 +850,17 @@ test('borrow', async t => {
 
     t.is(await E(pm).getProtocolLiquidity(), 10555555550n);
     t.is(await E(pm).getUnderlyingLiquidity(), 211111111n);
-    // t.deepEqual(await E(pm).getPriceAuthorityForBrand(panBrand), panUsdPriceAuthority);
-    // t.deepEqual(await E(pm).getPriceAuthorityForBrand(vanBrand), vanUsdPriceAuthority);
+    t.deepEqual((await E(pm).getPriceAuthorityForBrand(panBrand)).priceAuthority, panUsdPriceAuthority);
+    t.deepEqual((await E(pm).getPriceAuthorityForBrand(vanBrand)).priceAuthority, vanUsdPriceAuthority);
 
     return { pm, protocolReceived };
   };
 
   const vanPoolMan = await addVanPool();
   const panPoolMan = await addPanPool();
-  //
-  // await t.notThrowsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 15555555n)));
-  // await t.throwsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 211111112n)));
+
+  await t.notThrowsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 15555555n)));
+  await t.throwsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 211111112n)));
 
   // build the proppsal
   const vanPoolProtocolIssuer = await E(vanPoolMan.pm).getProtocolIssuer();
@@ -865,18 +882,386 @@ test('borrow', async t => {
     debtPaymentKeywordRecord,
     { collateralUnderlyingBrand: vanBrand },
   );
-  await timer.tick();
+
   const vaultKit = await E(borrowerUserSeat).getOfferResult();
   const vault = vaultKit.vault;
-  // console.log('[DEBT_AMOUNT]', vaultCurrentDebt);
-  console.log('[VAULT_KIT]', vaultKit);
-  console.log('[VAULT]', vault);
+
+  await timer.tick();
+  await timer.tick();
   const vaultCurrentDebt = await E(vault).getCurrentDebt();
 
+  t.notDeepEqual(vaultCurrentDebt, AmountMath.make(panBrand, 15555554n));
+  await new Promise(resolve => setTimeout(resolve, 5000));
+});
 
-  t.deepEqual(vaultCurrentDebt, AmountMath.make(panBrand, 15555554n));
+test('borrow-rate-fluctuate', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+  } = setupAssets();
+  const secondsPerDay = SECONDS_PER_YEAR / 365n;
+  const loanTiming = {
+    chargingPeriod: secondsPerDay,
+    recordingPeriod: secondsPerDay * 7n,
+    priceCheckPeriod: secondsPerDay * 7n * 2n
+  };
+  // charge interest on every tick
+  // const manualTimer = buildManualTimer(console.log, 0n, secondsPerDay * 7n);
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet, zoe, timer, quoteMint } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets,
+    usdBrand
+  );
+
+  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    priceList: [105n, 103n, 101n],
+    timer,
+    quoteMint,
+    unitAmountIn: AmountMath.make(vanBrand, 100n),
+    quoteInterval: secondsPerDay * 7n
+  });
+
+  const panUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: panBrand,
+    actualBrandOut: usdBrand,
+    priceList: [500n, 490n, 470n],
+    timer,
+    quoteMint,
+    unitAmountIn: AmountMath.make(panBrand, 100n),
+    quoteInterval: secondsPerDay * 7n,
+  });
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  const addVanPool = async () => {
+    const rates = makeRates(vanBrand, usdBrand);
+    const pm = await E(lendingPool).addPoolType(vanIssuer, 'VAN', rates, vanUsdPriceAuthority);
+    const protocolBrand = await E(pm).getProtocolBrand();
+    const protocolIssuer = await E(pm).getProtocolIssuer();
+    console.log('[BRAND]:', protocolBrand);
+    console.log('[ISSUER]:', protocolIssuer);
+    const displayInfo = vanBrand.getDisplayInfo();
+    const decimalPlaces = displayInfo?.decimalPlaces || 0n;
+    const underlyingAmountIn = AmountMath.make(vanBrand, 4n * 10n ** Nat(decimalPlaces));
+    const protocolAmountOut = await E(pm).getProtocolAmountOut(underlyingAmountIn);
+    const proposal = harden({
+      give: { Underlying: underlyingAmountIn },
+      want: { Protocol: protocolAmountOut },
+    });
+
+    const paymentKeywordRecord = harden({
+      Underlying: vanMint.mintPayment(underlyingAmountIn),
+    });
+
+    const invitation = await E(pm).makeDepositInvitation();
+    const seat = await E(zoe).offer(
+      invitation,
+      proposal,
+      paymentKeywordRecord
+    );
+
+    const {
+      Protocol: protocolReceived
+    } = await E(seat).getPayouts();
+    const protocolReceivedAmount = await E(protocolIssuer).getAmountOf(protocolReceived);
+    t.truthy(
+      AmountMath.isEqual(
+        protocolReceivedAmount,
+        AmountMath.make(protocolBrand, 20000000000n),
+      ),
+    );
 
 
+    t.is(await E(pm).getProtocolLiquidity(), 20000000000n);
+    t.is(await E(pm).getUnderlyingLiquidity(), 4n * 10n ** Nat(decimalPlaces));
+    // t.deepEqual(await E(pm).getPriceAuthorityForBrand(vanBrand), vanUsdPriceAuthority);
+
+    return { pm, protocolReceived };
+  }
+
+  const addPanPool = async () => {
+    const rates = makeRates(panBrand, usdBrand);
+    const pm = await E(lendingPool).addPoolType(panIssuer, 'PAN', rates, panUsdPriceAuthority);
+    const protocolBrand = await E(pm).getProtocolBrand();
+    const protocolIssuer = await E(pm).getProtocolIssuer();
+    console.log('[BRAND]:', protocolBrand);
+    console.log('[ISSUER]:', protocolIssuer);
+    const displayInfo = vanBrand.getDisplayInfo();
+    const decimalPlaces = displayInfo?.decimalPlaces || 0n;
+    const underlyingAmountIn = AmountMath.make(panBrand, 4n * 10n ** Nat(decimalPlaces));
+    const protocolAmountOut = await E(pm).getProtocolAmountOut(underlyingAmountIn);
+    const proposal = harden({
+      give: { Underlying: underlyingAmountIn },
+      want: { Protocol: protocolAmountOut },
+    });
+
+    const paymentKeywordRecord = harden({
+      Underlying: panMint.mintPayment(underlyingAmountIn),
+    });
+
+    const invitation = await E(pm).makeDepositInvitation();
+    const seat = await E(zoe).offer(
+      invitation,
+      proposal,
+      paymentKeywordRecord
+    );
+
+    const {
+      Protocol: protocolReceived
+    } = await E(seat).getPayouts();
+    t.truthy(
+      AmountMath.isEqual(
+        await E(protocolIssuer).getAmountOf(protocolReceived),
+        AmountMath.make(protocolBrand, 20000000000n),
+      ),
+    );
+
+
+    t.is(await E(pm).getProtocolLiquidity(), 20000000000n);
+    t.is(await E(pm).getUnderlyingLiquidity(), 4n * 10n ** Nat(decimalPlaces));
+    t.deepEqual((await E(pm).getPriceAuthorityForBrand(panBrand)).priceAuthority, panUsdPriceAuthority);
+    t.deepEqual((await E(pm).getPriceAuthorityForBrand(vanBrand)).priceAuthority, vanUsdPriceAuthority);
+
+    return { pm, protocolReceived };
+  };
+
+  const vanPoolMan = await addVanPool();
+  const panPoolMan = await addPanPool();
+
+  await t.notThrowsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 399999999n)));
+  await t.throwsAsync(E(panPoolMan.pm).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 400000001n)));
+
+  // build the proppsal
+  const vanPoolProtocolIssuer = await E(vanPoolMan.pm).getProtocolIssuer();
+
+  let debtProposal = {
+    give: { Collateral: await E(vanPoolProtocolIssuer).getAmountOf(vanPoolMan.protocolReceived) },
+    want: { Debt: AmountMath.make(panBrand, 4000000n) }
+  };
+
+  let debtPaymentKeywordRecord = {
+    Collateral: await vanPoolMan.protocolReceived
+  };
+
+  let borrowInvitation = await E(lendingPoolPublicFacet).makeBorrowInvitation();
+
+  let borrowerUserSeat = await E(zoe).offer(
+    borrowInvitation,
+    debtProposal,
+    debtPaymentKeywordRecord,
+    { collateralUnderlyingBrand: vanBrand },
+  );
+
+  const vaultKit4B = await E(borrowerUserSeat).getOfferResult();
+  const vault4B = vaultKit4B.vault;
+
+  const vaultCurrentDebt4B = await E(vault4B).getCurrentDebt();
+
+  t.deepEqual(vaultCurrentDebt4B, AmountMath.make(panBrand, 4000000n));
+  t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(270n, panBrand, BASIS_POINTS));
+
+  const collateral = await depositMoney(zoe, vanPoolMan.pm, vanMint,4n);
+
+  debtProposal = {
+    give: { Collateral: collateral.amount },
+    want: { Debt: AmountMath.make(panBrand, 1000000n) }
+  };
+
+  debtPaymentKeywordRecord = {
+    Collateral: collateral.payment
+  };
+
+  borrowInvitation = await E(lendingPoolPublicFacet).makeBorrowInvitation();
+
+  borrowerUserSeat = await E(zoe).offer(
+    borrowInvitation,
+    debtProposal,
+    debtPaymentKeywordRecord,
+    { collateralUnderlyingBrand: vanBrand },
+  );
+
+  const vaultKit1B = await E(borrowerUserSeat).getOfferResult();
+  const vault1B = vaultKit1B.vault;
+
+  const vaultCurrentDebt1B = await E(vault1B).getCurrentDebt();
+
+  t.deepEqual(vaultCurrentDebt1B, AmountMath.make(panBrand, 1000000n));
+  t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(275n, panBrand, BASIS_POINTS));
+
+  await timer.tick();
+  await waitForPromisesToSettle();
+  t.deepEqual(await E(panPoolMan.pm).getTotalDebt(), AmountMath.make(panBrand, 5000000n + 372n * 7n))
+  t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(276n, panBrand, BASIS_POINTS));
+  t.deepEqual((await E(panPoolMan.pm).getExchangeRate()).numerator, AmountMath.make(panBrand, 201n));
+});
+
+test('adjust-balances', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+  } = setupAssets();
+  const secondsPerDay = SECONDS_PER_YEAR / 365n;
+  const loanTiming = {
+    chargingPeriod: secondsPerDay,
+    recordingPeriod: secondsPerDay * 7n,
+    priceCheckPeriod: secondsPerDay * 7n * 2n
+  };
+  // charge interest on every tick
+  // const manualTimer = buildManualTimer(console.log, 0n, secondsPerDay * 7n);
+
+  const vanInitialLiquidity = AmountMath.make(vanBrand, 300n);
+  const vanLiquidity = {
+    proposal: vanInitialLiquidity,
+    payment: vanMint.mintPayment(vanInitialLiquidity),
+  };
+
+  const bootstrappedAssets = [vanBrand];
+
+  const { lendingPoolCreatorFacet, lendingPoolPublicFacet, zoe, timer, quoteMint } = await setupServices(
+    loanTiming,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    vanBrand,
+    { committeeName: 'TheCabal', committeeSize: 5 },
+    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
+    undefined,
+    vanLiquidity,
+    500n,
+    vanIssuer,
+    bootstrappedAssets,
+    usdBrand
+  );
+
+  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    priceList: [105n, 103n, 101n],
+    timer,
+    quoteMint,
+    unitAmountIn: AmountMath.make(vanBrand, 100n),
+    quoteInterval: secondsPerDay * 7n
+  });
+
+  const panUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: panBrand,
+    actualBrandOut: usdBrand,
+    priceList: [500n, 490n, 470n],
+    timer,
+    quoteMint,
+    unitAmountIn: AmountMath.make(panBrand, 100n),
+    quoteInterval: secondsPerDay * 7n,
+  });
+
+  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+
+  // Make the rates for the pools
+  const vanPoolRates = makeRates(vanBrand, usdBrand);
+  const panPoolRates = makeRates(panBrand, usdBrand);
+
+  // Add the pools
+  const vanPoolMan = await addPool(zoe, vanPoolRates, lendingPool, vanMint, "VAN", vanUsdPriceAuthority);
+  const panPoolMan = await addPool(zoe, panPoolRates, lendingPool, panMint, "PAN", panUsdPriceAuthority);
+
+  // Put money inside the pools
+  const vanPoolDepositedMoney = await depositMoney(zoe, vanPoolMan, vanMint, 6n);
+  const panPoolDepositedMoney = await depositMoney(zoe, panPoolMan, panMint, 10n);
+
+  // Check the protocol tokens received
+  const agVanIssuer = await E(vanPoolMan).getProtocolIssuer();
+  const agVanBrand = await E(agVanIssuer).getBrand();
+  const agPanIssuer = await E(panPoolMan).getProtocolIssuer();
+  const agPanBrand = await E(agPanIssuer).getBrand();
+
+  t.deepEqual(vanPoolDepositedMoney.amount, AmountMath.make(agVanBrand, 30000000000n));
+  t.deepEqual(panPoolDepositedMoney.amount, AmountMath.make(agPanBrand, 50000000000n));
+
+  await t.notThrowsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n - 1n)));
+  await t.throwsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n + 1n)));
+  //
+  // // build the proppsal
+  // const vanPoolProtocolIssuer = await E(vanPoolMan.pm).getProtocolIssuer();
+  //
+  // let debtProposal = {
+  //   give: { Collateral: await E(vanPoolProtocolIssuer).getAmountOf(vanPoolMan.protocolReceived) },
+  //   want: { Debt: AmountMath.make(panBrand, 4000000n) }
+  // };
+  //
+  // let debtPaymentKeywordRecord = {
+  //   Collateral: await vanPoolMan.protocolReceived
+  // };
+  //
+  // let borrowInvitation = await E(lendingPoolPublicFacet).makeBorrowInvitation();
+  //
+  // let borrowerUserSeat = await E(zoe).offer(
+  //   borrowInvitation,
+  //   debtProposal,
+  //   debtPaymentKeywordRecord,
+  //   { collateralUnderlyingBrand: vanBrand },
+  // );
+  //
+  // const vaultKit4B = await E(borrowerUserSeat).getOfferResult();
+  // const vault4B = vaultKit4B.vault;
+  //
+  // const vaultCurrentDebt4B = await E(vault4B).getCurrentDebt();
+  //
+  // t.deepEqual(vaultCurrentDebt4B, AmountMath.make(panBrand, 4000000n));
+  // t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(270n, panBrand, BASIS_POINTS));
+  //
+  // const collateral = await depositMoney(zoe, vanPoolMan.pm, vanBrand, vanMint,4n);
+  //
+  // debtProposal = {
+  //   give: { Collateral: collateral.amount },
+  //   want: { Debt: AmountMath.make(panBrand, 1000000n) }
+  // };
+  //
+  // debtPaymentKeywordRecord = {
+  //   Collateral: collateral.payment
+  // };
+  //
+  // borrowInvitation = await E(lendingPoolPublicFacet).makeBorrowInvitation();
+  //
+  // borrowerUserSeat = await E(zoe).offer(
+  //   borrowInvitation,
+  //   debtProposal,
+  //   debtPaymentKeywordRecord,
+  //   { collateralUnderlyingBrand: vanBrand },
+  // );
+  //
+  // const vaultKit1B = await E(borrowerUserSeat).getOfferResult();
+  // const vault1B = vaultKit1B.vault;
+  //
+  // const vaultCurrentDebt1B = await E(vault1B).getCurrentDebt();
+  //
+  // t.deepEqual(vaultCurrentDebt1B, AmountMath.make(panBrand, 1000000n));
+  // t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(275n, panBrand, BASIS_POINTS));
+  //
+  // await timer.tick();
+  // await waitForPromisesToSettle();
+  // t.deepEqual(await E(panPoolMan.pm).getTotalDebt(), AmountMath.make(panBrand, 5000000n + 372n * 7n))
+  // t.deepEqual(await E(panPoolMan.pm).getCurrentBorrowingRate(), makeRatio(276n, panBrand, BASIS_POINTS));
+  // t.deepEqual((await E(panPoolMan.pm).getExchangeRate()).numerator, AmountMath.make(panBrand, 201n));
 });
 
 test('math', async t => {
@@ -1043,6 +1428,64 @@ test('assertCollateralSufficient', async t => {
       AmountMath.make(panBrand, proposedDebtAmount.value + 2n),
       exchangeRate));
 });
+
+test('principal-money-from-compounded', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+  } = setupAssets();
+
+  const compoundedInterest = makeRatio(100027321431303571702n, vanBrand, 100000000000000000000n);
+  const principal = AmountMath.make(vanBrand, 15555554n);
+  const totalDebt = floorMultiplyBy(principal, compoundedInterest);
+
+  t.is(totalDebt.value, 15559804n);
+});
+
+test('price-authority-test', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    usdKit: { mint: usdMint, issuer: usdIssuer, brand: usdBrand },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+  } = setupAssets();
+
+  const timer = buildManualTimer(console.log);
+
+  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    priceList: [105n, 103n, 101n],
+    timer,
+    undefined,
+    unitAmountIn: AmountMath.make(vanBrand, 10n ** 8n),
+    quoteInterval:1n
+  });
+
+ const quote105 = await vanUsdPriceAuthority.quoteGiven(
+   AmountMath.make(vanBrand, 4n * 10n ** 8n),
+   usdBrand
+ );
+
+ t.deepEqual(getAmountOut(quote105), AmountMath.make(usdBrand, 420n));
+ await timer.tick();
+ await waitForPromisesToSettle();
+
+  const quote103 = await vanUsdPriceAuthority.quoteGiven(
+    AmountMath.make(vanBrand, 4n * 10n ** 8n),
+    usdBrand
+  );
+ t.deepEqual(getAmountOut(quote103), AmountMath.make(usdBrand, 412n));
+
+  await timer.tick();
+  await waitForPromisesToSettle();
+
+  const quote101 = await vanUsdPriceAuthority.quoteGiven(
+    AmountMath.make(vanBrand, 4n * 10n ** 8n),
+    usdBrand
+  );
+  t.deepEqual(getAmountOut(quote101), AmountMath.make(usdBrand, 404n));
+})
 
 
 

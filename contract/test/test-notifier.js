@@ -3,6 +3,10 @@ import { test } from '@agoric/swingset-vat/tools/prepare-test-env-ava.js';
 import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import '@agoric/zoe/exported.js';
 import { resolve as importMetaResolve } from 'import-meta-resolve';
+import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { RECORDING_PERIOD_KEY } from '../src/lendingPool/params.js';
+import { E } from '@agoric/eventual-send';
+import { makePromiseKit } from '@endo/promise-kit';
 
 const makeObserver = () => {
   return harden({
@@ -12,6 +16,12 @@ const makeObserver = () => {
     fail: reason => console.log(`${reason}`),
     finish: done => console.log(`${done}`),
   })
+}
+
+async function waitForPromisesToSettle() {
+  const pk = makePromiseKit();
+  setImmediate(pk.resolve);
+  return pk.promise;
 }
 
 test('notifier', async t => {
@@ -76,3 +86,39 @@ test('any', async t => {
 
   t.is('dummy', 'dummy');
 });
+
+test('timer', async t => {
+  const pro1 = new Promise((resolve, reject) => {
+    setTimeout(() => resolve({ id: 'pro1' }), 100);
+  });
+  const timer = buildManualTimer(console.log);
+
+  const periodNotifier = E(timer).makeNotifier(
+    5n,
+    3n,
+  );
+
+  const timerObserve= {
+    updateState: updateTime =>{
+      console.log('update', updateTime)
+
+    },
+    fail: reason => {
+
+    },
+    finish: done => {
+
+    },
+  }
+
+  observeNotifier(periodNotifier, timerObserve);
+
+  // for (let i = 0; i < 10; i++) {
+  //   timer.tick();
+  //   // await pro1;
+  // }
+  // await waitForPromisesToSettle();
+
+  await timer.tick();
+  t.is('dummy', 'dummy');
+})

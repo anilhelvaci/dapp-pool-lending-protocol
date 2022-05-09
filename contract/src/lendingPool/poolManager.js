@@ -30,9 +30,11 @@ import {
   INTEREST_RATE_KEY,
   CHARGING_PERIOD_KEY,
   PRICE_CHECK_PERIOD_KEY,
+  MULTIPILIER_RATE_KEY,
+  BASE_RATE_KEY
 } from './params.js';
 import { chargeInterest } from '../interest.js';
-import { calculateExchangeRate } from '../protocolMath.js';
+import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate } from '../protocolMath.js';
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
 import { makeQuoteManager } from './quoteManager.js';
 
@@ -102,6 +104,8 @@ export const makePoolManager = (
     // loans must initially have at least 1.2x collateralization
     getLoanFee: () => getLoanParams()[LOAN_FEE_KEY].value,
     getInterestRate: () => getLoanParams()[INTEREST_RATE_KEY].value,
+    getCurrentBorrowingRate: () => getCurrentBorrowingRate(),
+    getTotalDebt: () => totalDebt,
     getInitialExchangeRate: () => getLoanParams()[INITIAL_EXCHANGE_RATE_KEY].value,
     getExchangeRate: () => getExchangeRate(),
     getProtocolAmountOut: (depositAmount) => {
@@ -146,7 +150,7 @@ export const makePoolManager = (
   const debtsPerCollateralStore = makeScalarBigMapStore('debtsPerCollateralStore');
 
   /** @type {Ratio}} */
-  let compoundedInterest = makeRatio(100n, protocolBrand); // starts at 1.0, no interest
+  let compoundedInterest = makeRatio(100n, underlyingBrand); // starts at 1.0, no interest
 
   /**
    * timestamp of most recent update to interest
@@ -174,6 +178,17 @@ export const makePoolManager = (
       : calculateExchangeRate(underlyingAssetSeat.getCurrentAllocation().Underlying, totalDebt, totalProtocolSupply);
   };
 
+  /**
+   * @returns {Ratio}
+   */
+  const getCurrentBorrowingRate = () => {
+    const cashPresent = underlyingAssetSeat.getAmountAllocated('Underlying', underlyingBrand);
+    const utilizationRate = calculateUtilizationRate(cashPresent, totalDebt);
+    console.log("[UTILICATION_RATIO]", utilizationRate);
+    console.log("[TOTAL_DEBT]", totalDebt);
+    return calculateBorrowingRate(getLoanParams()[MULTIPILIER_RATE_KEY].value, getLoanParams()[BASE_RATE_KEY].value, utilizationRate);
+  }
+
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
     harden({
       compoundedInterest,
@@ -190,7 +205,7 @@ export const makePoolManager = (
    */
   const chargeAllVaults = async (updateTime, poolIncrementSeat) => {
     trace('chargeAllVaults', { updateTime });
-    const interestRate = shared.getInterestRate();
+    const interestRate = shared.getCurrentBorrowingRate();
 
     // Update local state with the results of charging interest
     ({ compoundedInterest, latestInterestUpdate, totalDebt } =
@@ -248,10 +263,12 @@ export const makePoolManager = (
 
   const timeObserver = {
     updateState: updateTime =>{
-      console.log('[CHARGING_INTEREST]');
-      chargeAllVaults(updateTime, poolIncrementSeat).catch(e =>
-        console.error('🚨 vaultManager failed to charge interest', e),
-      )
+      console.log('[CHARGING_INTEREST]', updateTime);
+      if (!AmountMath.isEmpty(totalDebt)) {
+        chargeAllVaults(updateTime, poolIncrementSeat).catch(e =>
+          console.error('🚨 vaultManager failed to charge interest', e),
+        )
+      }
     },
     fail: reason => {
       console.log('[FAIL]', reason.stack);
@@ -272,6 +289,7 @@ export const makePoolManager = (
 
   const priceCheckObserver = {
     updateState: newQuote => {
+      console.log('[DEBT_QUOTE_UPDATED]', getAmountOut(newQuote), getAmountIn(newQuote));
       underlyingQuoteManager.updateLatestQuote(newQuote);
     },
     fail: reason => {
@@ -352,7 +370,7 @@ export const makePoolManager = (
     assertEnoughLiquidtyExists(proposedDebtAmount);
 
     const collateralBrand = exchangeRate.numerator.brand;
-    const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand);
+    const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
 
     if (!debtsPerCollateralStore.has(collateralBrand)) {
       debtsPerCollateralStore.init(collateralBrand, makeDebtsPerCollateral(
@@ -387,13 +405,9 @@ export const makePoolManager = (
         give: { Underlying: fundAmount },
         want: { Protocol: protocolAmount },
       } = fundHolderSeat.getProposal();
-      console.log('[FUND_AMOUNT]', fundAmount);
-      console.log('[PROTOCOL_AMOUNT]', protocolAmount);
-      console.log('[PROTOCOL_AMOUNT_COMPARE]', AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)));
       assert(AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)), X`The amounts should be equal`);
       protocolMint.mintGains(harden({ Protocol: protocolAmount }), protocolAssetSeat);
       totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmount);
-      console.log('[TOTAL_PROTOCOL_SUPPLY]', totalProtocolSupply);
       fundHolderSeat.incrementBy(
         protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmount })),
       );

@@ -18,6 +18,8 @@ export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
 export const INTEREST_RATE_KEY = 'InterestRate';
 export const LOAN_FEE_KEY = 'LoanFee';
 export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
+export const BASE_RATE_KEY = 'BaseRate';
+export const MULTIPILIER_RATE_KEY = 'MultipilierRate';
 
 /**
  * @param {Amount} electorateInvitationAmount
@@ -39,6 +41,8 @@ const makeLoanParams = (loanTiming, rates) => {
     [LIQUIDATION_MARGIN_KEY]: makeGovernedRatio(rates.liquidationMargin),
     [INTEREST_RATE_KEY]: makeGovernedRatio(rates.interestRate),
     [LOAN_FEE_KEY]: makeGovernedRatio(rates.loanFee),
+    [BASE_RATE_KEY]: makeGovernedRatio(rates.baseRate),
+    [MULTIPILIER_RATE_KEY]: makeGovernedRatio(rates.multipilierRate),
   });
 };
 
@@ -82,6 +86,8 @@ const makePoolParamManager = rates => {
     .addBrandedRatio(INTEREST_RATE_KEY, rates.interestRate)
     .addBrandedRatio(LOAN_FEE_KEY, rates.loanFee)
     .addBrandedRatio(INITIAL_EXCHANGE_RATE_KEY, rates.initialExchangeRate)
+    .addBrandedRatio(BASE_RATE_KEY, rates.baseRate)
+    .addBrandedRatio(MULTIPILIER_RATE_KEY, rates.multipilierRate)
     .build();
 };
 
