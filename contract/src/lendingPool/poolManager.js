@@ -72,6 +72,7 @@ const trace = makeTracer('VM');
  * @param {ERef<TimerService>} timerService
  * @param {LiquidationStrategy} liquidationStrategy
  * @param {Timestamp} startTimeStamp
+ * @param {GetExchangeRateForPool} getExchangeRateForPool
  * @returns {VaultManager}
  */
 export const makePoolManager = (
@@ -90,6 +91,7 @@ export const makePoolManager = (
   timerService,
   // liquidationStrategy,
   startTimeStamp,
+  getExchangeRateForPool
 ) => {
   const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
   const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
@@ -255,6 +257,38 @@ export const makePoolManager = (
     totalDebt = AmountMath.make(underlyingBrand, totalDebt.value + delta);
   };
 
+  /**
+   * Make requested transfer for. Requested transfer being either rapying a debt
+   * of requesting more debt.
+   * @param seat
+   * @param currentDebt
+   */
+  const transferDebt = (seat, currentDebt) => {
+
+    const proposal = seat.getProposal();
+    if (proposal.want.Debt) {
+      // decrease the requested amount of underlying asset from the underlyingSeat
+      underlyingAssetSeat.decrementBy(harden({ Underlying: proposal.want.Debt }));
+      seat.incrementBy(
+        harden({ Debt: proposal.want.Debt }),
+      );
+    } else if (proposal.give.Debt) {
+      // We don't allow debt to be negative, so we'll refund overpayments
+      // const currentDebt = getCurrentDebt();
+      const acceptedDebt = AmountMath.isGTE(proposal.give.Debt, currentDebt)
+        ? currentDebt
+        : proposal.give.Debt;
+
+      seat.decrementBy(harden({ Debt: acceptedDebt }));
+      underlyingAssetSeat.incrementBy(harden({ Underlying: acceptedDebt }));
+    }
+  };
+
+  const reallocateBetweenSeats = (vaultSeat, clientSeat) => {
+    console.log("reallocateBetweenSeats")
+    zcf.reallocate(underlyingAssetSeat, vaultSeat, clientSeat);
+  }
+
   const periodNotifier = E(timerService).makeNotifier(
     0n,
     timingParams[RECORDING_PERIOD_KEY].value,
@@ -312,10 +346,13 @@ export const makePoolManager = (
     ...shared,
     applyDebtDelta,
     // reallocateWithFee,
+    reallocateBetweenSeats,
+    transferDebt,
     getCollateralBrand: () => collateralBrand,
     getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
-    getLatestUnderlyingQuote: () => underlyingQuoteManager.getLatestQuote()
+    getLatestUnderlyingQuote: () => underlyingQuoteManager.getLatestQuote(),
+    getExchangeRateForPool
   });
 
   /** @param {ZCFSeat} seat */

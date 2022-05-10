@@ -114,11 +114,25 @@ export const start = async (zcf, privateArgs) => {
       timerService,
       // liquidationStrategy, TODO figure out what to with this later
       startTimeStamp,
+      getExchangeRateForPool
     );
     poolTypes.init(underlyingBrand, pm);
 
     return pm;
   };
+
+  const getExchangeRateForPool = brand => {
+    console.log("getExchangeRateForPool: brand", brand);
+    assert(
+      poolTypes.has(brand),
+      X`Not a supported collateral type ${brand}`,
+    );
+    const collateralPool = poolTypes.get(brand);
+
+    // This is the exchange between the collateral presented as protocolToken
+    // and underlying asset corresponding to that protocol token
+    return collateralPool.getExchangeRate();
+  }
 
   const makeBorrowInvitation = () => {
     /** @param {ZCFSeat} borrowerSeat
@@ -133,15 +147,9 @@ export const start = async (zcf, privateArgs) => {
       assert(typeof offerArgs == 'object');
       assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'));
       const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
-      assert(
-        poolTypes.has(collateralUnderlyingBrand),
-        X`Not a supported collateral type ${collateralUnderlyingBrand}`,
-      );
-      const collateralPool = poolTypes.get(collateralUnderlyingBrand);
 
-      // This is the exchange between the collateral presented as protocolToken
-      // and underlying asset corresponding to that protocol token
-      const currentCollateralExchangeRate = await E(collateralPool).getExchangeRate();
+      const currentCollateralExchangeRate = getExchangeRateForPool(collateralUnderlyingBrand);
+
       const {
         want: { Debt: { brand: borrowBrand } }
       } = borrowerSeat.getProposal();
