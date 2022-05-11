@@ -198,9 +198,10 @@ export const makeInnerVault = (
   /**
    * @param {Amount} oldDebt - prior principal and all accrued interest
    * @param {Amount} oldCollateral - actual collateral
-   * @param {Amount} newDebt - actual principal and all accrued interest
+   * @param {Amount} targetDebt - actual principal and all accrued interest
    */
-  const updateDebtAccounting = (oldDebt, oldCollateral, newDebt) => {
+  const updateDebtAccounting = (oldDebt, oldCollateral, targetDebt) => {
+    const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
     // update vault manager which tracks total debt
     manager.applyDebtDelta(oldDebt, newDebt);
@@ -629,13 +630,13 @@ export const makeInnerVault = (
     console.log("adjustBalancesHook: proposal", proposal);
     assertOnlyKeys(proposal, ['Collateral', 'Debt']);
     const targetCollateralAmount = targetCollateralLevels(clientSeat).vault;
-    const newDebt = targetDebtLevels(clientSeat).client;
+    const targetDebt = targetDebtLevels(clientSeat).client;
     // max debt supported by current Collateral as modified by proposal
     const [maxDebtForOriginalTarget, requestedQuoteInCompareBrand] =
       await Promise.all([
         maxDebtFor(targetCollateralAmount, manager.getExchangeRateForPool(collateralUnderlyingBrand)),
         E(debtPriceAuthority).quoteGiven(
-          newDebt,
+          targetDebt,
           manager.getThirdCurrencyBrand(),
         )
       ]);
@@ -663,7 +664,7 @@ export const makeInnerVault = (
       targetCollateralAmount,
       vaultCollateral,
       requestedDebtInCompareBrand,
-      newDebt
+      targetDebt
     });
 
     // If the collateral decreased, we pro-rate maxDebt
@@ -695,7 +696,7 @@ export const makeInnerVault = (
     manager.transferDebt(clientSeat, getCurrentDebt());
     manager.reallocateBetweenSeats(clientSeat, vaultSeat);
 
-    updateDebtAccounting(oldDebt, oldCollateral, newDebt);
+    updateDebtAccounting(oldDebt, oldCollateral, targetDebt);
 
     updateUiState();
     clientSeat.exit();
