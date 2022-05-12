@@ -30,7 +30,7 @@ import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 import { Nat } from '@agoric/nat';
 import { makeInnerVault } from '../../src/lendingPool/vault.js';
-import { depositMoney, addPool } from './helpers.js';
+import { depositMoney, addPool, makeRates, setupAssets, makeBundle } from './helpers.js';
 
 import {
   setUpZoeForTest,
@@ -71,39 +71,12 @@ export const Phase = /** @type {const} */ ({
   TRANSFER: 'transfer',
 });
 
-async function makeBundle(sourceRoot) {
-  const url = await importMetaResolve(sourceRoot, import.meta.url);
-  const path = new URL(url).pathname;
-  const contractBundle = await bundleSource(path);
-  trace('makeBundle', sourceRoot);
-  return contractBundle;
-}
-
 // makeBundle is a slow step, so we do it once for all the tests.
 const bundlePs = {
-  faucet: makeBundle(contractRoots.faucet),
-  liquidate: makeBundle(contractRoots.liquidate),
-  LendingPool: makeBundle(contractRoots.LendingPool),
+  faucet: makeBundle(bundleSource, contractRoots.faucet),
+  liquidate: makeBundle(bundleSource, contractRoots.liquidate),
+  LendingPool: makeBundle(bundleSource, contractRoots.LendingPool),
 };
-
-function setupAssets() {
-  // setup collateral assets
-  const vanKit = makeIssuerKit('VAN', AssetKind.NAT, harden({ decimalPlaces: 8 }));
-  const sowKit = makeIssuerKit('SOW');
-  const panKit = makeIssuerKit('PAN', AssetKind.NAT, harden({ decimalPlaces: 8 }));
-  const usdKit = makeIssuerKit('USD', AssetKind.NAT, harden({ decimalPlaces: 6 }));
-  const agVanKit = makeIssuerKit('AgVan', AssetKind.NAT, harden({ decimalPlaces: 6 }));
-  const agPanKit = makeIssuerKit('AgPan', AssetKind.NAT, harden({ decimalPlaces: 6 }));
-
-  return harden({
-    vanKit,
-    sowKit,
-    panKit,
-    usdKit,
-    agVanKit,
-    agPanKit
-  });
-}
 
 // Some notifier updates aren't propagating sufficiently quickly for the tests.
 // This invocation (thanks to Warner) waits for all promises that can fire to
@@ -112,21 +85,6 @@ async function waitForPromisesToSettle() {
   const pk = makePromiseKit();
   setImmediate(pk.resolve);
   return pk.promise;
-}
-
-function makeRates(underlyingBrand, compareBrand) {
-  return harden({
-    // margin required to maintain a loan
-    liquidationMargin: makeRatio(150n, compareBrand),
-    // periodic interest rate (per charging period)
-    interestRate: makeRatio(100n, underlyingBrand, BASIS_POINTS),
-    // charge to create or increase loan balance
-    loanFee: makeRatio(500n, underlyingBrand, BASIS_POINTS), // delete
-    // base rate for dynamic borrowing rate
-    baseRate: makeRatio(250n, underlyingBrand, BASIS_POINTS),
-    // multipilier rate for utilizitaion rate
-    multipilierRate: makeRatio(20n, underlyingBrand),
-  });
 }
 
 function calculateProtocolFromUnderlying(underlyingAmount, exchangeRate) {
@@ -263,7 +221,6 @@ export const startLendingPool = async (
       installation.consume.contractGovernor,
     ]);
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
-  const feeMintAccess = await feeMintAccessP;
 
   const lendingPoolTerms = makeGovernedTerms(
     await priceManager,
@@ -296,7 +253,7 @@ export const startLendingPool = async (
     installations.LendingPool,
     undefined,
     lendingPoolTerms,
-    harden({ feeMintAccess, initialPoserInvitation }),
+    harden({ initialPoserInvitation }),
   );
 
   // const [vaultFactoryInstance, vaultFactoryCreator] = await Promise.all([
@@ -428,13 +385,13 @@ async function setupServices(
   // produce.priceAuthority.resolve(priceAuthority);
   const priceManager = makePriceManager({});
   produce.priceManager.resolve(priceManager);
-  produce.feeMintAccess.resolve(feeMintAccess);
+  // produce.feeMintAccess.resolve(feeMintAccess);
   const vaultBundles = await Collect.allValues({
     LendingPool: bundlePs.LendingPool,
     liquidate: bundlePs.liquidate,
   });
   produce.vaultBundles.resolve(vaultBundles);
-  produce.bootstrappedAssets.resolve(bootstrappedAssets);
+  produce.bootstrappedAssets.resolve({});
   produce.compareCurrencyBrand.resolve(compareCurrencyBrand);
   const {
     lendingPoolCreatorFacet,
