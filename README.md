@@ -20,8 +20,8 @@ You may have already installed the Agoric SDK. Unfortunately the newest version 
 ### Lending protocol
 
 1. Clone this repository `git clone https://github.com/anilhelvaci/dapp-pool-lending-protocol/`
-2. Checkout to latest feature branch `git checkout feature/bootstrap-protocol`
-3. cd `dapp-pool-lending-protocol`
+2. cd `dapp-pool-lending-protocol`
+3. Checkout to latest feature branch `git checkout feature/bootstrap-protocol`
 4. Install dependencies `agoric install`
 5. Verify all went well:
    1. `cd contract`
