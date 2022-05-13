@@ -30,7 +30,7 @@ import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 import { Nat } from '@agoric/nat';
 import { makeInnerVault } from '../../src/lendingPool/vault.js';
-import { depositMoney, addPool, makeRates, setupAssets, makeBundle } from './helpers.js';
+import { depositMoney, addPool, makeRates, setupAssets, makeBundle,startLendingPool } from './helpers.js';
 
 import {
   setUpZoeForTest,
@@ -161,126 +161,6 @@ async function setupAmmAndElectorate(
     space,
   };
 }
-
-/**
- * @param { EconomyBootstrapPowers } powers
- * @param { Object } config
- * @param { LoanTiming } config.loanParams
- */
-export const startLendingPool = async (
-  {
-    consume: {
-      vaultBundles,
-      chainTimerService,
-      priceManager,
-      zoe,
-      feeMintAccess: feeMintAccessP, // ISSUE: why doeszn't Zoe await this?
-      economicCommitteeCreatorFacet: electorateCreatorFacet,
-      bootstrappedAssets,
-      compareCurrencyBrand
-    },
-    produce, // {  vaultFactoryCreator }
-    brand: {
-      consume: { RUN: centralBrandP },
-    },
-    instance,
-    installation,
-  },
-  { loanParams } = {
-    loanParams: {
-      chargingPeriod: SECONDS_PER_HOUR,
-      recordingPeriod: SECONDS_PER_DAY,
-    },
-  },
-) => {
-  const bundles = await vaultBundles;
-  const installations = await Collect.allValues({
-    LendingPool: E(zoe).install(bundles.LendingPool),
-    liquidate: E(zoe).install(bundles.liquidate),
-  });
-
-  const poserInvitationP = E(electorateCreatorFacet).getPoserInvitation();
-  const [initialPoserInvitation, invitationAmount] = await Promise.all([
-    poserInvitationP,
-    E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
-  ]);
-
-  const centralBrand = await centralBrandP;
-
-  // declare governed params for the vaultFactory; addVaultType() sets actual rates
-  const rates = {
-    liquidationMargin: makeRatio(105n, centralBrand),
-    interestRate: makeRatio(250n, centralBrand, BASIS_POINTS),
-    loanFee: makeRatio(200n, centralBrand, BASIS_POINTS),
-  };
-
-  const [ammInstance, electorateInstance, contractGovernorInstall] =
-    await Promise.all([
-      instance.consume.amm,
-      instance.consume.economicCommittee,
-      installation.consume.contractGovernor,
-    ]);
-  const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
-
-  const lendingPoolTerms = makeGovernedTerms(
-    await priceManager,
-    loanParams,
-    installations.liquidate,
-    chainTimerService,
-    invitationAmount,
-    rates,
-    ammPublicFacet,
-    await bootstrappedAssets,
-    undefined,
-    await compareCurrencyBrand
-  );
-  // const governorTerms = harden({
-  //   timer: chainTimerService,
-  //   electorateInstance,
-  //   governedContractInstallation: installations.VaultFactory,
-  //   governed: {
-  //     terms: vaultFactoryTerms,
-  //     issuerKeywordRecord: {},
-  //     privateArgs: harden({ feeMintAccess, initialPoserInvitation }),
-  //   },
-  // });
-
-  const {
-    creatorFacet: lendingPoolCreatorFacet,
-    publicFacet: lendingPoolPublicFacet,
-    instance: lendingPoolInstance,
-  } = await E(zoe).startInstance(
-    installations.LendingPool,
-    undefined,
-    lendingPoolTerms,
-    harden({ initialPoserInvitation }),
-  );
-
-  // const [vaultFactoryInstance, vaultFactoryCreator] = await Promise.all([
-  //   E(governorCreatorFacet).getInstance(),
-  //   E(governorCreatorFacet).getCreatorFacet(),
-  // ]);
-  // const voteCreator = Far('vaultFactory vote creator', {
-  //   voteOnParamChange: E(governorCreatorFacet).voteOnParamChange,
-  // });
-  // produce.vaultFactoryCreator.resolve(vaultFactoryCreator);
-  // produce.vaultFactoryGovernorCreator.resolve(governorCreatorFacet);
-  // produce.vaultFactoryVoteCreator.resolve(voteCreator);
-  // // Advertise the installations, instances in agoricNames.
-  // instance.produce.VaultFactory.resolve(vaultFactoryInstance);
-  // instance.produce.Treasury.resolve(vaultFactoryInstance);
-  // instance.produce.VaultFactoryGovernor.resolve(governorInstance);
-  // entries(installations).forEach(([name, install]) =>
-  //   installation.produce[name].resolve(install),
-  // );
-  console.log('PUBLIC_FACET', lendingPoolPublicFacet);
-  return harden({
-    lendingPoolCreatorFacet,
-    lendingPoolPublicFacet,
-    lendingPoolInstance
-  })
-
-};
 
 /**
  * @param {ERef<ZoeService>} zoe
@@ -1154,8 +1034,8 @@ test('adjust-balances-no-interest', async t => {
   const panPoolRates = makeRates(panBrand, usdBrand);
 
   // Add the pools
-  const vanPoolMan = await addPool(zoe, vanPoolRates, lendingPool, vanMint, "VAN", vanUsdPriceAuthority);
-  const panPoolMan = await addPool(zoe, panPoolRates, lendingPool, panMint, "PAN", panUsdPriceAuthority);
+  const vanPoolMan = await addPool(zoe, vanPoolRates, lendingPool, vanIssuer, "VAN", vanUsdPriceAuthority);
+  const panPoolMan = await addPool(zoe, panPoolRates, lendingPool, panIssuer, "PAN", panUsdPriceAuthority);
 
   // Put money inside the pools
   let vanPoolDepositedMoney = await depositMoney(zoe, vanPoolMan, vanMint, 6n);

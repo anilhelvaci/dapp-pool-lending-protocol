@@ -60,13 +60,13 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
  * @param zoe
  * @param rates
  * @param lendingPool
- * @param underlyingMint
+ * @param underlyingIssuer
  * @param underlyingKeyword
  * @param underlyingPriceAuthority
  * @returns {Promise<*>}
  */
-export const addPool = async (zoe, rates, lendingPool, underlyingMint, underlyingKeyword, underlyingPriceAuthority) => {
-  const underlyingIssuer = underlyingMint.getIssuer();
+export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underlyingKeyword, underlyingPriceAuthority) => {
+  // const underlyingIssuer = underlyingMint.getIssuer();
   const pm = await E(lendingPool).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
 
   return pm;
@@ -181,6 +181,10 @@ export const startLendingPool = async (
     undefined,
     await compareCurrencyBrand
   );
+  /**
+   * This is for if we want to govern the lendingPool contract via a DAO.
+   * Commented out right now might need this later
+   */
   // const governorTerms = harden({
   //   timer: chainTimerService,
   //   electorateInstance,
@@ -224,7 +228,116 @@ export const startLendingPool = async (
   return harden({
     lendingPoolCreatorFacet,
     lendingPoolPublicFacet,
-    lendingPoolInstance
+    lendingPoolInstance,
+    installations
   })
 
 };
+
+export const startFaucets = async (zoe, faucetBundles) => {
+
+  const installations = await Collect.allValues({
+    priceAuthorityFaucet: E(zoe).install(faucetBundles.priceAuthorityFaucet),
+    lendingPoolFaucet: E(zoe).install(faucetBundles.lendingPoolFaucet),
+  });
+
+  // start priceAuthorityFaucet
+  const {
+    creatorFacet: priceAuthorityFaucetCreatorFacet,
+    publicFacet: priceAuthorityFaucetPublicFacet,
+    instance: priceAuthorityFaucetInstance,
+  } = await E(zoe).startInstance(
+    installations.priceAuthorityFaucet
+  );
+
+  // start vanFaucet
+  const {
+    creatorFacet: vanFaucetCreatorFacet,
+    publicFacet: vanFaucetPublicFacet,
+    instance: vanFaucetInstance,
+  } = await E(zoe).startInstance(
+    installations.lendingPoolFaucet,
+    undefined,
+    {
+      keyword: 'VAN',
+      displayInfo: {
+        decimalPlaces: 8,
+      },
+    },
+  );
+
+  // start panFaucet
+  const {
+    creatorFacet: panFaucetCreatorFacet,
+    publicFacet: panFaucetPublicFacet,
+    instance: panFaucetInstance,
+  } = await E(zoe).startInstance(
+    installations.lendingPoolFaucet,
+    undefined,
+    {
+      keyword: 'PAN',
+      displayInfo: {
+        decimalPlaces: 8,
+      },
+    },
+  );
+
+  // start usdFaucet
+  const {
+    creatorFacet: usdFaucetCreatorFacet,
+    publicFacet: usdFaucetPublicFacet,
+    instance: usdFaucetInstance,
+  } = await E(zoe).startInstance(
+    installations.lendingPoolFaucet,
+    undefined,
+    {
+      keyword: 'USD',
+      displayInfo: {
+        decimalPlaces: 6,
+      },
+    },
+  );
+
+  return {
+    vanAsset: {
+      creatorFacet: vanFaucetCreatorFacet,
+      publicFacet: vanFaucetPublicFacet,
+      instance: vanFaucetInstance
+    },
+    panAsset: {
+      creatorFacet: panFaucetCreatorFacet,
+      publicFacet: panFaucetPublicFacet,
+      instance: panFaucetInstance
+    },
+    usdAsset: {
+      creatorFacet: usdFaucetCreatorFacet,
+      publicFacet: usdFaucetPublicFacet,
+      instance: usdFaucetInstance
+    },
+    priceAuthorityFaucet: {
+      creatorFacet: priceAuthorityFaucetCreatorFacet,
+      publicFacet: priceAuthorityFaucetPublicFacet,
+      instance: priceAuthorityFaucetInstance
+    },
+    installations
+  }
+}
+
+export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keyword) => {
+  const displayInfo = await E(brand).getDisplayInfo();
+  const proposalAmountKeywordRecord = {};
+  proposalAmountKeywordRecord[keyword] = AmountMath.make(brand, unit * 10n ** BigInt(displayInfo.decimalPlaces));
+  const liquidityProposal = {
+    give: {},
+    want: proposalAmountKeywordRecord
+  }
+
+  const faucetSeat = E(zoe).offer(
+    invitation,
+    harden(liquidityProposal),
+    harden({})
+  );
+
+  return  await E(faucetSeat).getPayout(keyword);
+
+}

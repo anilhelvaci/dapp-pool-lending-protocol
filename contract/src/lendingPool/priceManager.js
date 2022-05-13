@@ -22,7 +22,7 @@ export const makePriceManager = (options) => {
     const displayInfo = await E(brandIn).getDisplayInfo();
     const decimalPlaces = displayInfo?.decimalPlaces || 0n;
     console.log('[DISPLAY_INFO]', displayInfo);
-    const notifier = priceAuthority.makeQuoteNotifier(AmountMath.make(brandIn, 10n ** Nat(decimalPlaces)), compareBrand);
+    const notifier = E(priceAuthority).makeQuoteNotifier(AmountMath.make(brandIn, 10n ** Nat(decimalPlaces)), compareBrand);
     priceAuthorities.init(brandIn, harden({ priceAuthority, notifier }));
     console.log('[PRICE_AUTHS]', priceAuthorities.keys());
     return notifier;
