@@ -1,6 +1,7 @@
 // @ts-check
 import '@agoric/zoe/exported.js';
-import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule.js';
+// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule.js';
+import { makeScalarMap } from '@agoric/store';
 import { Far } from '@endo/marshal';
 import { Nat } from '@agoric/nat';
 import { E } from '@agoric/eventual-send';
@@ -8,9 +9,9 @@ import { AmountMath } from '@agoric/ertp';
 /** @type PriceManager*/
 export const makePriceManager = (options) => {
   /** @type {MapStore<Brand, PriceAuthority>} */
-  const priceAuthorities = makeScalarBigMapStore('priceAuthorities');
+  const priceAuthorities = makeScalarMap('priceAuthorities');
   /** @type {MapStore<string, InnerVault>} */
-  const supportedAssetPublicFacets = makeScalarBigMapStore('supportedAssetPublicFacets');
+  const supportedAssetPublicFacets = makeScalarMap('supportedAssetPublicFacets');
 
   /**
    * @param {Brand} brandIn

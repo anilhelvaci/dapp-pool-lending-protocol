@@ -17,9 +17,10 @@ import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 
-import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
+// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
+import { makeScalarMap } from '@agoric/store';
 import { makeInnerVault } from './vault.js';
-import { makePrioritizedVaults } from './prioritizedVaults.js';
+// import { makePrioritizedVaults } from './prioritizedVaults.js';
 import { liquidate } from './liquidation.js';
 import { makeTracer } from '../makeTracer.js';
 import {
@@ -149,7 +150,7 @@ export const makePoolManager = (
   /**
    * @type {MapStore<Brand, DebtsPerCollateral>}
    */
-  const debtsPerCollateralStore = makeScalarBigMapStore('debtsPerCollateralStore');
+  const debtsPerCollateralStore = makeScalarMap('debtsPerCollateralStore');
 
   /** @type {Ratio}} */
   let compoundedInterest = makeRatio(100n, underlyingBrand); // starts at 1.0, no interest

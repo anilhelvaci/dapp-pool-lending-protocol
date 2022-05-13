@@ -1,7 +1,8 @@
 import { makeQuoteManager } from './quoteManager.js';
 import { PRICE_CHECK_PERIOD_KEY } from './params.js';
 import { observeNotifier } from '@agoric/notifier';
-import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
+// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
+import { makeScalarMap} from '@agoric/store';
 import { makeInnerVault } from './vault.js';
 import { E } from '@agoric/eventual-send';
 import { Far } from '@endo/marshal';
@@ -32,8 +33,8 @@ export const makeDebtsPerCollateral = (
   const debtDisplayInfoP = E(manager.getUnderlyingBrand()).getDisplayInfo();
   let vaultCounter = 0;
   /** @type {MapStore<string, InnerVault>} */
-  const vaults = makeScalarBigMapStore('vaults');
-  const vaultsToLiquidate = makeScalarBigMapStore('vaultsToLiquidate');
+  const vaults = makeScalarMap('vaults');
+  const vaultsToLiquidate = makeScalarMap('vaultsToLiquidate');
 
   const quoteManager = makeQuoteManager();
 
