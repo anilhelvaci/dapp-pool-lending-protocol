@@ -173,6 +173,7 @@ export const makePoolManager = (
         underlyingBrand),
       X`Requested ${q(proposedDebtAmount)} exceeds the total liquidity ${q(totalLiquidity)}`,
     );
+    console.log("assertEnoughLiquidtyExists: Enough!")
   };
 
   const getExchangeRate = () => {
@@ -409,7 +410,7 @@ export const makePoolManager = (
 
     const collateralBrand = exchangeRate.numerator.brand;
     const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
-
+    console.log("wrappedCollateralPriceAuthority: ", wrappedCollateralPriceAuthority)
     if (!debtsPerCollateralStore.has(collateralBrand)) {
       debtsPerCollateralStore.init(collateralBrand, makeDebtsPerCollateral(
         zcf,
@@ -425,6 +426,7 @@ export const makePoolManager = (
     }
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
+    console.log("debtsPerCollateral: ", debtsPerCollateral)
     const vaultKit = await E(debtsPerCollateral).addNewVault(seat, underlyingAssetSeat, exchangeRate);
     trace('VaultKit', vaultKit);
     return vaultKit;

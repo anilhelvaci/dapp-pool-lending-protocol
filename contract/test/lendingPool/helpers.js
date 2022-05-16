@@ -323,6 +323,25 @@ export const startFaucets = async (zoe, faucetBundles) => {
   }
 }
 
+export const startPriceManager = async (zoe, priceManBundle) => {
+  const installations = await Collect.allValues({
+    priceManagerContract: E(zoe).install(priceManBundle.priceManagerContract),
+  });
+
+  const {
+    creatorFacet: priceAuthorityManagerCreatorFacet,
+    publicFacet: priceAuthorityManagerPublicFacet,
+    instance: priceAuthorityManagerInstance,
+  } = await E(zoe).startInstance(
+    installations.priceManagerContract
+  );
+
+  return {
+    priceAuthorityManagerPublicFacet,
+    priceAuthorityManagerInstance
+  }
+}
+
 export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keyword) => {
   const displayInfo = await E(brand).getDisplayInfo();
   const proposalAmountKeywordRecord = {};

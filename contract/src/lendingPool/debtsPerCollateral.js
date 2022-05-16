@@ -29,13 +29,14 @@ export const makeDebtsPerCollateral = (
   timer,
   timingParams,
 ) => {
+  console.log("making makeDebtsPerCollateral")
   const collateralDisplayInfoP = E(collateralBrand).getDisplayInfo();
   const debtDisplayInfoP = E(manager.getUnderlyingBrand()).getDisplayInfo();
   let vaultCounter = 0;
   /** @type {MapStore<string, InnerVault>} */
   const vaults = makeScalarMap('vaults');
   const vaultsToLiquidate = makeScalarMap('vaultsToLiquidate');
-
+  console.log("making makeQuoteManager")
   const quoteManager = makeQuoteManager();
 
   // initialize notifiers
@@ -78,7 +79,7 @@ export const makeDebtsPerCollateral = (
   const addNewVault = async (seat, underlyingAssetSeat, exchangeRate) => {
     vaultCounter += 1;
     const vaultId = String(vaultCounter);
-
+    console.log("addNewVault")
     const innerVault = makeInnerVault(
       zcf,
       manager,

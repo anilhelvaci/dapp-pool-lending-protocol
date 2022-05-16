@@ -124,7 +124,7 @@ export const makeInnerVault = (
   // CONSTANTS
   const collateralBrand = manager.getCollateralBrand();
   // const { brand: debtBrand } = mint.getIssuerRecord();
-
+  console.log("makeInnerVault")
   /**
    * State object to support virtualization when available
    *

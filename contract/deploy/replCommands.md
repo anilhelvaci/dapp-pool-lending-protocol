@@ -75,3 +75,105 @@ history[23] 200000000n
 command[24] E(vanPoolMan).getProtocolLiquidity()
 history[24] 10000000000n
 ````
+
+### Borrow
+Here we are taking a different approach from the walletBridge approach we used for the deposit functionality. The reason for that 
+is the agoric verion we currently have does not support sending optional offerArgs to the contract and we need the offerArgs
+for out borrowing function to work. In the upcoming versions this is fixed and the below interaction with contract is
+only for demonstration purpuses. A real dapp will never use E(zoe).offer() by itself.
+
+All board IDs you see here is taken from the console output of the ./deploy.js.
+
+````js
+// Get Brands and issuers
+
+// VAN
+command[24] E(home.board).getValue("board00443")
+history[24] [Object Alleged: VAN issuer]{}
+command[25] vanIssuer = history[24]
+history[25] [Object Alleged: VAN issuer]{}
+command[26] E(vanIssuer).getBrand()
+history[26] [Object Alleged: VAN brand]{}
+command[27] vanBrand = history[26]
+history[27] [Object Alleged: VAN brand]{}
+
+
+// PAN
+command[28] E(home.board).getValue("board01744")
+history[28] [Object Alleged: PAN issuer]{}
+command[29] panIssuer = history[28]
+history[29] [Object Alleged: PAN issuer]{}
+command[30] E(panIssuer).getBrand()
+history[30] [Object Alleged: PAN brand]{}
+command[31] panBrand = history[30]
+history[31] [Object Alleged: PAN brand]{}
+
+// AgVAN
+command[37] E(home.board).getValue("board03446")
+history[37] [Object Alleged: AgVAN issuer]{}
+command[38] agVanIssuer = history[37]
+history[38] [Object Alleged: AgVAN issuer]{}
+command[39] E(agVanIssuer).getBrand()
+history[39] [Object Alleged: AgVAN brand]{}
+command[42] agVanBrand = history[39]
+history[42] [Object Alleged: AgVAN brand]{}
+
+// Get the purse for AgVAN
+command[36] E(home.wallet).getPurse("AgVAN Purse-1")
+history[36] [Object Alleged: AgVAN purse]{}
+
+// Build the proposal
+
+// Get lendingPoolPublicFacet
+command[21] E(home.board).getValue("board02437")
+history[21] [Object Alleged: InstanceHandle]{}
+command[22] E(home.zoe).getPublicFacet(history[21])
+history[22] [Object Alleged: lending pool public facet]{}
+command[23] lendingPoolPublicFacet = history[22]
+history[23] [Object Alleged: lending pool public facet]{}
+
+// AmountKeywordRecord for give
+command[43] E(lendingPoolPublicFacet).getAmountKeywordRecord("Collateral", agVanBrand, 10n ** 8n * 50n)
+history[43] {"Collateral":{"brand":[Object Alleged: AgVAN brand]{},"value":5000000000n}}
+
+// AmountKeywordRecord for want
+command[44] E(lendingPoolPublicFacet).getAmountKeywordRecord("Debt", panBrand, 4n * 10n ** 6n)
+history[44] {"Debt":{"brand":[Object Alleged: PAN brand]{},"value":4000000n}}
+
+borrowProposalOne = {want: history[44], give: history[43]}
+
+//Prepare the payment
+command[47] E(history[36]).withdraw(borrowProposalOne.give.Collateral) // history[36] corresponds to the purse we got from the wallet
+history[47] [Object Alleged: AgVAN payment]{}
+
+// Build the offer
+command[48] E(home.zoe).offer(E(lendingPoolPublicFacet).makeBorrowInvitation(), borrowProposalOne, {Collateral: history[47]}, {collateralUnderlyingBrand: vanBrand})
+history[48] [Object Alleged: userSeat]{}
+// Check for results
+command[52] E(history[48]).getOfferResult() // This might take a while
+history[52] {"assetNotifier":[Object Alleged: notifier]{},"invitationMakers":[Object Alleged: invitation makers]{},"vault":[Object Alleged: vault]{},"vaultNotifier":[Object Alleged: notifier]{},"vaultUpdater":[Object Alleged: updater]{}}
+
+// Get payout
+command[51] E(history[48]).getPayout("Debt")
+history[51] [Object Alleged: PAN payment]{}
+
+// Check Payment
+command[53] E(panIssuer).getAmountOf(history[51])
+history[53] {"brand":[Object Alleged: PAN brand]{},"value":4000000n}
+
+// Get purse for PAN
+command[54] E(home.wallet).getPurse("PAN Purse-1")
+history[54] [Object Alleged: PAN purse]{}
+
+// Put the money inside the purse
+command[55] E(history[54]).deposit(history[51])
+history[55] {"brand":[Object Alleged: PAN brand]{},"value":4000000n}
+
+// Check the parameters
+command[59] E(panPoolMan).getTotalDebt()
+history[59] {"brand":[Object Alleged: PAN brand]{},"value":4003920n}
+command[60] E(panPoolMan).getCurrentBorrowingRate()
+history[60] {"denominator":{"brand":[Object Alleged: PAN brand]{},"value":10000n},"numerator":{"brand":[Object Alleged: PAN brand]{},"value":259n}}
+command[61] E(panPoolMan).getExchangeRate()
+history[61] {"denominator":{"brand":[Object Alleged: AgPAN brand]{},"value":10000n},"numerator":{"brand":[Object Alleged: PAN brand]{},"value":201n}}
+````

@@ -144,10 +144,11 @@ export const start = async (zcf, privateArgs) => {
         want: { Debt: null },
       });
 
-      assert(typeof offerArgs == 'object');
-      assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'));
+      console.log("*[OFFER_ARGS]*", offerArgs);
+      assert(typeof offerArgs == 'object', "[NO_OFFER_ARGS]");
+      assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'), "[NO_OFFER_ARGS]");
       const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
-
+      console.log("*[collateralUnderlyingBrand]*", collateralUnderlyingBrand);
       const currentCollateralExchangeRate = getExchangeRateForPool(collateralUnderlyingBrand);
 
       const {
@@ -178,7 +179,12 @@ export const start = async (zcf, privateArgs) => {
     hasPool,
     hasKeyword,
     getPool: (brand) => poolTypes.get(brand),
-    makeBorrowInvitation
+    makeBorrowInvitation,
+    getAmountKeywordRecord: (keyword, brand, value) => {
+      const amountKeywordRecord = {};
+      amountKeywordRecord[keyword] = AmountMath.make(brand, value);
+      return amountKeywordRecord;
+    }
   });
 
   const getParamMgrRetriever = () =>
