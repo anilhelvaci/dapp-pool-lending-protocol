@@ -3,23 +3,8 @@
 import '@agoric/zoe/exported.js';
 import '@agoric/zoe/src/contracts/exported.js';
 
-// The vaultFactory owns a number of VaultManagers and a mint for RUN.
-//
-// addVaultType is a closely held method that adds a brand new collateral type.
-// It specifies the initial exchange rate for that type. It depends on a
-// separately specified AMM to provide the ability to liquidate loans that are
-// in arrears. We could check that the AMM has sufficient liquidity, but for the
-// moment leave that to those participating in the governance process for adding
-// new collateral type to ascertain.
-
-// This contract wants to be managed by a contractGovernor, but it isn't
-// compatible with contractGovernor, since it has a separate paramManager for
-// each Vault. This requires it to manually replicate the API of contractHelper
-// to satisfy contractGovernor. It needs to return a creatorFacet with
-// { getParamMgrRetriever, getInvitation, getLimitedCreatorFacet }.
-
 import { E } from '@agoric/eventual-send';
-import '@agoric/governance/src/exported';
+import '@agoric/governance/src/exported.js';
 import { AmountMath, AssetKind } from '@agoric/ertp';
 
 import { makeScalarMap, keyEQ } from '@agoric/store';
@@ -53,11 +38,13 @@ export const start = async (zcf, privateArgs) => {
     timerService,
     liquidationInstall,
     electionManager,
-    main: { [CONTRACT_ELECTORATE]: electorateParam },
+    governedParams: { [CONTRACT_ELECTORATE]: electorateParam },
     loanTimingParams,
     bootstrappedAssets: bootstrappedAssetIssuers,
     compareCurrencyBrand
   } = zcf.getTerms();
+  const { initialPoserInvitation } = privateArgs;
+  const electorateParamManager = await makeElectorateParamManager(E(zcf).getZoeService(), initialPoserInvitation);
 
   console.log('[PRICE_MANAGER]', priceManager);
   console.log('[COMPARE_CURRENCY_BRAND]', compareCurrencyBrand);
@@ -87,7 +74,7 @@ export const start = async (zcf, privateArgs) => {
     const poolParamManager = makePoolParamManager(ratesUpdated);
     poolParamManagers.init(underlyingBrand, poolParamManager);
 
-    //TODO Create liquadition for dynamic underdlying assets
+    // TODO Create liquadition for dynamic underdlying assets
     // const { creatorFacet: liquidationFacet } = await E(zoe).startInstance(
     //   liquidationInstall,
     //   harden({ RUN: runIssuer, Collateral: underlyingIssuer }),
@@ -190,10 +177,10 @@ export const start = async (zcf, privateArgs) => {
   const getParamMgrRetriever = () =>
     Far('paramManagerRetriever', {
       get: paramDesc => {
-        if (paramDesc.key === 'main') {
+        if (paramDesc.key === 'governedParams') {
           return electorateParamManager;
         } else {
-          return vaultParamManagers.get(paramDesc.collateralBrand);
+          return poolParamManagers.get(paramDesc.collateralBrand);
         }
       },
     });
@@ -207,6 +194,8 @@ export const start = async (zcf, privateArgs) => {
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {
     getParamMgrRetriever,
     getLimitedCreatorFacet: () => lendingPool,
+    getGovernedApis: () => harden({}),
+    getGovernedApiNames: () => harden({}),
   });
 
   return harden({

@@ -17,10 +17,8 @@ import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 
-// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
 import { makeScalarMap } from '@agoric/store';
 import { makeInnerVault } from './vault.js';
-// import { makePrioritizedVaults } from './prioritizedVaults.js';
 import { liquidate } from './liquidation.js';
 import { makeTracer } from '../makeTracer.js';
 import {
@@ -137,16 +135,6 @@ export const makePoolManager = (
 
   let vaultCounter = 0;
 
-  /**
-   * A store for vaultKits prioritized by their collaterization ratio.
-   *
-   * It should be set only once but it's a `let` because it can't be set until after the
-   * definition of reschedulePriceCheck, which refers to sortedVaultKits
-   *
-   * @type {ReturnType<typeof makePrioritizedVaults>=}
-   */
-  // XXX misleading mutability and confusing flow control; could be refactored with a listener
-  let prioritizedVaults;
   /**
    * @type {MapStore<Brand, DebtsPerCollateral>}
    */

@@ -2,88 +2,107 @@
 
 import '@agoric/zoe/exported.js';
 import {
-  setUpZoeForTest,
-  setupAmmServices,
+  startLendingPool,
+  setupAmmAndElectorate,
 } from '../test/lendingPool/setup.js';
 import { E } from '@agoric/eventual-send';
 import '@agoric/zoe/src/contractSupport/index.js';
-import { depositMoney, addPool, makeRates, setupAssets, makeBundle, getLiquidityFromFaucet, startPriceManager } from '../test/lendingPool/helpers.js';
-import { makePriceManager } from '../src/lendingPool/priceManager.js';
-import { startLendingPool, startFaucets } from '../test/lendingPool/helpers.js';
+import {
+  addPool,
+  makeRates,
+  makeBundle,
+  getLiquidityFromFaucet,
+  startPriceManager,
+} from '../test/lendingPool/helpers.js';
+import { startFaucets } from '../test/lendingPool/helpers.js';
 import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
 import { SECONDS_PER_YEAR } from '../src/interest.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
+import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
+
 const contractRoots = {
   lendingPoolFaucet: './lendingPoolFaucet.js',
   priceAuthorityFaucet: './priceAuthorityFaucet.js',
   liquidate: '../../src/lendingPool/liquidateMinimum.js',
   LendingPool: '../../src/lendingPool/lendingPool.js',
   priceManagerContract: '../../src/lendingPool/priceManagerContract.js',
+  amm: '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
 };
 
-const setupAmmAndElectorate = async (timer,
-                               zoe,
-                               vanLiquidity,
-                               usdLiquidity,
-                               usdIssuer,
-                               vanIssuer,
-                               electorateTerms) => {
+async function setupServices(
+  t,
+  timer = buildManualTimer(console.log),
+) {
+  const {
+    zoe,
+    loanTiming,
+    vanInitialLiquidity,
+    compareInitialLiquidity,
+    priceManager,
+  } = t.context;
+  t.context.timer = timer;
 
-  const usdBrand = await E(usdIssuer).getBrand();
-  const centralR = { issuer: usdIssuer, brand: usdBrand };
-
-
+  const { amm: ammFacets, space } = await setupAmmAndElectorate(
+    t,
+    vanInitialLiquidity,
+    compareInitialLiquidity,
+  );
+  const { consume, produce, instance } = space;
+  // trace(t, 'amm', { ammFacets });
 
   const {
-    amm,
-    committeeCreator,
-    governor,
-    invitationAmount,
-    electorateInstance,
-    space,
-  } = await setupAmmServices(electorateTerms, centralR, timer, zoe);
+    installation: { produce: iProduce },
+  } = space;
+  iProduce.LendingPool.resolve(t.context.installation.LendingPool);
+  iProduce.liquidate.resolve(t.context.installation.liquidate);
+  produce.priceManager.resolve(priceManager);
 
-  const liquidityIssuer = E(amm.ammPublicFacet).addPool(vanIssuer, 'VAN');
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  await startLendingPool(space, { loanParams: loanTiming });
 
-  const liqProposal = harden({
-    give: {
-      Secondary: vanLiquidity.proposal,
-      Central: usdLiquidity.proposal,
-    },
-    want: { Liquidity: AmountMath.makeEmpty(liquidityBrand) },
-  });
-  const liqInvitation = await E(
-    amm.ammPublicFacet,
-  ).makeAddLiquidityInvitation();
-
-  console.log("liqProposal", liqProposal);
-
-  const ammLiquiditySeat = await E(zoe).offer(
-    liqInvitation,
-    liqProposal,
-    harden({
-      Secondary: vanLiquidity.payment,
-      Central: usdLiquidity.payment,
-    }),
+  const governorCreatorFacet = consume.lendingPoolGovernorCreator;
+  /** @type {Promise<VaultFactory & LimitedCreatorFacet<any>>} */
+  const lendingPoolCreatorFacetP = /** @type { any } */ (
+    E(governorCreatorFacet).getCreatorFacet()
   );
 
-  const newAmm = {
-    ammCreatorFacet: amm.ammCreatorFacet,
-    ammPublicFacet: amm.ammPublicFacet,
-    instance: amm.governedInstance,
-    ammLiquidity: E(ammLiquiditySeat).getPayout('Liquidity'),
+  /** @type {[any, VaultFactory, VFC['publicFacet'], VaultManager, PriceAuthority]} */
+    // @ts-expect-error cast
+  const [
+      governorInstance,
+      lendingPoolCreatorFacet,
+      lendingPoolInstance,
+      lendingPoolPublicFacet,
+    ] = await Promise.all([
+      instance.consume.lendingPoolGovernor,
+      lendingPoolCreatorFacetP,
+      instance.consume.lendingPool,
+      E(governorCreatorFacet).getPublicFacet(),
+    ]);
+  // trace(t, { governorInstance, lendingPoolCreatorFacet, lendingPoolPublicFacet });
+
+  const { g, l } = {
+    g: {
+      governorInstance,
+      governorPublicFacet: E(zoe).getPublicFacet(governorInstance),
+      governorCreatorFacet,
+    },
+    l: {
+      lendingPoolCreatorFacet,
+      lendingPoolPublicFacet,
+      lendingPoolInstance,
+    },
   };
 
   return {
-    governor,
-    amm: newAmm,
-    committeeCreator,
-    electorateInstance,
-    invitationAmount,
+    zoe,
+    governor: g,
+    lendingPool: l,
+    ammFacets,
+    timer,
     space,
   };
-};
+}
 
 /**
  * What we need to deploy the lendingPool contract
@@ -104,20 +123,26 @@ export default async function deployContract(
 
   const secondsPerDay = SECONDS_PER_YEAR / 365n;
 
-  const bundlePs = {
+  const bundles = await Collect.allValues({
     lendingPoolFaucet: makeBundle(bundleSource, contractRoots.lendingPoolFaucet),
     priceAuthorityFaucet: makeBundle(bundleSource, contractRoots.priceAuthorityFaucet),
     liquidate: makeBundle(bundleSource, contractRoots.liquidate),
     LendingPool: makeBundle(bundleSource, contractRoots.LendingPool),
     priceManagerContract: makeBundle(bundleSource, contractRoots.priceManagerContract),
-  };
-
-  const faucetBundles = await Collect.allValues({
-    lendingPoolFaucet: bundlePs.lendingPoolFaucet,
-    priceAuthorityFaucet: bundlePs.priceAuthorityFaucet,
+    amm: makeBundle(bundleSource, contractRoots.amm),
   });
 
-  const { vanAsset, panAsset, usdAsset, priceAuthorityFaucet, installations } = await startFaucets(zoe, faucetBundles);
+  const contractInstallations = Collect.mapValues(bundles, bundle =>
+    E(zoe).install(bundle),
+  );
+
+  const {
+    vanAsset,
+    panAsset,
+    usdAsset,
+    priceAuthorityFaucet,
+    installations,
+  } = await startFaucets(zoe, contractInstallations);
 
   // get issuers and brands
   const vanIssuer = await E(vanAsset.publicFacet).getIssuer();
@@ -136,7 +161,7 @@ export default async function deployContract(
     timer,
     undefined,
     unitAmountIn: AmountMath.make(vanBrand, 100n),
-    quoteInterval: secondsPerDay * 7n
+    quoteInterval: 7n,
   });
 
   const panUsdPriceAuthority = await E(priceAuthorityFaucet.creatorFacet).makeScriptedPriceAuthority({
@@ -146,35 +171,33 @@ export default async function deployContract(
     timer,
     undefined,
     unitAmountIn: AmountMath.make(panBrand, 100n),
-    quoteInterval: secondsPerDay * 7n,
+    quoteInterval: 7n,
   });
 
-  const priceManBundle = await Collect.allValues({
-    priceManagerContract: bundlePs.priceManagerContract,
-  });
+  const priceManInstallation = await contractInstallations.priceManagerContract;
 
-  const { priceAuthorityManagerPublicFacet: priceManager, priceAuthorityManagerInstance } = await startPriceManager(zoe, priceManBundle);
-
-  // console.log("vanUsdPriceAuthority", vanUsdPriceAuthority);
-  // console.log("panUsdPriceAuthority", panUsdPriceAuthority);
+  const {
+    priceAuthorityManagerPublicFacet: priceManager,
+    priceAuthorityManagerInstance,
+  } = await startPriceManager(zoe, priceManInstallation);
 
   // get liquidity
-  const vanLiquidity = await getLiquidityFromFaucet(zoe, E(vanAsset.creatorFacet).makeFaucetInvitation(), 5n, vanBrand, "VAN");
+  const vanLiquidity = await getLiquidityFromFaucet(zoe, E(vanAsset.creatorFacet).makeFaucetInvitation(), 5n, vanBrand, 'VAN');
   const vanLiquidityAmount = await E(vanIssuer).getAmountOf(vanLiquidity);
 
-  const panLiquidity = await getLiquidityFromFaucet(zoe, E(panAsset.creatorFacet).makeFaucetInvitation(), 5n, panBrand, "PAN");
+  const panLiquidity = await getLiquidityFromFaucet(zoe, E(panAsset.creatorFacet).makeFaucetInvitation(), 5n, panBrand, 'PAN');
   const panLiquidityAmount = await E(panIssuer).getAmountOf(panLiquidity);
 
-  const usdLiquidity = await getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 5n, usdBrand, "USD");
+  const usdLiquidity = await getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 5n, usdBrand, 'USD');
   const usdLiquidityAmount = await E(usdIssuer).getAmountOf(usdLiquidity);
 
 
-  console.log("vanLiquidity", vanLiquidity);
-  console.log("vanLiquidityAmount", vanLiquidityAmount);
-  console.log("panLiquidity", panLiquidity);
-  console.log("panLiquidityAmount", panLiquidityAmount);
-  console.log("usdLiquidity", usdLiquidity);
-  console.log("usdLiquidityAmount", usdLiquidityAmount);
+  console.log('vanLiquidity', vanLiquidity);
+  console.log('vanLiquidityAmount', vanLiquidityAmount);
+  console.log('panLiquidity', panLiquidity);
+  console.log('panLiquidityAmount', panLiquidityAmount);
+  console.log('usdLiquidity', usdLiquidity);
+  console.log('usdLiquidityAmount', usdLiquidityAmount);
 
   const vanLiquidityAMM = {
     proposal: harden(vanLiquidityAmount),
@@ -189,49 +212,38 @@ export default async function deployContract(
   const loanTiming = {
     chargingPeriod: secondsPerDay,
     recordingPeriod: secondsPerDay * 7n,
-    priceCheckPeriod: secondsPerDay * 7n * 2n
+    priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
   const electorateTerms = { committeeName: 'TheCabal', committeeSize: 5 };
 
-  const { amm: ammFacets, space } = await setupAmmAndElectorate(
-    timer,
+  const params = {};
+  params.context = {
     zoe,
-    vanLiquidityAMM,
-    usdLiquidityAMM,
-    usdIssuer,
-    vanIssuer,
+    compareCurrencyKit: { issuer: usdIssuer, brand: usdBrand },
+    vanKit: { issuer: vanIssuer, brand: vanBrand },
+    loanTiming,
+    vanInitialLiquidity: vanLiquidityAMM,
+    compareInitialLiquidity: usdLiquidityAMM,
     electorateTerms,
-  );
+    priceManager,
+    installation: contractInstallations,
+  };
 
-  const { consume, produce } = space;
-
-  const quoteMint = makeIssuerKit('quote', AssetKind.SET).mint;
-  // const priceManager = makePriceManager({});
-  produce.priceManager.resolve(priceManager);
-  const vaultBundles = await Collect.allValues({
-    LendingPool: bundlePs.LendingPool,
-    liquidate: bundlePs.liquidate,
-  });
-  produce.vaultBundles.resolve(vaultBundles);
-  produce.bootstrappedAssets.resolve({  });
-  produce.compareCurrencyBrand.resolve(usdBrand);
   const {
-    lendingPoolCreatorFacet,
-    lendingPoolPublicFacet,
-    lendingPoolInstance,
-    installations: lendingPoolInstallations
-  } = await startLendingPool(space, { loanParams: loanTiming });
-
-  const lendingPool = await E(lendingPoolCreatorFacet).getLimitedCreatorFacet();
+    space,
+    lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet, lendingPoolInstance },
+  } = await setupServices(params, timer);
 
   // Make the rates for the pools
   const vanPoolRates = makeRates(vanBrand, usdBrand);
   const panPoolRates = makeRates(panBrand, usdBrand);
 
+  console.log('lendingPoolCreatorFacet', lendingPoolCreatorFacet);
+
   // Add the pools
-  const vanPoolMan = await addPool(zoe, vanPoolRates, lendingPool, vanIssuer, "VAN", vanUsdPriceAuthority);
-  const panPoolMan = await addPool(zoe, panPoolRates, lendingPool, panIssuer, "PAN", panUsdPriceAuthority);
+  const vanPoolMan = await addPool(zoe, vanPoolRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
+  const panPoolMan = await addPool(zoe, panPoolRates, lendingPoolCreatorFacet, panIssuer, 'PAN', panUsdPriceAuthority);
 
   // Check the protocol tokens received
   const agVanIssuer = await E(vanPoolMan).getProtocolIssuer();
@@ -239,8 +251,8 @@ export default async function deployContract(
   const agPanIssuer = await E(panPoolMan).getProtocolIssuer();
   const agPanBrand = await E(panPoolMan).getProtocolBrand();
 
-  console.log("agVanIssuer", agVanIssuer);
-  console.log("agPanIssuer", agPanIssuer);
+  console.log('agVanIssuer', agVanIssuer);
+  console.log('agPanIssuer', agPanIssuer);
 
   const [
     LENDING_POOL_INSTANCE_BOARD_ID,
@@ -259,7 +271,7 @@ export default async function deployContract(
     PRICE_MANAGER_INSTANCE_BOARD_ID,
   ] = await Promise.all([
     E(board).getId(lendingPoolInstance),
-    E(board).getId(lendingPoolInstallations.LendingPool),
+    E(board).getId(await contractInstallations.LendingPool),
     E(board).getId(vanAsset.instance),
     E(board).getId(panAsset.instance),
     E(board).getId(usdAsset.instance),
@@ -269,16 +281,16 @@ export default async function deployContract(
     E(board).getId(usdIssuer),
     E(board).getId(agVanIssuer),
     E(board).getId(agPanIssuer),
-    E(board).getId(installations.priceAuthorityFaucet),
-    E(board).getId(installations.lendingPoolFaucet),
+    E(board).getId(await contractInstallations.priceAuthorityFaucet),
+    E(board).getId(await contractInstallations.lendingPoolFaucet),
     E(board).getId(priceAuthorityManagerInstance),
   ]);
 
   const walletBridge = await E(wallet).getBridge();
-  await E(walletBridge).suggestIssuer("VAN Purse", VAN_ISSUER_BOARD_ID);
-  await E(walletBridge).suggestIssuer("PAN Purse", PAN_ISSUER_BOARD_ID);
-  await E(walletBridge).suggestIssuer("AgVAN Purse", AGVAN_ISSUER_BOARD_ID);
-  await E(walletBridge).suggestIssuer("AgPAN Purse", AGPAN_ISSUER_BOARD_ID);
+  await E(walletBridge).suggestIssuer('VAN Purse', VAN_ISSUER_BOARD_ID);
+  await E(walletBridge).suggestIssuer('PAN Purse', PAN_ISSUER_BOARD_ID);
+  await E(walletBridge).suggestIssuer('AgVAN Purse', AGVAN_ISSUER_BOARD_ID);
+  await E(walletBridge).suggestIssuer('AgPAN Purse', AGPAN_ISSUER_BOARD_ID);
 
   let vanLiqInvitation = await E(vanAsset.creatorFacet).makeFaucetInvitation();
 
@@ -293,7 +305,7 @@ export default async function deployContract(
         VAN: {
           // The pursePetname identifies which purse we want to use
           pursePetname: 'VAN Purse',
-          value: 5n * 10n ** 8n ,
+          value: 5n * 10n ** 8n,
         },
       },
     },
@@ -314,7 +326,7 @@ export default async function deployContract(
         PAN: {
           // The pursePetname identifies which purse we want to use
           pursePetname: 'PAN Purse',
-          value: 10n * 10n ** 8n ,
+          value: 10n * 10n ** 8n,
         },
       },
     },
@@ -332,20 +344,20 @@ export default async function deployContract(
         Protocol: {
           // The pursePetname identifies which purse we want to uselib
           pursePetname: 'AgVAN Purse',
-          value: 1n * 10n ** 8n * 50n ,
+          value: 5n * 10n ** 8n * 50n,
         },
       },
       give: {
         Underlying: {
           // The pursePetname identifies which purse we want to use
           pursePetname: 'VAN Purse',
-          value: 1n * 10n ** 8n ,
+          value: 5n * 10n ** 8n,
         },
       },
     },
   };
 
-  console.log("depositVanOfferConfig", depositVanOfferConfig);
+  console.log('depositVanOfferConfig', depositVanOfferConfig);
   const depositVanfferID = await E(walletBridge).addOffer(depositVanOfferConfig);
 
   const depositPanOfferConfig = {
@@ -358,21 +370,50 @@ export default async function deployContract(
         Protocol: {
           // The pursePetname identifies which purse we want to uselib
           pursePetname: 'AgPAN Purse',
-          value: 10n * 10n ** 8n * 50n ,
+          value: 10n * 10n ** 8n * 50n,
         },
       },
       give: {
         Underlying: {
           // The pursePetname identifies which purse we want to use
           pursePetname: 'PAN Purse',
-          value: 10n * 10n ** 8n ,
+          value: 10n * 10n ** 8n,
         },
       },
     },
   };
 
-  console.log("depositPanOfferConfig", depositPanOfferConfig);
+  console.log('depositPanOfferConfig', depositPanOfferConfig);
   const depositPanOfferID = await E(walletBridge).addOffer(depositPanOfferConfig);
+
+  const borrowPanOfferConfig = {
+    id: `${Date.now()}`,
+    invitation: E(lendingPoolPublicFacet).makeBorrowInvitation(),
+    installationHandleBoardId: LENDING_POOL_INSTALL_BOARD_ID,
+    instanceHandleBoardId: LENDING_POOL_INSTANCE_BOARD_ID,
+    proposalTemplate: {
+      want: {
+        Debt: {
+          // The pursePetname identifies which purse we want to uselib
+          pursePetname: 'PAN Purse',
+          value: 4n * 10n ** 6n,
+        },
+      },
+      give: {
+        Collateral: {
+          // The pursePetname identifies which purse we want to use
+          pursePetname: 'AgVAN Purse',
+          value: 1n * 10n ** 8n * 50n,
+        },
+      },
+      arguments: {
+        collateralUnderlyingBrand: vanBrand,
+      },
+    },
+  };
+
+  console.log('borrowPanOfferConfig', borrowPanOfferConfig);
+  const borrowPanOfferID = await E(walletBridge).addOffer(borrowPanOfferConfig);
 
   console.log(`-- LENDING_POOL_INSTANCE_BOARD_ID: ${LENDING_POOL_INSTANCE_BOARD_ID} --`);
   console.log(`-- LENDING_POOL_INSTALL_BOARD_ID: ${LENDING_POOL_INSTALL_BOARD_ID} --`);
@@ -392,5 +433,5 @@ export default async function deployContract(
   console.log(`-- DEPOSIT_VAN_OFFER_ID: ${depositVanfferID} --`);
   console.log(`-- DEPOSIT_PAN_OFFER_ID: ${depositPanOfferID} --`);
   console.log(`-- PRICE_MANAGER_INSTANCE_BOARD_ID: ${PRICE_MANAGER_INSTANCE_BOARD_ID} --`);
-  // console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
+  console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
 }

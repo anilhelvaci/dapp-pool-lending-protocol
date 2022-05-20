@@ -5,9 +5,7 @@ import {
   makeRatio,
 } from '@agoric/zoe/src/contractSupport/index.js';
 import { resolve as importMetaResolve } from 'import-meta-resolve';
-import bundleSource from '@endo/bundle-source';
 import { makeTracer } from '../../src/makeTracer.js';
-import { makeGovernedTerms } from '../../src/lendingPool/params.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 
 const trace = makeTracer('Helper');
@@ -44,11 +42,11 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   const seat = await E(zoe).offer(
     invitation,
     proposal,
-    paymentKeywordRecord
+    paymentKeywordRecord,
   );
 
   const {
-    Protocol: protocolReceived
+    Protocol: protocolReceived,
   } = await E(seat).getPayouts();
 
   const protocolAmount = await E(protocolIssuer).getAmountOf(protocolReceived);
@@ -70,7 +68,7 @@ export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underly
   const pm = await E(lendingPool).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
 
   return pm;
-}
+};
 
 export const makeRates = (underlyingBrand, compareBrand) => {
   return harden({
@@ -85,7 +83,7 @@ export const makeRates = (underlyingBrand, compareBrand) => {
     // multipilier rate for utilizitaion rate
     multipilierRate: makeRatio(20n, underlyingBrand),
   });
-}
+};
 
 export const setupAssets = () => {
   // setup collateral assets
@@ -102,9 +100,9 @@ export const setupAssets = () => {
     panKit,
     usdKit,
     agVanKit,
-    agPanKit
+    agPanKit,
   });
-}
+};
 
 export const makeBundle = async (bundleSource, sourceRoot) => {
   const url = await importMetaResolve(sourceRoot, import.meta.url);
@@ -112,133 +110,13 @@ export const makeBundle = async (bundleSource, sourceRoot) => {
   const contractBundle = await bundleSource(path);
   trace('makeBundle', sourceRoot);
   return contractBundle;
-}
-
-export const startLendingPool = async (
-  {
-    consume: {
-      vaultBundles,
-      chainTimerService,
-      priceManager,
-      zoe,
-      feeMintAccess: feeMintAccessP, // ISSUE: why doeszn't Zoe await this?
-      economicCommitteeCreatorFacet: electorateCreatorFacet,
-      bootstrappedAssets,
-      compareCurrencyBrand
-    },
-    produce, // {  vaultFactoryCreator }
-    brand: {
-      consume: { RUN: centralBrandP },
-    },
-    instance,
-    installation,
-  },
-  { loanParams } = {
-    loanParams: {
-      chargingPeriod: SECONDS_PER_HOUR,
-      recordingPeriod: SECONDS_PER_DAY,
-    },
-  },
-) => {
-  const bundles = await vaultBundles;
-  const installations = await Collect.allValues({
-    LendingPool: E(zoe).install(bundles.LendingPool),
-    liquidate: E(zoe).install(bundles.liquidate),
-  });
-
-  const poserInvitationP = E(electorateCreatorFacet).getPoserInvitation();
-  const [initialPoserInvitation, invitationAmount] = await Promise.all([
-    poserInvitationP,
-    E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
-  ]);
-
-  const centralBrand = await centralBrandP;
-
-  // declare governed params for the vaultFactory; addVaultType() sets actual rates
-  const rates = {
-    liquidationMargin: makeRatio(105n, centralBrand),
-    interestRate: makeRatio(250n, centralBrand, BASIS_POINTS),
-    loanFee: makeRatio(200n, centralBrand, BASIS_POINTS),
-  };
-
-  const [ammInstance, electorateInstance, contractGovernorInstall] =
-    await Promise.all([
-      instance.consume.amm,
-      instance.consume.economicCommittee,
-      installation.consume.contractGovernor,
-    ]);
-  const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
-
-  const lendingPoolTerms = makeGovernedTerms(
-    await priceManager,
-    loanParams,
-    installations.liquidate,
-    chainTimerService,
-    invitationAmount,
-    rates,
-    ammPublicFacet,
-    await bootstrappedAssets,
-    undefined,
-    await compareCurrencyBrand
-  );
-  /**
-   * This is for if we want to govern the lendingPool contract via a DAO.
-   * Commented out right now might need this later
-   */
-  // const governorTerms = harden({
-  //   timer: chainTimerService,
-  //   electorateInstance,
-  //   governedContractInstallation: installations.VaultFactory,
-  //   governed: {
-  //     terms: vaultFactoryTerms,
-  //     issuerKeywordRecord: {},
-  //     privateArgs: harden({ feeMintAccess, initialPoserInvitation }),
-  //   },
-  // });
-
-  const {
-    creatorFacet: lendingPoolCreatorFacet,
-    publicFacet: lendingPoolPublicFacet,
-    instance: lendingPoolInstance,
-  } = await E(zoe).startInstance(
-    installations.LendingPool,
-    undefined,
-    lendingPoolTerms,
-    harden({ initialPoserInvitation }),
-  );
-
-  // const [vaultFactoryInstance, vaultFactoryCreator] = await Promise.all([
-  //   E(governorCreatorFacet).getInstance(),
-  //   E(governorCreatorFacet).getCreatorFacet(),
-  // ]);
-  // const voteCreator = Far('vaultFactory vote creator', {
-  //   voteOnParamChange: E(governorCreatorFacet).voteOnParamChange,
-  // });
-  // produce.vaultFactoryCreator.resolve(vaultFactoryCreator);
-  // produce.vaultFactoryGovernorCreator.resolve(governorCreatorFacet);
-  // produce.vaultFactoryVoteCreator.resolve(voteCreator);
-  // // Advertise the installations, instances in agoricNames.
-  // instance.produce.VaultFactory.resolve(vaultFactoryInstance);
-  // instance.produce.Treasury.resolve(vaultFactoryInstance);
-  // instance.produce.VaultFactoryGovernor.resolve(governorInstance);
-  // entries(installations).forEach(([name, install]) =>
-  //   installation.produce[name].resolve(install),
-  // );
-  console.log('PUBLIC_FACET', lendingPoolPublicFacet);
-  return harden({
-    lendingPoolCreatorFacet,
-    lendingPoolPublicFacet,
-    lendingPoolInstance,
-    installations
-  })
-
 };
 
-export const startFaucets = async (zoe, faucetBundles) => {
+export const startFaucets = async (zoe, installation) => {
 
   const installations = await Collect.allValues({
-    priceAuthorityFaucet: E(zoe).install(faucetBundles.priceAuthorityFaucet),
-    lendingPoolFaucet: E(zoe).install(faucetBundles.lendingPoolFaucet),
+    priceAuthorityFaucet: installation.priceAuthorityFaucet,
+    lendingPoolFaucet: installation.lendingPoolFaucet,
   });
 
   // start priceAuthorityFaucet
@@ -247,7 +125,7 @@ export const startFaucets = async (zoe, faucetBundles) => {
     publicFacet: priceAuthorityFaucetPublicFacet,
     instance: priceAuthorityFaucetInstance,
   } = await E(zoe).startInstance(
-    installations.priceAuthorityFaucet
+    installations.priceAuthorityFaucet,
   );
 
   // start vanFaucet
@@ -302,45 +180,42 @@ export const startFaucets = async (zoe, faucetBundles) => {
     vanAsset: {
       creatorFacet: vanFaucetCreatorFacet,
       publicFacet: vanFaucetPublicFacet,
-      instance: vanFaucetInstance
+      instance: vanFaucetInstance,
     },
     panAsset: {
       creatorFacet: panFaucetCreatorFacet,
       publicFacet: panFaucetPublicFacet,
-      instance: panFaucetInstance
+      instance: panFaucetInstance,
     },
     usdAsset: {
       creatorFacet: usdFaucetCreatorFacet,
       publicFacet: usdFaucetPublicFacet,
-      instance: usdFaucetInstance
+      instance: usdFaucetInstance,
     },
     priceAuthorityFaucet: {
       creatorFacet: priceAuthorityFaucetCreatorFacet,
       publicFacet: priceAuthorityFaucetPublicFacet,
-      instance: priceAuthorityFaucetInstance
+      instance: priceAuthorityFaucetInstance,
     },
-    installations
-  }
-}
+    installations,
+  };
+};
 
-export const startPriceManager = async (zoe, priceManBundle) => {
-  const installations = await Collect.allValues({
-    priceManagerContract: E(zoe).install(priceManBundle.priceManagerContract),
-  });
+export const startPriceManager = async (zoe, priceManInstallation) => {
 
   const {
     creatorFacet: priceAuthorityManagerCreatorFacet,
     publicFacet: priceAuthorityManagerPublicFacet,
     instance: priceAuthorityManagerInstance,
   } = await E(zoe).startInstance(
-    installations.priceManagerContract
+    priceManInstallation,
   );
 
   return {
     priceAuthorityManagerPublicFacet,
-    priceAuthorityManagerInstance
-  }
-}
+    priceAuthorityManagerInstance,
+  };
+};
 
 export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keyword) => {
   const displayInfo = await E(brand).getDisplayInfo();
@@ -348,15 +223,14 @@ export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keywo
   proposalAmountKeywordRecord[keyword] = AmountMath.make(brand, unit * 10n ** BigInt(displayInfo.decimalPlaces));
   const liquidityProposal = {
     give: {},
-    want: proposalAmountKeywordRecord
-  }
+    want: proposalAmountKeywordRecord,
+  };
 
   const faucetSeat = E(zoe).offer(
     invitation,
     harden(liquidityProposal),
-    harden({})
+    harden({}),
   );
 
-  return  await E(faucetSeat).getPayout(keyword);
-
-}
+  return await E(faucetSeat).getPayout(keyword);
+};

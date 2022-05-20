@@ -147,6 +147,7 @@
  * @typedef {Object} LoanTiming
  * @property {bigint} chargingPeriod
  * @property {bigint} recordingPeriod
+ * @property {bigint} priceCheckPeriod
  */
 
 /**
