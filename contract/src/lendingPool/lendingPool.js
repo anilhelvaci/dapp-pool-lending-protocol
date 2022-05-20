@@ -3,24 +3,9 @@
 import '@agoric/zoe/exported.js';
 import '@agoric/zoe/src/contracts/exported.js';
 
-// The vaultFactory owns a number of VaultManagers and a mint for RUN.
-//
-// addVaultType is a closely held method that adds a brand new collateral type.
-// It specifies the initial exchange rate for that type. It depends on a
-// separately specified AMM to provide the ability to liquidate loans that are
-// in arrears. We could check that the AMM has sufficient liquidity, but for the
-// moment leave that to those participating in the governance process for adding
-// new collateral type to ascertain.
-
-// This contract wants to be managed by a contractGovernor, but it isn't
-// compatible with contractGovernor, since it has a separate paramManager for
-// each Vault. This requires it to manually replicate the API of contractHelper
-// to satisfy contractGovernor. It needs to return a creatorFacet with
-// { getParamMgrRetriever, getInvitation, getLimitedCreatorFacet }.
-
 import { E } from '@agoric/eventual-send';
-import '@agoric/governance/src/exported';
-import { AssetKind } from '@agoric/ertp';
+import '@agoric/governance/src/exported.js';
+import { AmountMath, AssetKind } from '@agoric/ertp';
 
 import { makeScalarMap, keyEQ } from '@agoric/store';
 import {
@@ -32,12 +17,15 @@ import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 
-import { makeVaultManager } from './vaultManager.js';
+import { makePoolManager } from './poolManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
-import { makeVaultParamManager, makeElectorateParamManager } from './params.js';
+import { makePoolParamManager, makeElectorateParamManager } from './params.js';
+import { assert } from '@agoric/assert';
 
 const { details: X } = assert;
+
+const BASIS_POINTS = 10000n;
 
 /**
  * @param {ContractFacet} zcf
@@ -46,50 +34,168 @@ const { details: X } = assert;
 export const start = async (zcf, privateArgs) => {
   const {
     ammPublicFacet,
-    priceAuthority,
+    priceManager,
     timerService,
     liquidationInstall,
     electionManager,
-    main: { [CONTRACT_ELECTORATE]: electorateParam },
+    governedParams: { [CONTRACT_ELECTORATE]: electorateParam },
     loanTimingParams,
-    bootstrappedAssets: bootstrappedAssetBrands
+    bootstrappedAssets: bootstrappedAssetIssuers,
+    compareCurrencyBrand
   } = zcf.getTerms();
+  const { initialPoserInvitation } = privateArgs;
+  const electorateParamManager = await makeElectorateParamManager(E(zcf).getZoeService(), initialPoserInvitation);
 
-  const protocolTokenMintsP = bootstrappedAssetBrands.map(async brand => {
-    const protocolTokenName = `Ag${await E(brand).getAllegedName()}`;
-    return await zcf.makeZCFMint(protocolTokenName, AssetKind.NAT);
-  })
+  console.log('[PRICE_MANAGER]', priceManager);
+  console.log('[COMPARE_CURRENCY_BRAND]', compareCurrencyBrand);
 
-  const protocolTokenMints = await Promise.all(protocolTokenMintsP);
+  const poolTypes = makeScalarMap('brand');
+  const poolParamManagers = makeScalarMap('brand');
+  console.log('[LENDING_POOL]');
 
-  const getProtocolTokenList = () => {
-    return protocolTokenMints.map(mint => mint.getIssuerRecord().brand.getAllegedName());
+  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => { // TODO priceAuth as an argument
+    await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
+    const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
+    const { brand: protocolBrand } = protocolMint.getIssuerRecord();
+    const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
+    // We create only one vault per collateralType.
+    assert(
+      !poolTypes.has(underlyingBrand),
+      `Collateral brand ${underlyingBrand} has already been added`,
+    );
+
+    const initialExchangeRate = makeRatioFromAmounts(AmountMath.make(underlyingBrand, 200n),
+      AmountMath.make(protocolBrand, BASIS_POINTS));
+    const ratesUpdated = harden({
+      ...rates,
+      initialExchangeRate
+    });
+    /** a powerful object; can modify parameters */
+    const poolParamManager = makePoolParamManager(ratesUpdated);
+    poolParamManagers.init(underlyingBrand, poolParamManager);
+
+    // TODO Create liquadition for dynamic underdlying assets
+    // const { creatorFacet: liquidationFacet } = await E(zoe).startInstance(
+    //   liquidationInstall,
+    //   harden({ RUN: runIssuer, Collateral: underlyingIssuer }),
+    //   harden({ amm: ammPublicFacet }),
+    // );
+    // const liquidationStrategy = makeLiquidationStrategy(liquidationFacet); ??/
+
+    const startTimeStamp = await E(timerService).getCurrentTimestamp();
+    const priceAuthNotifier = await E(priceManager).addNewWrappedPriceAuthority(underlyingBrand, priceAuthority, compareCurrencyBrand);
+
+    const pm = makePoolManager(
+      zcf,
+      protocolMint,
+      underlyingBrand,
+      underlyingBrand,
+      compareCurrencyBrand,
+      underlyingKeyword,
+      priceAuthority,
+      priceAuthNotifier,
+      priceManager,
+      loanTimingParams,
+      poolParamManager.getParams,
+      // reallocateWithFee,
+      timerService,
+      // liquidationStrategy, TODO figure out what to with this later
+      startTimeStamp,
+      getExchangeRateForPool
+    );
+    poolTypes.init(underlyingBrand, pm);
+
+    return pm;
+  };
+
+  const getExchangeRateForPool = brand => {
+    console.log("getExchangeRateForPool: brand", brand);
+    assert(
+      poolTypes.has(brand),
+      X`Not a supported collateral type ${brand}`,
+    );
+    const collateralPool = poolTypes.get(brand);
+
+    // This is the exchange between the collateral presented as protocolToken
+    // and underlying asset corresponding to that protocol token
+    return collateralPool.getExchangeRate();
+  }
+
+  const makeBorrowInvitation = () => {
+    /** @param {ZCFSeat} borrowerSeat
+     * @param {Object} offerArgs
+     * */
+    const borrowHook = async (borrowerSeat, offerArgs) => {
+      assertProposalShape(borrowerSeat, {
+        give: { Collateral: null },
+        want: { Debt: null },
+      });
+
+      console.log("*[OFFER_ARGS]*", offerArgs);
+      assert(typeof offerArgs == 'object', "[NO_OFFER_ARGS]");
+      assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'), "[NO_OFFER_ARGS]");
+      const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
+      console.log("*[collateralUnderlyingBrand]*", collateralUnderlyingBrand);
+      const currentCollateralExchangeRate = getExchangeRateForPool(collateralUnderlyingBrand);
+
+      const {
+        want: { Debt: { brand: borrowBrand } }
+      } = borrowerSeat.getProposal();
+      assert(
+        poolTypes.has(borrowBrand),
+        X`Not a supported collateral type ${borrowBrand}`,
+      );
+      const pool = poolTypes.get(borrowBrand);
+      return pool.makeBorrowKit(borrowerSeat, currentCollateralExchangeRate);
+    };
+
+    return zcf.makeInvitation(borrowHook, 'Borrow');
+  }
+
+  const hasKeyword = keyword => {
+    return zcf.assertUniqueKeyword(keyword);
+  }
+
+  const hasPool = brand => {
+    const result = poolTypes.has(brand) && poolParamManagers.has(brand);
+    return result;
   }
 
   const publicFacet = Far('lending pool public facet', {
     helloWorld: () => 'Hello World',
-    getProtocolTokenList
+    hasPool,
+    hasKeyword,
+    getPool: (brand) => poolTypes.get(brand),
+    makeBorrowInvitation,
+    getAmountKeywordRecord: (keyword, brand, value) => {
+      const amountKeywordRecord = {};
+      amountKeywordRecord[keyword] = AmountMath.make(brand, value);
+      return amountKeywordRecord;
+    }
   });
 
   const getParamMgrRetriever = () =>
     Far('paramManagerRetriever', {
       get: paramDesc => {
-        if (paramDesc.key === 'main') {
+        if (paramDesc.key === 'governedParams') {
           return electorateParamManager;
         } else {
-          return vaultParamManagers.get(paramDesc.collateralBrand);
+          return poolParamManagers.get(paramDesc.collateralBrand);
         }
       },
     });
 
   /** @type {VaultFactory} */
-  const vaultFactory = Far('vaultFactory machine', {
-    helloFromCreator: () => 'Hello From the creator'
+  const lendingPool = Far('lendingPool machine', {
+    helloFromCreator: () => 'Hello From the creator',
+    addPoolType
   });
 
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {
     getParamMgrRetriever,
-    getLimitedCreatorFacet: () => vaultFactory,
+    getLimitedCreatorFacet: () => lendingPool,
+    getGovernedApis: () => harden({}),
+    getGovernedApiNames: () => harden({}),
   });
 
   return harden({

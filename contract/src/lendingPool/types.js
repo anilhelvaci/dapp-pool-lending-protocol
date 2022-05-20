@@ -26,6 +26,10 @@
  * @property {Ratio} interestRate - annual interest rate charged on loans
  * @property {Ratio} loanFee - The fee (in BasisPoints) charged when opening
  * or increasing a loan.
+ * @property {Ratio} initialExchangeRate - Exchange rate between underlying
+ * asset and the protocol token when protocol token supply is zero.
+ * @property {Ratio} baseRate
+ * @property {Ratio} multipilierRate
  */
 
 /**
@@ -43,6 +47,57 @@
  * @property {() => Allocation} getRewardAllocation,
  * @property {() => Instance} getContractGovernor
  * @property {() => Promise<Invitation>} makeCollectFeesInvitation
+ */
+
+/**
+ * @typedef {Object} ZCFSeat
+ * @property {() => void} exit
+ * @property {ZCFSeatFail} fail
+ * @property {() => Notifier<Allocation>} getNotifier
+ * @property {() => boolean} hasExited
+ * @property {() => ProposalRecord} getProposal
+ * @property {ZCFGetAmountAllocated} getAmountAllocated
+ * @property {() => Allocation} getCurrentAllocation
+ * @property {() => Allocation} getStagedAllocation
+ * @property {() => boolean} hasStagedAllocation
+ * @property {(newAllocation: Allocation) => boolean} isOfferSafe
+ * @property {(amountKeywordRecord: AmountKeywordRecord) => AmountKeywordRecord} incrementBy
+ * @property {(amountKeywordRecord: AmountKeywordRecord) => AmountKeywordRecord} decrementBy
+ * @property {() => void} clear
+ */
+
+/**
+ * @typedef {Object} ContractFacet
+ *
+ * The Zoe interface specific to a contract instance. The Zoe Contract
+ * Facet is an API object used by running contract instances to access
+ * the Zoe state for that instance. The Zoe Contract Facet is accessed
+ * synchronously from within the contract, and usually is referred to
+ * in code as zcf.
+ *
+ * @property {Reallocate} reallocate - reallocate amounts among seats
+ * @property {(keyword: Keyword) => void} assertUniqueKeyword - check
+ * whether a keyword is valid and unique and could be added in
+ * `saveIssuer`
+ * @property {SaveIssuer} saveIssuer - save an issuer to ZCF and Zoe
+ * and get the AmountMath and brand synchronously accessible after
+ * saving
+ * @property {MakeInvitation} makeInvitation
+ * @property {(completion: Completion) => void} shutdown
+ * @property {ShutdownWithFailure} shutdownWithFailure
+ * @property {Assert} assert
+ * @property {() => ERef<ZoeService>} getZoeService
+ * @property {() => Issuer} getInvitationIssuer
+ * @property {() => Terms} getTerms
+ * @property {(issuer: Issuer) => Brand} getBrandForIssuer
+ * @property {(brand: Brand) => Issuer} getIssuerForBrand
+ * @property {GetAssetKindByBrand} getAssetKind
+ * @property {MakeZCFMint} makeZCFMint
+ * @property {ZCFRegisterFeeMint} registerFeeMint
+ * @property {ZCFMakeEmptySeatKit} makeEmptySeatKit
+ * @property {SetTestJig} setTestJig
+ * @property {() => void} stopAcceptingOffers
+ * @property {() => Instance} getInstance
  */
 
 /**
@@ -64,10 +119,14 @@
  * @property {() => Ratio} getLoanFee
  * @property {() => Promise<PriceQuote>} getCollateralQuote
  * @property {() => Ratio} getInterestRate - The annual interest rate on a loan
+ * @property {() => Ratio} getInitialExchangeRate
+ * @property {() => Ratio} getExchangeRate
+ * @property {(depositAmount: Amount) => Amount} getProtocolAmountOut
  * @property {() => RelativeTime} getChargingPeriod - The period (in seconds) at
  *   which interest is charged to the loan.
  * @property {() => RelativeTime} getRecordingPeriod - The period (in seconds)
  *   at which interest is recorded to the loan.
+ * @property {() => Ratio} getCurrentBorrowingRate
  */
 
 /**
@@ -88,6 +147,7 @@
  * @typedef {Object} LoanTiming
  * @property {bigint} chargingPeriod
  * @property {bigint} recordingPeriod
+ * @property {bigint} priceCheckPeriod
  */
 
 /**
@@ -162,3 +222,11 @@
  */
 
 /** @typedef {import('./vault').InnerVault} InnerVault */
+
+/**
+ * @typedef {Object} ERef<PriceManager>
+ * @property {() => void } addNewPriceAuthority
+ * @property {() => void} addNewSupportedAssetPublicFacet
+ * @property {() => PriceAuthority} getPriceAuthority
+ * @property {() => VaultManager} getsupportedAssetPublicFacets
+ */

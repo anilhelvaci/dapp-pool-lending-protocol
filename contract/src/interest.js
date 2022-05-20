@@ -115,17 +115,17 @@ export const calculateCompoundedInterest = (
 /**
  *
  *
- * @param {ZCFMint} mint
+ * @param {Brand} underlyingBrand
  * @param {Amount} debt
  */
-const validatedBrand = async (mint, debt) => {
+const validatedBrand = async (underlyingBrand, debt) => {
   const { brand: debtBrand } = debt;
-  const { brand: issuerBrand } = await E(mint).getIssuerRecord();
+  // const { brand: issuerBrand } = await E(mint).getIssuerRecord();
   assert(
-    debtBrand === issuerBrand,
-    X`Debt and issuer brands differ: ${debtBrand} != ${issuerBrand}`,
+    debtBrand === underlyingBrand,
+    X`Debt and issuer brands differ: ${debtBrand} != ${underlyingBrand}`,
   );
-  return issuerBrand;
+  return underlyingBrand;
 };
 
 /**
@@ -148,7 +148,7 @@ const validatedBrand = async (mint, debt) => {
  * @returns {Promise<{compoundedInterest: Ratio, latestInterestUpdate: bigint, totalDebt: Amount<NatValue> }>}
  */
 export const chargeInterest = async (powers, params, prior, accruedUntil) => {
-  const brand = await validatedBrand(powers.mint, prior.totalDebt);
+  const brand = await validatedBrand(powers.underlyingBrand, prior.totalDebt);
 
   const interestCalculator = makeInterestCalculator(
     params.interestRate,
@@ -193,13 +193,13 @@ export const chargeInterest = async (powers, params, prior, accruedUntil) => {
     AmountMath.make(brand, interestAccrued),
   );
 
-  // mint that much of brand for the reward pool
-  const rewarded = AmountMath.make(brand, interestAccrued);
-  powers.mint.mintGains(
-    harden({ [powers.seatAllocationKeyword]: rewarded }),
-    powers.poolIncrementSeat,
-  );
-  powers.reallocateWithFee(rewarded, powers.poolIncrementSeat);
+  // // mint that much of brand for the reward pool
+  // const rewarded = AmountMath.make(brand, interestAccrued);
+  // powers.mint.mintGains(
+  //   harden({ [powers.seatAllocationKeyword]: rewarded }),
+  //   powers.poolIncrementSeat,
+  // );
+  // powers.reallocateWithFee(rewarded, powers.poolIncrementSeat);
 
   return {
     compoundedInterest,

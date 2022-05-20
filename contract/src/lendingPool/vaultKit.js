@@ -62,7 +62,7 @@ const wrapVault = innerVault => {
  * Create a kit of utilities for use of the (inner) vault.
  *
  * @param {InnerVault} inner
- * @param {Notifier<import('./vaultManager').AssetState>} assetNotifier
+ * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
  */
 export const makeVaultKit = (inner, assetNotifier) => {
   const { vault, vaultUpdater } = wrapVault(inner);
