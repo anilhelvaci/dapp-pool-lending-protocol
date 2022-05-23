@@ -77,10 +77,7 @@ history[24] 10000000000n
 ````
 
 ### Borrow
-Here we are taking a different approach from the walletBridge approach we used for the deposit functionality. The reason for that 
-is the agoric verion we currently have does not support sending optional offerArgs to the contract and we need the offerArgs
-for out borrowing function to work. In the upcoming versions this is fixed and the below interaction with contract is
-only for demonstration purpuses. A real dapp will never use E(zoe).offer() by itself.
+Now let's borrow some money
 
 All board IDs you see here is taken from the console output of the ./deploy.js.
 
@@ -97,7 +94,6 @@ history[26] [Object Alleged: VAN brand]{}
 command[27] vanBrand = history[26]
 history[27] [Object Alleged: VAN brand]{}
 
-
 // PAN
 command[28] E(home.board).getValue("board01744")
 history[28] [Object Alleged: PAN issuer]{}
@@ -108,22 +104,6 @@ history[30] [Object Alleged: PAN brand]{}
 command[31] panBrand = history[30]
 history[31] [Object Alleged: PAN brand]{}
 
-// AgVAN
-command[37] E(home.board).getValue("board03446")
-history[37] [Object Alleged: AgVAN issuer]{}
-command[38] agVanIssuer = history[37]
-history[38] [Object Alleged: AgVAN issuer]{}
-command[39] E(agVanIssuer).getBrand()
-history[39] [Object Alleged: AgVAN brand]{}
-command[42] agVanBrand = history[39]
-history[42] [Object Alleged: AgVAN brand]{}
-
-// Get the purse for AgVAN
-command[36] E(home.wallet).getPurse("AgVAN Purse-1")
-history[36] [Object Alleged: AgVAN purse]{}
-
-// Build the proposal
-
 // Get lendingPoolPublicFacet
 command[21] E(home.board).getValue("board02437")
 history[21] [Object Alleged: InstanceHandle]{}
@@ -132,42 +112,44 @@ history[22] [Object Alleged: lending pool public facet]{}
 command[23] lendingPoolPublicFacet = history[22]
 history[23] [Object Alleged: lending pool public facet]{}
 
-// AmountKeywordRecord for give
-command[43] E(lendingPoolPublicFacet).getAmountKeywordRecord("Collateral", agVanBrand, 10n ** 8n * 50n)
-history[43] {"Collateral":{"brand":[Object Alleged: AgVAN brand]{},"value":5000000000n}}
+// Get the wallet bridge
+command[21] wb = E(home.wallet).getBridge()
+history[21] [Object Alleged: preapprovedBridge]{}
 
-// AmountKeywordRecord for want
-command[44] E(lendingPoolPublicFacet).getAmountKeywordRecord("Debt", panBrand, 4n * 10n ** 6n)
-history[44] {"Debt":{"brand":[Object Alleged: PAN brand]{},"value":4000000n}}
+// Build the proposal
+command[8] borrowProposalTemplate = { want: { Debt: { pursePetname: 'PAN Purse', value: 4n * 10n ** 6n, }, }, give: { Collateral: { pursePetname: 'AgVAN Purse', value: 1n * 10n ** 8n * 50n, }, }, arguments: { collateralUnderlyingBrand: vanBrand, }, }
+history[8] {"want":{"Debt":{"pursePetname":"PAN Purse","value":4000000n}},"give":{"Collateral":{"pursePetname":"AgVAN Purse","value":5000000000n}},"arguments":{"collateralUnderlyingBrand":[Object Alleged: VAN brand]{}}}
 
-borrowProposalOne = {want: history[44], give: history[43]}
+// Prepare other parameters for offerConfig
+command[15] id= "421409128"
+history[15] "421409128"
 
-//Prepare the payment
-command[47] E(history[36]).withdraw(borrowProposalOne.give.Collateral) // history[36] corresponds to the purse we got from the wallet
-history[47] [Object Alleged: AgVAN payment]{}
+command[11] installationHandleBoardId="board06120"
+history[11] "board06120"
 
-// Build the offer
-command[48] E(home.zoe).offer(E(lendingPoolPublicFacet).makeBorrowInvitation(), borrowProposalOne, {Collateral: history[47]}, {collateralUnderlyingBrand: vanBrand})
-history[48] [Object Alleged: userSeat]{}
-// Check for results
-command[52] E(history[48]).getOfferResult() // This might take a while
-history[52] {"assetNotifier":[Object Alleged: notifier]{},"invitationMakers":[Object Alleged: invitation makers]{},"vault":[Object Alleged: vault]{},"vaultNotifier":[Object Alleged: notifier]{},"vaultUpdater":[Object Alleged: updater]{}}
+command[13] instanceHandleBoardId="board04719"
+history[13] "board04719"
 
-// Get payout
-command[51] E(history[48]).getPayout("Debt")
-history[51] [Object Alleged: PAN payment]{}
+command[16] offerConfig = {id, installationHandleBoardId, instanceHandleBoardId, proposalTemplate: borrowProposalTemplate}
+history[16] {"id":"421409128","installationHandleBoardId":"board06120","instanceHandleBoardId":"board04719","proposalTemplate":{"want":{"Debt":{"pursePetname":"PAN Purse","value":4000000n}},"give":{"Collateral":{"pursePetname":"AgVAN Purse","value":5000000000n}},"arguments":{"collateralUnderlyingBrand":[Object Alleged: VAN brand]{}}}}
 
-// Check Payment
-command[53] E(panIssuer).getAmountOf(history[51])
-history[53] {"brand":[Object Alleged: PAN brand]{},"value":4000000n}
+// Get the invitation for borrow, the last offerConfig parameter
+command[20] E(lendingPoolPublicFacet).makeBorrowInvitation().then(invitation => offerConfig.invitation = invitation)
+history[20] [Object Alleged: Zoe Invitation payment]{}
 
-// Get purse for PAN
-command[54] E(home.wallet).getPurse("PAN Purse-1")
-history[54] [Object Alleged: PAN purse]{}
+// Send the offer
+command[24] E(wb).addOffer(offerConfig)
+history[24] "421409128"
 
-// Put the money inside the purse
-command[55] E(history[54]).deposit(history[51])
-history[55] {"brand":[Object Alleged: PAN brand]{},"value":4000000n}
+// Check offer result
+command[25] E(home.wallet).lookup("offerResult", "unknown#421409128")
+history[25] {"assetNotifier":[Object Alleged: notifier]{},"invitationMakers":[Object Alleged: invitation makers]{},"vault":[Object Alleged: vault]{},"vaultNotifier":[Object Alleged: notifier]{},"vaultUpdater":[Object Alleged: updater]{}}
+
+// Get PAN Pool Manager
+command[30] E(lendPublicFacet).getPool(panBrand)
+history[30] [Object Alleged: vault manager]{}
+command[31] panPoolMan = history[30]
+history[31] [Object Alleged: vault manager]{}
 
 // Check the parameters
 command[59] E(panPoolMan).getTotalDebt()

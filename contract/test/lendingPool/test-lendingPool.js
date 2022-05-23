@@ -580,7 +580,7 @@ test('borrow-rate-fluctuate', async t => {
 
   debtProposal = {
     give: { Collateral: collateral.amount },
-    want: { Debt: AmountMath.make(panBrand, 1000000n) }
+    want: { Debt: AmountMath.make(panBrand, 2000000n) }
   };
 
   debtPaymentKeywordRecord = {
@@ -601,13 +601,13 @@ test('borrow-rate-fluctuate', async t => {
 
   const vaultCurrentDebt1B = await E(vault1B).getCurrentDebt();
 
-  t.deepEqual(vaultCurrentDebt1B, AmountMath.make(panBrand, 1000000n));
-  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(275n, panBrand, BASIS_POINTS));
+  t.deepEqual(vaultCurrentDebt1B, AmountMath.make(panBrand, 2000000n));
+  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(280n, panBrand, BASIS_POINTS));
 
   await timer.tick();
   await waitForPromisesToSettle();
-  t.deepEqual(await E(panPoolMan).getTotalDebt(), AmountMath.make(panBrand, 5000000n + 372n * 7n))
-  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(275n, panBrand, BASIS_POINTS)); // adopt banker's rounding
+  t.deepEqual(await E(panPoolMan).getTotalDebt(), AmountMath.make(panBrand, 6000000n + 3183n))
+  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(280n, panBrand, BASIS_POINTS)); // adopt banker's rounding
   t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 200n)); // adopt banker's rounding
 });
 
