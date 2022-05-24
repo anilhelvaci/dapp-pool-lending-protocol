@@ -78,6 +78,7 @@ const validTransitions = {
  * @property {() => Brand} getThirdCurrencyBrand
  * @property {(seat: ZCFSeat, currentDebt: Amount) => void} transferDebt
  * @property {(brand: Brand) => Ratio} getExchangeRateForPool
+ * @property {(proposal: Proposal) => void} stageUnderlyingAllocation
  */
 
 /**
@@ -198,10 +199,10 @@ export const makeInnerVault = (
   /**
    * @param {Amount} oldDebt - prior principal and all accrued interest
    * @param {Amount} oldCollateral - actual collateral
-   * @param {Amount} targetDebt - actual principal and all accrued interest
+   * @param {Amount} newDebt - actual principal and all accrued interest
    */
-  const updateDebtAccounting = (oldDebt, oldCollateral, targetDebt) => {
-    const newDebt = AmountMath.add(oldDebt, targetDebt);
+  const updateDebtAccounting = (oldDebt, oldCollateral, newDebt) => {
+    // const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
     // update vault manager which tracks total debt
     manager.applyDebtDelta(oldDebt, newDebt);
@@ -355,14 +356,14 @@ export const makeInnerVault = (
    * @param {OuterPhase} newPhase
    */
   const snapshotState = newPhase => {
-    const { debtSnapshot: run, interestSnapshot: interest } = state;
+    const { debtSnapshot: debt, interestSnapshot: interest } = state;
     /** @type {VaultUIState} */
     return harden({
       // TODO move manager state to a separate notifer https://github.com/Agoric/agoric-sdk/issues/4540
-      interestRate: manager.getInterestRate(),
+      interestRate: manager.getCurrentBorrowingRate(),
       liquidationRatio: manager.getLiquidationMargin(),
       // XXX 'run' is implied by the brand in the amount
-      debtSnapshot: { run, interest },
+      debtSnapshot: { debt, interest },
       locked: getCollateralAmount(),
       // newPhase param is so that makeTransferInvitation can finish without setting the vault's phase
       // TODO refactor https://github.com/Agoric/agoric-sdk/issues/4415
@@ -417,9 +418,10 @@ export const makeInnerVault = (
   const closeHook = async seat => {
     assertCloseable();
     const { phase, vaultSeat } = state;
+    const proposal = seat.getProposal();
     if (phase === VaultPhase.ACTIVE) {
       assertProposalShape(seat, {
-        give: { RUN: null },
+        give: { Debt: null },
         want: { Collateral: null },
       });
 
@@ -428,14 +430,14 @@ export const makeInnerVault = (
       // missed our chance.
       const currentDebt = getCurrentDebt();
       const {
-        give: { RUN: runOffered },
-      } = seat.getProposal();
+        give: { Debt: debtOffered },
+      } = proposal;
 
       // you must pay off the entire remainder but if you offer too much, we won't
       // take more than you owe
       assert(
-        AmountMath.isGTE(runOffered, currentDebt),
-        X`Offer ${runOffered} is not sufficient to pay off debt ${currentDebt}`,
+        AmountMath.isGTE(debtOffered, currentDebt),
+        X`Offer ${debtOffered} is not sufficient to pay off debt ${currentDebt}`,
       );
 
       // Return any overpayment
@@ -444,8 +446,9 @@ export const makeInnerVault = (
           harden({ Collateral: getCollateralAllocated(vaultSeat) }),
         ),
       );
-      zcf.reallocate(seat, vaultSeat);
-      mint.burnLosses(harden({ RUN: currentDebt }), seat);
+      manager.stageUnderlyingAllocation(proposal);
+      seat.decrementBy(harden({ Debt: debtOffered }));
+      manager.reallocateBetweenSeats(seat, vaultSeat);
     } else if (phase === VaultPhase.LIQUIDATED) {
       // Simply reallocate vault assets to the offer seat.
       // Don't take anything from the offer, even if vault is underwater.
@@ -595,21 +598,17 @@ export const makeInnerVault = (
    * @param {ProposalRecord} proposal
    * @param {{vault: Amount, client: Amount}} debtAfter
    */
-  const loanFee = (proposal, debtAfter) => {
+  const calculateNewDebt = (proposal, debtAfter) => {
     let newDebt;
     const currentDebt = getCurrentDebt();
-    let toMint = AmountMath.makeEmpty(debtBrand);
-    let fee = AmountMath.makeEmpty(debtBrand);
-    if (proposal.want.RUN) {
-      fee = ceilMultiplyBy(proposal.want.RUN, manager.getLoanFee());
-      toMint = AmountMath.add(proposal.want.RUN, fee);
-      newDebt = AmountMath.add(currentDebt, toMint);
-    } else if (proposal.give.RUN) {
+    if (proposal.want.Debt) {
+      newDebt = AmountMath.add(proposal.want.Debt, currentDebt);
+    } else if (proposal.give.Debt) {
       newDebt = AmountMath.subtract(currentDebt, debtAfter.vault);
     } else {
       newDebt = currentDebt;
     }
-    return { newDebt, toMint, fee };
+    return newDebt;
   };
 
   /**
@@ -654,6 +653,9 @@ export const makeInnerVault = (
 
     // After the AWAIT, we retrieve the vault's allocations again.
     const collateralAfter = targetCollateralLevels(clientSeat);
+    const debtAfter = targetDebtLevels(clientSeat);
+
+    const newDebt = calculateNewDebt(proposal, debtAfter);
 
     // Get new balances after calling the priceAuthority, so we can compare
     // to the debt limit based on the new values.
@@ -664,7 +666,8 @@ export const makeInnerVault = (
       targetCollateralAmount,
       vaultCollateral,
       requestedDebtInCompareBrand,
-      targetDebt
+      targetDebt,
+      newDebt
     });
 
     // If the collateral decreased, we pro-rate maxDebt
@@ -694,9 +697,9 @@ export const makeInnerVault = (
     const { vaultSeat } = state;
     transferCollateral(clientSeat);
     manager.transferDebt(clientSeat, getCurrentDebt());
-    manager.reallocateBetweenSeats(clientSeat, vaultSeat);
+    manager.reallocateBetweenSeats(vaultSeat, clientSeat);
 
-    updateDebtAccounting(oldDebt, oldCollateral, targetDebt);
+    updateDebtAccounting(oldDebt, oldCollateral, newDebt);
 
     updateUiState();
     clientSeat.exit();

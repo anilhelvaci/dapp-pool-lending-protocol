@@ -274,9 +274,25 @@ export const makePoolManager = (
     }
   };
 
+  const stageUnderlyingAllocation = (proposal) => {
+    if (proposal.give.Debt) {
+      underlyingAssetSeat.incrementBy(harden({Underlying: proposal.give.Debt}))
+    } else if (proposal.want.Debt) {
+      underlyingAssetSeat.decrementBy(harden({Underlying: proposal.want.Debt}))
+    }
+  }
+
   const reallocateBetweenSeats = (vaultSeat, clientSeat) => {
-    console.log("reallocateBetweenSeats")
-    zcf.reallocate(underlyingAssetSeat, vaultSeat, clientSeat);
+    const seatList = [];
+    addIfHasStagedAllocation(seatList, vaultSeat);
+    addIfHasStagedAllocation(seatList, clientSeat);
+    addIfHasStagedAllocation(seatList, underlyingAssetSeat);
+    trace("seatList", seatList);
+    zcf.reallocate(...seatList);
+  }
+
+  const addIfHasStagedAllocation = (seatList, seat) => {
+    if(seat.hasStagedAllocation()) seatList.push(seat);
   }
 
   const periodNotifier = E(timerService).makeNotifier(
@@ -335,8 +351,8 @@ export const makePoolManager = (
   const managerFacet = harden({
     ...shared,
     applyDebtDelta,
-    // reallocateWithFee,
     reallocateBetweenSeats,
+    stageUnderlyingAllocation,
     transferDebt,
     getCollateralBrand: () => collateralBrand,
     getUnderlyingBrand: () => underlyingBrand,

@@ -1,6 +1,7 @@
 // @ts-check
 
 import {
+  ceilMultiplyBy,
   floorDivideBy,
   floorMultiplyBy,
   invertRatio,
@@ -46,7 +47,7 @@ export const calculateCurrentDebt = (
     interestSnapshot,
   );
 
-  return floorMultiplyBy(debtSnapshot, interestSinceSnapshot);
+  return ceilMultiplyBy(debtSnapshot, interestSinceSnapshot);
 };
 
 /**
