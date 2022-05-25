@@ -16,7 +16,7 @@ import {
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
-
+import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
 import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
@@ -24,8 +24,6 @@ import { makePoolParamManager, makeElectorateParamManager } from './params.js';
 import { assert } from '@agoric/assert';
 
 const { details: X } = assert;
-
-const BASIS_POINTS = 10000n;
 
 /**
  * @param {ContractFacet} zcf
@@ -64,8 +62,8 @@ export const start = async (zcf, privateArgs) => {
       `Collateral brand ${underlyingBrand} has already been added`,
     );
 
-    const initialExchangeRate = makeRatioFromAmounts(AmountMath.make(underlyingBrand, 200n),
-      AmountMath.make(protocolBrand, BASIS_POINTS));
+    const initialExchangeRate = makeRatioFromAmounts(AmountMath.make(underlyingBrand, 2000000n),
+      AmountMath.make(protocolBrand, BigInt(LARGE_DENOMINATOR)));
     const ratesUpdated = harden({
       ...rates,
       initialExchangeRate
@@ -152,6 +150,17 @@ export const start = async (zcf, privateArgs) => {
     return zcf.makeInvitation(borrowHook, 'Borrow');
   }
 
+  const makeRedeemInvitation = (underlyingBrand) => {
+    assert(
+      poolTypes.has(underlyingBrand),
+      X`Not a supported pool type ${underlyingBrand}`,
+    );
+
+    const pm = poolTypes.get(underlyingBrand);
+
+    return zcf.makeInvitation(pm.redeemHook, 'Redeem');
+  };
+
   const hasKeyword = keyword => {
     return zcf.assertUniqueKeyword(keyword);
   }
@@ -167,6 +176,7 @@ export const start = async (zcf, privateArgs) => {
     hasKeyword,
     getPool: (brand) => poolTypes.get(brand),
     makeBorrowInvitation,
+    makeRedeemInvitation,
     getAmountKeywordRecord: (keyword, brand, value) => {
       const amountKeywordRecord = {};
       amountKeywordRecord[keyword] = AmountMath.make(brand, value);

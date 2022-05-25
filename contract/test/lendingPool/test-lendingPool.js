@@ -610,7 +610,7 @@ test('borrow-rate-fluctuate', async t => {
   await waitForPromisesToSettle();
   t.deepEqual(await E(panPoolMan).getTotalDebt(), AmountMath.make(panBrand, 6000000n + 3183n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(280n, panBrand, BASIS_POINTS)); // adopt banker's rounding
-  t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 200n)); // adopt banker's rounding
+  t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 2000016n)); // adopt banker's rounding
 });
 
 /**
@@ -880,6 +880,8 @@ test('adjust-balances-interest-accrued', async t => {
     E(aliceVault).getCollateralAmount(),
 
   ]);
+
+  await waitForPromisesToSettle();
 
   t.is(aliceUpdateOfferResult, 'We have adjusted your balances, thank you for your business');
   t.deepEqual(await E(panIssuer).getAmountOf(aliceDebtReceivedPayment.Debt), AmountMath.make(panBrand, 7n * 10n ** 8n / 100n));
@@ -1151,6 +1153,135 @@ test('close-loan', async t => {
   t.is(aliceCloseOfferResult, 'your loan is closed, thank you for your business');
   t.is(state.value.vaultState, VaultPhase.CLOSED);
   t.deepEqual(aliceClosePayout, aliceCollateralPayment);
+});
+
+test('redeem-underlying', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    compareCurrencyKit: { brand: usdBrand },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+    vanRates,
+    panRates,
+  } = t.context;
+
+  t.context.loanTiming = {
+    chargingPeriod: secondsPerDay,
+    recordingPeriod: secondsPerDay * 7n,
+    priceCheckPeriod: secondsPerDay * 7n * 2n,
+  };
+
+  const { zoe, lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet }, timer } = await setupServices(
+    t,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
+    secondsPerDay * 7n,
+    500n,
+  );
+
+  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    priceList: [105n, 103n, 101n],
+    timer,
+    undefined,
+    unitAmountIn: AmountMath.make(vanBrand, 100n),
+    quoteInterval: secondsPerDay * 7n,
+  });
+
+  const panUsdPriceAuthority = makeScriptedPriceAuthority({
+    actualBrandIn: panBrand,
+    actualBrandOut: usdBrand,
+    priceList: [500n, 490n, 470n],
+    timer,
+    undefined,
+    unitAmountIn: AmountMath.make(panBrand, 100n),
+    quoteInterval: secondsPerDay * 7n,
+  });
+
+  // Add the pools
+  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
+  const panPoolMan = await addPool(zoe, panRates, lendingPoolCreatorFacet, panIssuer, 'PAN', panUsdPriceAuthority);
+
+  // Check the protocol tokens received
+  const agVanIssuer = await E(vanPoolMan).getProtocolIssuer();
+  const agVanBrand = await E(agVanIssuer).getBrand();
+  const agPanIssuer = await E(panPoolMan).getProtocolIssuer();
+  const agPanBrand = await E(agPanIssuer).getBrand();
+
+  // Put money inside the pools
+  let vanPoolDepositedMoney = await depositMoney(zoe, vanPoolMan, vanMint, 5n);
+  let panPoolDepositMoney = await depositMoney(zoe, panPoolMan, panMint, 10n);
+
+  await t.notThrowsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n - 1n)));
+  await t.throwsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n + 1n)));
+
+  const [collateralPayment, vanDepositedMoneyMinusLoan] =
+    await E(agVanIssuer).split(vanPoolDepositedMoney.payment,
+      calculateProtocolFromUnderlying(AmountMath.make(vanBrand, 1n * 10n ** 8n), await E(vanPoolMan).getExchangeRate()));
+  vanPoolDepositedMoney = vanDepositedMoneyMinusLoan;
+
+  let debtProposal = {
+    give: { Collateral: await E(agVanIssuer).getAmountOf(collateralPayment) },
+    want: { Debt: AmountMath.make(panBrand, 4n * 10n ** 6n) },
+  };
+
+  let debtPaymentKeywordRecord = {
+    Collateral: collateralPayment,
+  };
+
+  let borrowInvitation = await E(lendingPoolPublicFacet).makeBorrowInvitation();
+
+  let borrowerUserSeat = await E(zoe).offer(
+    borrowInvitation,
+    debtProposal,
+    debtPaymentKeywordRecord,
+    { collateralUnderlyingBrand: vanBrand },
+  );
+
+  const vaultKit4B = await E(borrowerUserSeat).getOfferResult();
+  const vault4B = vaultKit4B.vault;
+
+  const vaultCurrentDebt4B = await E(vault4B).getCurrentDebt();
+
+  t.deepEqual(vaultCurrentDebt4B, AmountMath.make(panBrand, 4n * 10n ** 6n));
+  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
+
+  // interest time
+  await timer.tick();
+  await waitForPromisesToSettle();
+
+  const vault4BDebtAfterInterest = await E(vault4B).getCurrentDebt();
+
+  t.deepEqual(vault4BDebtAfterInterest, AmountMath.make(panBrand, 4n * 10n ** 6n + 1960n));
+  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
+  t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 2000004n));
+
+  const [redeemPayment, panDepositedMoneyMinusRedeem] =
+    await E(agPanIssuer).split(panPoolDepositMoney.payment,
+      AmountMath.make(agPanBrand, 1n * 10n ** 8n * 50n));
+
+  const redeemProposal = {
+    give: { Protocol: await E(agPanIssuer).getAmountOf(redeemPayment) }
+  };
+
+console.log("redeemPayment", await E(agPanIssuer).getAmountOf(redeemPayment))
+  const redeemPaymentRecord = {
+    Protocol: redeemPayment
+  };
+
+  const redeemUserSeat = await E(zoe).offer(
+    E(lendingPoolPublicFacet).makeRedeemInvitation(panBrand),
+    redeemProposal,
+    redeemPaymentRecord
+  );
+
+  const redeemPayout = await E(redeemUserSeat).getPayout("Underlying");
+  const redeemOfferResult = await E(redeemUserSeat).getOfferResult();
+  console.log("redeemOfferResult", redeemOfferResult)
+  t.deepEqual(await E(panIssuer).getAmountOf(redeemPayout), AmountMath.make(panBrand, 100000200n));
+  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(259n, panBrand, BASIS_POINTS));
+  t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 2000004n));
 });
 
 test('math', async t => {

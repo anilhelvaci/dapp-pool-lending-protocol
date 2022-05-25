@@ -11,9 +11,9 @@ import { E } from '@endo/far';
 import { assert, details as X } from '@agoric/assert';
 
 export const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n;
-const BASIS_POINTS = 10000;
+export const BASIS_POINTS = 10000;
 // single digit APR is less than a basis point per day.
-const LARGE_DENOMINATOR = BASIS_POINTS * BASIS_POINTS;
+export const LARGE_DENOMINATOR = BASIS_POINTS * BASIS_POINTS;
 
 /**
  * Number chosen from 6 digits for a basis point, doubled for multiplication.

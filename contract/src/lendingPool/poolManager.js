@@ -36,6 +36,7 @@ import { chargeInterest } from '../interest.js';
 import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate } from '../protocolMath.js';
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
 import { makeQuoteManager } from './quoteManager.js';
+import { floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const trace = makeTracer('VM');
 
@@ -436,6 +437,33 @@ export const makePoolManager = (
     return vaultKit;
   };
 
+  /**
+   * @param {ZCFSeat} seat
+   * @returns {Promise<string>}
+   */
+  const redeemHook = async seat => {
+    assertProposalShape(seat, {
+      give: { Protocol: null },
+    });
+
+    const {
+      give: { Protocol: redeemProtocolAmount },
+    } = seat.getProposal();
+
+    const underlyingAmountToRedeem = floorMultiplyBy(redeemProtocolAmount, getExchangeRate());
+
+    assertEnoughLiquidtyExists(underlyingAmountToRedeem);
+    totalProtocolSupply = AmountMath.subtract(totalProtocolSupply, redeemProtocolAmount);
+    seat.incrementBy(
+      underlyingAssetSeat.decrementBy(harden({ Underlying: underlyingAmountToRedeem })),
+    );
+
+    zcf.reallocate(seat, underlyingAssetSeat);
+    seat.exit();
+
+    return "Success, thanks for doing business with us";
+  };
+
   const makeDepositInvitation = () => {
     /** @param {ZCFSeat} fundHolderSeat*/
     const depositHook = async fundHolderSeat => {
@@ -474,6 +502,7 @@ export const makePoolManager = (
     ...shared,
     makeVaultKit,
     makeBorrowKit,
+    redeemHook,
     makeDepositInvitation,
   });
 };

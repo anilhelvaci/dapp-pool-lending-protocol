@@ -11,10 +11,9 @@ import {
 import { assert, details as X, q } from '@agoric/assert';
 import { AmountMath } from '@agoric/ertp';
 import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
+import { LARGE_DENOMINATOR, BASIS_POINTS } from './interest.js';
 
 const { multiply, floorDivide, ceilDivide, add, subtract } = natSafeMath;
-
-const BASIS_POINTS = 10000n;
 
 export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalSupplyAmount) => {
   assert(totalCashAmount.brand === totalBorrowAmount.brand,
@@ -27,7 +26,7 @@ export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalS
       numeratorAmount,
       totalSupplyAmount
     ),
-    BASIS_POINTS
+    BigInt(LARGE_DENOMINATOR)
   )
 };
 
@@ -42,7 +41,7 @@ export const calculateUtilizationRate = (totalCashAmount, totalBorrowAmount) => 
       totalBorrowAmount,
       denominatorAmount
     ),
-    BASIS_POINTS
+    BigInt(BASIS_POINTS)
   );
 }
 
@@ -53,7 +52,7 @@ export const calculateBorrowingRate = (multiplierRatio, baseRate, utilizationRat
 
   return quantize(
     addRatios(baseRate, multiplyRatios(utilizationRate, multiplierRatio)),
-    BASIS_POINTS
+    BigInt(BASIS_POINTS)
   );
 };
 
