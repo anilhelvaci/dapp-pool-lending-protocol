@@ -1,5 +1,5 @@
-export const makeQuoteManager = () => {
-  let latestQuote;
+export const makeQuoteManager = (initialQuote) => {
+  let latestQuote = initialQuote;
 
   const updateLatestQuote = (newQuote) => {
     latestQuote = newQuote;

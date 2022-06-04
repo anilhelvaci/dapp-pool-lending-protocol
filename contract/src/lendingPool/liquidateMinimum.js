@@ -1,14 +1,16 @@
 // @ts-check
 
-import { E } from '@agoric/eventual-send';
-import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
+// import { E } from '@endo/eventual-send';
+import {
+  ceilMultiplyBy,
+  offerTo,
+} from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
-import { Far } from '@endo/marshal';
+import { Far, E } from '@endo/far';
 
-import { makeDefaultLiquidationStrategy } from './liquidation.js';
 import { makeTracer } from '../makeTracer.js';
 
-const trace = makeTracer('LM');
+const trace = makeTracer('LiqMin', false);
 
 /**
  * This contract liquidates the minimum amount of vault's collateral necessary
@@ -16,110 +18,98 @@ const trace = makeTracer('LM');
  * necessary. Because it has offer safety, it can refuse the trade. When that
  * happens, we fall back to selling using the default strategy, which currently
  * uses the AMM's swapIn instead.
+ *
+ * @param {ZCF<{
+ *   amm: XYKAMMPublicFacet,
+ * }>} zcf
  */
-
-/** @type {ContractStartFn} */
 const start = async zcf => {
   const { amm } = zcf.getTerms();
 
-  const makeDebtorHook = runDebt => {
-    const runBrand = runDebt.brand;
-    return async debtorSeat => {
-      const {
-        give: { In: amountIn },
-      } = debtorSeat.getProposal();
-      const inBefore = debtorSeat.getAmountAllocated('In');
+  /**
+   * @param {ZCFSeat} debtorSeat
+   * @param {object} options
+   * @param {Amount<'nat'>} options.debt Debt before penalties
+   * @param {Ratio} options.penaltyRate
+   */
+  const handleLiquidationOffer = async (
+    debtorSeat,
+    { debt: originalDebt, penaltyRate, collateralUnderlyingIssuer },
+  ) => {
+    console.log("Pools", await E(amm).getAllPoolBrands());
+    // XXX does not distribute penalties anywhere
+    const { zcfSeat: penaltyPoolSeat } = zcf.makeEmptySeatKit();
+    const penalty = ceilMultiplyBy(originalDebt, penaltyRate);
+    const debtWithPenalty = AmountMath.add(originalDebt, penalty);
+    // const debtWithPenalty = originalDebt;
+    console.log("Proposal", debtorSeat.getProposal())
+    const debtBrand = originalDebt.brand;
+    const {
+      give: { In: amountIn },
+    } = debtorSeat.getProposal();
+    // await zcf.saveIssuer(collateralUnderlyingIssuer, "In");
+    console.log("originalDebt", originalDebt)
+    console.log("debtWithPenalty", debtWithPenalty)
+    const { amountOut: debtPriceInCollateral } = await E(amm).getInputPrice(
+      debtWithPenalty,
+      AmountMath.makeEmpty(amountIn.brand)
+    );
 
-      const swapInvitation = E(amm).makeSwapOutInvitation();
-      const liqProposal = harden({
-        give: { In: amountIn },
-        want: { Out: runDebt },
-      });
-      trace(`OFFER TO DEBT: `, runDebt.value);
+    const collateralToSell = AmountMath.min(debtPriceInCollateral, amountIn);
 
-      const { deposited, userSeatPromise: liqSeat } = await offerTo(
-        zcf,
-        swapInvitation,
-        undefined, // The keywords were mapped already
-        liqProposal,
-        debtorSeat,
-      );
+    const swapInvitation = await E(amm).makeSwapInInvitation();
+    const liquidationProposal = harden({
+      want: { Out: originalDebt },
+      give: { In: collateralToSell },
+    });
+    console.log("liquidationProposal", liquidationProposal);
+    console.log("swapInvitation", swapInvitation);
+    const { deposited, userSeatPromise: liqSeat } = await offerTo(
+      zcf,
+      swapInvitation,
+      undefined, // The keywords were mapped already
+      liquidationProposal,
+      debtorSeat,
+      debtorSeat,
+      undefined
+    );
 
-      // Three (!) awaits coming here. We can't use Promise.all because
-      // offerTo() can return before getOfferResult() is valid, and we can't
-      // check whether swapIn liquidated assets until getOfferResult() returns.
-      // Of course, we also can't exit the seat until one or the other
-      // liquidation takes place.
-      await deposited;
-      await E(liqSeat).getOfferResult();
+    const amounts = await deposited;
+    trace(`Liq results`, {
+      debtWithPenalty,
+      amountIn,
+      paid: debtorSeat.getCurrentAllocation(),
+      amounts,
+    });
+    console.log("LiqOfferResult", await E(liqSeat).getOfferResult());
+    // Now we need to know how much was sold so we can pay off the debt.
+    // We can use this seat because only liquidation adds debt brand to it..
+    const debtPaid = debtorSeat.getAmountAllocated('Out', debtBrand);
+    console.log("debtPaid", debtPaid);
 
-      // if swapOut failed to make the trade, we'll sell it all
-      const sellAllIfUnsold = async () => {
-        if (
-          !AmountMath.isEqual(inBefore, debtorSeat.getAmountAllocated('In'))
-        ) {
-          return;
-        }
+    // const penaltyPaid = AmountMath.min(penalty, debtPaid);
+    //
+    // // Allocate penalty portion of proceeds to a seat that will hold it for transfer to reserve
+    // // penaltyPoolSeat.incrementBy(
+    // //   debtorSeat.decrementBy(harden({ Out: penaltyPaid })),
+    // // );
+    // zcf.reallocate(debtorSeat);
 
-        trace('liquidating all collateral because swapIn did not succeed');
-        const strategy = makeDefaultLiquidationStrategy(amm);
-        const { deposited: sellAllDeposited, userSeatPromise: sellAllSeat } =
-          await offerTo(
-            zcf,
-            strategy.makeInvitation(runDebt),
-            undefined, // The keywords were mapped already
-            strategy.makeProposal(amountIn, AmountMath.makeEmpty(runBrand)),
-            debtorSeat,
-          );
-        // await sellAllDeposited, but don't need the value
-        await Promise.all([
-          E(sellAllSeat).getOfferResult(),
-          sellAllDeposited,
-        ]).catch(sellAllError => {
-          throw Error(`Unable to liquidate ${sellAllError}`);
-        });
-      };
-      await sellAllIfUnsold();
-
-      debtorSeat.exit();
-    };
+    debtorSeat.exit();
   };
 
-  const creatorFacet = Far('debtorInvitationCreator', {
-    makeDebtorInvitation: runDebt =>
-      zcf.makeInvitation(makeDebtorHook(runDebt), 'Liquidate'),
+  /**
+   * @type {ERef<Liquidator>}
+   */
+  const creatorFacet = Far('debtorInvitationCreator (minimum)', {
+    makeLiquidateInvitation: () =>
+      zcf.makeInvitation(handleLiquidationOffer, 'Liquidate'),
   });
 
   return harden({ creatorFacet });
 };
 
-/**
- * @param {LiquidationCreatorFacet} creatorFacet
- */
-const makeLiquidationStrategy = creatorFacet => {
-  const makeInvitation = async runDebt =>
-    E(creatorFacet).makeDebtorInvitation(runDebt);
-
-  const keywordMapping = () =>
-    harden({
-      Collateral: 'In',
-      RUN: 'Out',
-    });
-
-  const makeProposal = (collateral, run) =>
-    harden({
-      give: { In: collateral },
-      want: { Out: AmountMath.makeEmptyFromAmount(run) },
-    });
-
-  return {
-    makeInvitation,
-    keywordMapping,
-    makeProposal,
-  };
-};
+/** @typedef {ContractOf<typeof start>} LiquidationContract */
 
 harden(start);
-harden(makeLiquidationStrategy);
-
-export { start, makeLiquidationStrategy };
+export { start };

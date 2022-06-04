@@ -30,6 +30,7 @@
  * asset and the protocol token when protocol token supply is zero.
  * @property {Ratio} baseRate
  * @property {Ratio} multipilierRate
+ * @property {Ratio} penaltyRate
  */
 
 /**

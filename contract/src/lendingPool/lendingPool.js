@@ -18,7 +18,7 @@ import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
-import { makeLiquidationStrategy } from './liquidateMinimum.js';
+// import { makeLiquidationStrategy } from './liquidateMinimum.js';
 import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
 import { makePoolParamManager, makeElectorateParamManager } from './params.js';
 import { assert } from '@agoric/assert';
@@ -46,6 +46,7 @@ export const start = async (zcf, privateArgs) => {
 
   console.log('[PRICE_MANAGER]', priceManager);
   console.log('[COMPARE_CURRENCY_BRAND]', compareCurrencyBrand);
+  console.log('[LIQUIDATION_INSTALL]', liquidationInstall);
 
   const poolTypes = makeScalarMap('brand');
   const poolParamManagers = makeScalarMap('brand');
@@ -72,7 +73,7 @@ export const start = async (zcf, privateArgs) => {
     const poolParamManager = makePoolParamManager(ratesUpdated);
     poolParamManagers.init(underlyingBrand, poolParamManager);
 
-    // TODO Create liquadition for dynamic underdlying assets
+    // TODO Create liquidation for dynamic underdlying assets
     // const { creatorFacet: liquidationFacet } = await E(zoe).startInstance(
     //   liquidationInstall,
     //   harden({ RUN: runIssuer, Collateral: underlyingIssuer }),
@@ -97,9 +98,11 @@ export const start = async (zcf, privateArgs) => {
       poolParamManager.getParams,
       // reallocateWithFee,
       timerService,
-      // liquidationStrategy, TODO figure out what to with this later
       startTimeStamp,
-      getExchangeRateForPool
+      getExchangeRateForPool,
+      makeRedeemInvitation,
+      liquidationInstall,
+      ammPublicFacet
     );
     poolTypes.init(underlyingBrand, pm);
 

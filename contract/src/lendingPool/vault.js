@@ -253,8 +253,10 @@ export const makeInnerVault = (
     return reverseInterest(state.debtSnapshot, state.interestSnapshot);
   };
 
-  const getCollateralAllocated = seat =>
-    seat.getAmountAllocated('Collateral', collateralBrand);
+  const getCollateralAllocated = seat => {
+    console.log("collateralBrand", collateralBrand)
+    return seat.getAmountAllocated('Collateral', collateralBrand);
+  }
   const getDebtAllocated = seat => seat.getAmountAllocated('Debt', debtBrand);
 
   const assertVaultHoldsNoRun = () => {
@@ -334,7 +336,10 @@ export const makeInnerVault = (
    * @returns {Amount<NatValue>}
    */
   const getCollateralAmount = () => {
-    const { vaultSeat } = state;
+    const { vaultSeat, phase } = state;
+    console.log("vaultSeatAllocations", vaultSeat.getCurrentAllocation());
+    console.log("Phase", phase);
+    console.log("Exited", vaultSeat.hasExited());
     // getCollateralAllocated would return final allocations
     return vaultSeat.hasExited()
       ? AmountMath.makeEmpty(collateralBrand)

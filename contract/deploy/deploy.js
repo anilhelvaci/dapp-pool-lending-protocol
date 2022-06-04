@@ -39,6 +39,8 @@ async function setupServices(
     loanTiming,
     vanInitialLiquidity,
     compareInitialLiquidity,
+    panInitialLiquidity,
+    usdPanInitialLiquidity,
     priceManager,
   } = t.context;
   t.context.timer = timer;
@@ -47,6 +49,8 @@ async function setupServices(
     t,
     vanInitialLiquidity,
     compareInitialLiquidity,
+    panInitialLiquidity,
+    usdPanInitialLiquidity
   );
   const { consume, produce, instance } = space;
   // trace(t, 'amm', { ammFacets });
@@ -191,6 +195,9 @@ export default async function deployContract(
   const usdLiquidity = await getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 5n, usdBrand, 'USD');
   const usdLiquidityAmount = await E(usdIssuer).getAmountOf(usdLiquidity);
 
+  const usdPanLiquidity = await getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 5n, usdBrand, 'USD');
+  const usdPanLiquidityAmount = await E(usdIssuer).getAmountOf(usdLiquidity);
+
 
   console.log('vanLiquidity', vanLiquidity);
   console.log('vanLiquidityAmount', vanLiquidityAmount);
@@ -204,9 +211,19 @@ export default async function deployContract(
     payment: vanLiquidity,
   };
 
+  const panLiquidityAMM = {
+    proposal: harden(panLiquidityAmount),
+    payment: panLiquidity,
+  };
+
   const usdLiquidityAMM = {
     proposal: harden(usdLiquidityAmount),
     payment: usdLiquidity,
+  };
+
+  const usdPanLiquidityAMM = {
+    proposal: harden(usdPanLiquidityAmount),
+    payment: usdPanLiquidity,
   };
 
   const loanTiming = {
@@ -222,9 +239,12 @@ export default async function deployContract(
     zoe,
     compareCurrencyKit: { issuer: usdIssuer, brand: usdBrand },
     vanKit: { issuer: vanIssuer, brand: vanBrand },
+    panKit: { issuer: panIssuer, brand: panBrand },
     loanTiming,
     vanInitialLiquidity: vanLiquidityAMM,
     compareInitialLiquidity: usdLiquidityAMM,
+    panInitialLiquidity: panLiquidityAMM,
+    usdPanInitialLiquidity: usdPanLiquidityAMM,
     electorateTerms,
     priceManager,
     installation: contractInstallations,
@@ -386,34 +406,34 @@ export default async function deployContract(
   console.log('depositPanOfferConfig', depositPanOfferConfig);
   const depositPanOfferID = await E(walletBridge).addOffer(depositPanOfferConfig);
 
-  const borrowPanOfferConfig = {
-    id: `${Date.now()}`,
-    invitation: E(lendingPoolPublicFacet).makeBorrowInvitation(),
-    installationHandleBoardId: LENDING_POOL_INSTALL_BOARD_ID,
-    instanceHandleBoardId: LENDING_POOL_INSTANCE_BOARD_ID,
-    proposalTemplate: {
-      want: {
-        Debt: {
-          // The pursePetname identifies which purse we want to uselib
-          pursePetname: 'PAN Purse',
-          value: 4n * 10n ** 6n,
-        },
-      },
-      give: {
-        Collateral: {
-          // The pursePetname identifies which purse we want to use
-          pursePetname: 'AgVAN Purse',
-          value: 1n * 10n ** 8n * 50n,
-        },
-      },
-      arguments: {
-        collateralUnderlyingBrand: vanBrand,
-      },
-    },
-  };
-
-  console.log('borrowPanOfferConfig', borrowPanOfferConfig);
-  const borrowPanOfferID = await E(walletBridge).addOffer(borrowPanOfferConfig);
+  // const borrowPanOfferConfig = {
+  //   id: `${Date.now()}`,
+  //   invitation: E(lendingPoolPublicFacet).makeBorrowInvitation(),
+  //   installationHandleBoardId: LENDING_POOL_INSTALL_BOARD_ID,
+  //   instanceHandleBoardId: LENDING_POOL_INSTANCE_BOARD_ID,
+  //   proposalTemplate: {
+  //     want: {
+  //       Debt: {
+  //         // The pursePetname identifies which purse we want to uselib
+  //         pursePetname: 'PAN Purse',
+  //         value: 4n * 10n ** 6n,
+  //       },
+  //     },
+  //     give: {
+  //       Collateral: {
+  //         // The pursePetname identifies which purse we want to use
+  //         pursePetname: 'AgVAN Purse',
+  //         value: 1n * 10n ** 8n * 50n,
+  //       },
+  //     },
+  //     arguments: {
+  //       collateralUnderlyingBrand: vanBrand,
+  //     },
+  //   },
+  // };
+  //
+  // console.log('borrowPanOfferConfig', borrowPanOfferConfig);
+  // const borrowPanOfferID = await E(walletBridge).addOffer(borrowPanOfferConfig);
 
   console.log(`-- LENDING_POOL_INSTANCE_BOARD_ID: ${LENDING_POOL_INSTANCE_BOARD_ID} --`);
   console.log(`-- LENDING_POOL_INSTALL_BOARD_ID: ${LENDING_POOL_INSTALL_BOARD_ID} --`);
@@ -433,5 +453,5 @@ export default async function deployContract(
   console.log(`-- DEPOSIT_VAN_OFFER_ID: ${depositVanfferID} --`);
   console.log(`-- DEPOSIT_PAN_OFFER_ID: ${depositPanOfferID} --`);
   console.log(`-- PRICE_MANAGER_INSTANCE_BOARD_ID: ${PRICE_MANAGER_INSTANCE_BOARD_ID} --`);
-  console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
+  // console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
 }

@@ -19,7 +19,7 @@ import { Far } from '@endo/marshal';
 
 import { makeScalarMap } from '@agoric/store';
 import { makeInnerVault } from './vault.js';
-import { liquidate } from './liquidation.js';
+import { liquidate, liquidationDetailTerms } from './liquidation.js';
 import { makeTracer } from '../makeTracer.js';
 import {
   RECORDING_PERIOD_KEY,
@@ -30,7 +30,7 @@ import {
   CHARGING_PERIOD_KEY,
   PRICE_CHECK_PERIOD_KEY,
   MULTIPILIER_RATE_KEY,
-  BASE_RATE_KEY
+  BASE_RATE_KEY, PENALTY_RATE_KEY,
 } from './params.js';
 import { chargeInterest } from '../interest.js';
 import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate } from '../protocolMath.js';
@@ -73,6 +73,9 @@ const trace = makeTracer('VM');
  * @param {LiquidationStrategy} liquidationStrategy
  * @param {Timestamp} startTimeStamp
  * @param {GetExchangeRateForPool} getExchangeRateForPool
+ * @param {MakeRedeemInvitation} makeRedeemInvitation
+ * @param {Installation} liquidationInstall
+ * @param {XYKAMMPublicFacet} ammPublicFacet
  * @returns {VaultManager}
  */
 export const makePoolManager = (
@@ -91,7 +94,10 @@ export const makePoolManager = (
   timerService,
   // liquidationStrategy,
   startTimeStamp,
-  getExchangeRateForPool
+  getExchangeRateForPool,
+  makeRedeemInvitation,
+  liquidationInstall,
+  ammPublicFacet
 ) => {
   const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
   const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
@@ -120,7 +126,7 @@ export const makePoolManager = (
     getProtocolBrand: () => protocolBrand,
     getProtocolIssuer: () => protocolIssuer,
     getProtocolLiquidity: () => totalProtocolSupply.value,
-    getUnderlyingLiquidity: () => underlyingAssetSeat.getCurrentAllocation().Underlying.value,
+    getUnderlyingLiquidity: () => underlyingAssetSeat.getAmountAllocated("Underlying"),
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
     async getCollateralQuote() {
@@ -150,6 +156,11 @@ export const makePoolManager = (
    * @type {bigint}
    */
   let latestInterestUpdate = startTimeStamp;
+
+  const liquidation = {
+    instance: undefined,
+    liquidator: undefined
+  }
 
   /**
    * @param {Amount} proposedDebtAmount
@@ -248,8 +259,14 @@ export const makePoolManager = (
     totalDebt = AmountMath.make(underlyingBrand, totalDebt.value + delta);
   };
 
+
+  const liquidateVault = async (collateralUnderlyingBrand) => {
+    const debtPerCollateral = debtsPerCollateralStore.get(collateralUnderlyingBrand);
+    return await debtPerCollateral.liquidateFirstVault();
+  }
+
   /**
-   * Make requested transfer for. Requested transfer being either rapying a debt
+   * Make requested transfer for. Requested transfer being either repaying a debt
    * of requesting more debt.
    * @param seat
    * @param currentDebt
@@ -274,6 +291,19 @@ export const makePoolManager = (
       underlyingAssetSeat.incrementBy(harden({ Underlying: acceptedDebt }));
     }
   };
+
+  const transferLiquidatedFund = vaultSeat => {
+    const vaultAllocations = vaultSeat.getCurrentAllocation();
+    assert(vaultAllocations.Debt && vaultAllocations.Debt !== undefined, 'The vault has no liquidated funds');
+    const {
+      Debt: liquidatedAmount
+    } = vaultSeat.getCurrentAllocation();
+    console.log("underlyingAssetSeatBefore", underlyingAssetSeat.getCurrentAllocation());
+    vaultSeat.decrementBy(harden({Debt: liquidatedAmount}));
+    underlyingAssetSeat.incrementBy(harden({ Underlying: liquidatedAmount }));
+    zcf.reallocate(vaultSeat, underlyingAssetSeat);
+    console.log("underlyingAssetSeatAfter", underlyingAssetSeat.getCurrentAllocation());
+  }
 
   const stageUnderlyingAllocation = (proposal) => {
     if (proposal.give.Debt) {
@@ -359,7 +389,10 @@ export const makePoolManager = (
     getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
     getLatestUnderlyingQuote: () => underlyingQuoteManager.getLatestQuote(),
-    getExchangeRateForPool
+    getExchangeRateForPool,
+    makeRedeemInvitation,
+    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value,
+    transferLiquidatedFund
   });
 
   /** @param {ZCFSeat} seat */
@@ -414,10 +447,10 @@ export const makePoolManager = (
     assertEnoughLiquidtyExists(proposedDebtAmount);
 
     const collateralBrand = exchangeRate.numerator.brand;
-    const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
-    console.log("wrappedCollateralPriceAuthority: ", wrappedCollateralPriceAuthority)
+
     if (!debtsPerCollateralStore.has(collateralBrand)) {
-      debtsPerCollateralStore.init(collateralBrand, makeDebtsPerCollateral(
+      const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
+      debtsPerCollateralStore.init(collateralBrand, await makeDebtsPerCollateral(
         zcf,
         collateralBrand,
         underlyingBrand,
@@ -432,7 +465,10 @@ export const makePoolManager = (
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
     console.log("debtsPerCollateral: ", debtsPerCollateral)
-    const vaultKit = await E(debtsPerCollateral).addNewVault(seat, underlyingAssetSeat, exchangeRate);
+    const [vaultKit] = await Promise.all([
+      debtsPerCollateral.addNewVault(seat, underlyingAssetSeat, exchangeRate),
+      debtsPerCollateral.setupLiquidator(liquidationInstall, ammPublicFacet)
+    ]);
     trace('VaultKit', vaultKit);
     return vaultKit;
   };
@@ -444,6 +480,7 @@ export const makePoolManager = (
   const redeemHook = async seat => {
     assertProposalShape(seat, {
       give: { Protocol: null },
+      want: { Underlying: null },
     });
 
     const {
@@ -454,6 +491,7 @@ export const makePoolManager = (
 
     assertEnoughLiquidtyExists(underlyingAmountToRedeem);
     totalProtocolSupply = AmountMath.subtract(totalProtocolSupply, redeemProtocolAmount);
+    protocolMint.burnLosses({ Protocol: redeemProtocolAmount }, seat);
     seat.incrementBy(
       underlyingAssetSeat.decrementBy(harden({ Underlying: underlyingAmountToRedeem })),
     );
@@ -504,5 +542,6 @@ export const makePoolManager = (
     makeBorrowKit,
     redeemHook,
     makeDepositInvitation,
+    liquidateVault
   });
 };

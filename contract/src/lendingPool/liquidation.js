@@ -1,8 +1,9 @@
 // @ts-check
+// @jessie-check
 
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
-import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
+import { makeRatio, offerTo } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeTracer } from '../makeTracer.js';
 
 const trace = makeTracer('LIQ');
@@ -15,87 +16,96 @@ const trace = makeTracer('LIQ');
  * Once collateral has been sold using the contract, we burn the amount
  * necessary to cover the debt and return the remainder.
  *
- * @param {ContractFacet} zcf
- * @param {InnerVault} innerVault
- * @param {(losses: AmountKeywordRecord,
- *             zcfSeat: ZCFSeat
- *            ) => void} burnLosses
- * @param {LiquidationStrategy} strategy
+ * @param {ZCF} zcf
+ * @param {Vault} vault
+ * @param {Liquidator}  liquidator
+ * @param {MakeRedeemInvitation} makeRedeemInvitation
  * @param {Brand} collateralBrand
- * @returns {Promise<InnerVault>}
+ * @param {Issuer} collateralUnderlyingIssuer
+ * @param {Ratio} penaltyRate
+ * @param {TransferLiquidatedFund} transferLiquidatedFund
+ * @returns {Promise<Vault>}
  */
 const liquidate = async (
   zcf,
-  innerVault,
-  burnLosses,
-  strategy,
+  vault,
+  liquidator,
+  makeRedeemInvitation,
   collateralBrand,
+  collateralUnderlyingIssuer,
+  penaltyRate,
+  transferLiquidatedFund
 ) => {
-  innerVault.liquidating();
-  const debt = innerVault.getCurrentDebt();
-  const { brand: runBrand } = debt;
-  const vaultZcfSeat = innerVault.getVaultSeat();
+  trace('liquidate start', vault);
+  vault.liquidating();
+  console.log("collateralBrand", collateralBrand);
+  // console.log("collateralUnderlyingIssuer", collateralUnderlyingIssuer);
+  // const collateralUnderlyingBrand = await E(collateralUnderlyingIssuer).getBrand();
+  const debt = vault.getCurrentDebt();
 
-  const collateralToSell = vaultZcfSeat.getAmountAllocated(
-    'Collateral',
-    collateralBrand,
+  const vaultZcfSeat = vault.getVaultSeat();
+  const testSeat = zcf.makeEmptySeatKit().zcfSeat;
+
+  const collateralToSell = vaultZcfSeat.getAmountAllocated('Collateral');
+
+  console.log("vaultCollateralBefore", vaultZcfSeat.getCurrentAllocation());
+
+  const { deposited: redeemDeposited, userSeatPromise: redeemSeat } = await offerTo(
+    zcf,
+    makeRedeemInvitation(collateralBrand),
+    harden({ Collateral: 'Protocol', CollateralUnderlying: 'Underlying' }),
+    harden({
+      give: { Protocol: collateralToSell },
+      want: { Underlying: AmountMath.makeEmpty(collateralBrand) },
+    }),
+    vaultZcfSeat,
+    vaultZcfSeat,
+    undefined
   );
+
+  console.log("redeemDeposited", await redeemDeposited);
+  console.log("redeemOfferResult", await E(redeemSeat).getOfferResult());
+  console.log("redeemUnderlying", await E(redeemSeat).getCurrentAllocation());
+  console.log("vaultCollateralAfter", vaultZcfSeat.getCurrentAllocation());
+
+  trace(`liq prep`, { collateralToSell, debt, liquidator });
+
+  const collateralUnderlyingToSell = vaultZcfSeat.getAmountAllocated('CollateralUnderlying', collateralBrand);
 
   const { deposited, userSeatPromise: liqSeat } = await offerTo(
     zcf,
-    strategy.makeInvitation(debt),
-    strategy.keywordMapping(),
-    strategy.makeProposal(collateralToSell, debt),
+    E(liquidator).makeLiquidateInvitation(),
+    harden({ CollateralUnderlying: 'In', Debt: 'Out' }),
+    harden({
+      give: { In: collateralUnderlyingToSell },
+      want: { Out: AmountMath.makeEmpty(debt.brand) },
+    }),
     vaultZcfSeat,
+    vaultZcfSeat,
+    harden({ debt, penaltyRate }),
   );
-  trace(` offeredTo`, collateralToSell, debt);
+  trace(` offeredTo`, { collateralToSell, debt });
 
-  // await deposited, but we don't need the value.
-  await Promise.all([deposited, E(liqSeat).getOfferResult()]);
+  await deposited;
+  transferLiquidatedFund(vaultZcfSeat);
+  // console.log("testAfter", testSeat.getCurrentAllocation());
+  console.log("liqOfferResult", await E(liqSeat).getOfferResult());
+  console.log("liqCurrnetAllocation", await E(liqSeat).getCurrentAllocation());
+  console.log("vaultSeatAfter", vaultZcfSeat.getCurrentAllocation());
+  vault.liquidated(AmountMath.makeEmpty(debt.brand));
 
-  // Now we need to know how much was sold so we can pay off the debt.
-  // We can use this because only liquidation adds RUN to the vaultSeat.
-  const proceeds = vaultZcfSeat.getAmountAllocated('RUN', runBrand);
-
-  const isUnderwater = !AmountMath.isGTE(proceeds, debt);
-  const runToBurn = isUnderwater ? proceeds : debt;
-  trace({ debt, isUnderwater, runToBurn });
-  burnLosses(harden({ RUN: runToBurn }), vaultZcfSeat);
-  innerVault.liquidated(AmountMath.subtract(debt, runToBurn));
-
-  // remaining funds are left on the vault for the user to close and claim
-  return innerVault;
+  return vault;
 };
 
-/**
- * The default strategy converts of all the collateral to RUN using autoswap,
- * and refunds any excess RUN.
- *
- * @type {(XYKAMMPublicFacet) => LiquidationStrategy}
- */
-const makeDefaultLiquidationStrategy = amm => {
-  const keywordMapping = () =>
-    harden({
-      Collateral: 'In',
-      RUN: 'Out',
-    });
+const liquidationDetailTerms = debtBrand =>
+  harden({
+    MaxImpactBP: 50n,
+    OracleTolerance: makeRatio(30n, debtBrand),
+    AMMMaxSlippage: makeRatio(30n, debtBrand),
+  });
+/** @typedef {ReturnType<typeof liquidationDetailTerms>} LiquidationTerms */
 
-  const makeProposal = (collateral, run) =>
-    harden({
-      give: { In: collateral },
-      want: { Out: AmountMath.makeEmptyFromAmount(run) },
-    });
-
-  trace(`return from makeDefault`);
-
-  return {
-    makeInvitation: () => E(amm).makeSwapInInvitation(),
-    keywordMapping,
-    makeProposal,
-  };
-};
-
-harden(makeDefaultLiquidationStrategy);
 harden(liquidate);
+harden(liquidationDetailTerms);
 
-export { makeDefaultLiquidationStrategy, liquidate };
+export { liquidate, liquidationDetailTerms };

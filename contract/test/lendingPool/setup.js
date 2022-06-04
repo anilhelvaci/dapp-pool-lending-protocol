@@ -260,7 +260,6 @@ export const startLendingPool = async (
     invitationAmount,
     poolManagerParams,
     ammPublicFacet,
-    // liquidationTerms: liquidationDetailTerms(centralBrand),
     undefined,
     compareBrand
   );
@@ -303,10 +302,16 @@ export const startLendingPool = async (
 
 harden(startLendingPool)
 
-export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
+export const setupAmmAndElectorate = async (
+  t,
+  vanLiquidity,
+  compLiquidityPoolVan,
+  panLiquidity,
+  compLiquidityPoolPan) => {
   const {
     zoe,
     vanKit: { issuer: vanIssuer },
+    panKit: { issuer: panIssuer },
     electorateTerms = { committeeName: 'The Cabal', committeeSize: 1 },
     timer,
   } = t.context;
@@ -327,24 +332,47 @@ export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
     // @ts-expect-error cast from unknown
   const ammPublicFacet = await E(governorCreatorFacet).getPublicFacet();
 
-  const liquidityIssuer = E(ammPublicFacet).addPool(vanIssuer, 'VAN');
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  // Add VAN/USD Pool
+  const vanLiquidityIssuer = E(ammPublicFacet).addPool(vanIssuer, 'VAN');
+  const vanLiquidityBrand = await E(vanLiquidityIssuer).getBrand();
 
-  const liqProposal = harden({
+  // Add PAN/USD Pool
+  const panLiquidityIssuer = E(ammPublicFacet).addPool(panIssuer, 'PAN');
+  const panLiquidityBrand = await E(panLiquidityIssuer).getBrand();
+
+  const vanPoolLiqProposal = harden({
     give: {
       Secondary: vanLiquidity.proposal,
-      Central: compLiquidity.proposal,
+      Central: compLiquidityPoolVan.proposal,
     },
-    want: { Liquidity: AmountMath.makeEmpty(liquidityBrand) },
+    want: { Liquidity: AmountMath.makeEmpty(vanLiquidityBrand) },
   });
-  const liqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+  const vanPoolAddLiqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
 
-  const ammLiquiditySeat = await E(zoe).offer(
-    liqInvitation,
-    liqProposal,
+  const vanPoolAddLiquiditySeat = await E(zoe).offer(
+    vanPoolAddLiqInvitation,
+    vanPoolLiqProposal,
     harden({
       Secondary: vanLiquidity.payment,
-      Central: compLiquidity.payment,
+      Central: compLiquidityPoolVan.payment,
+    }),
+  );
+
+  const panPoolLiqProposal = harden({
+    give: {
+      Secondary: panLiquidity.proposal,
+      Central: compLiquidityPoolPan.proposal,
+    },
+    want: { Liquidity: AmountMath.makeEmpty(panLiquidityBrand) },
+  });
+  const panPoolAddLiqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+
+  const panPoolAddLiquiditySeat = await E(zoe).offer(
+    panPoolAddLiqInvitation,
+    panPoolLiqProposal,
+    harden({
+      Secondary: panLiquidity.payment,
+      Central: compLiquidityPoolPan.payment,
     }),
   );
 
@@ -353,7 +381,8 @@ export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
     ammCreatorFacet: await consume.ammCreatorFacet,
     ammPublicFacet,
     instance: governedInstance,
-    ammLiquidity: E(ammLiquiditySeat).getPayout('Liquidity'),
+    ammVanPoolLiquidity: E(vanPoolAddLiquiditySeat).getPayout('Liquidity'),
+    ammPanPoolLiquidity: E(panPoolAddLiquiditySeat).getPayout('Liquidity'),
   };
 
   return { amm: newAmm, space };

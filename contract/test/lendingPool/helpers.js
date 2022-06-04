@@ -82,6 +82,8 @@ export const makeRates = (underlyingBrand, compareBrand) => {
     baseRate: makeRatio(250n, underlyingBrand, BASIS_POINTS),
     // multipilier rate for utilizitaion rate
     multipilierRate: makeRatio(20n, underlyingBrand),
+    // penalty rate for liquidation
+    penaltyRate: makeRatio(10n, underlyingBrand),
   });
 };
 
