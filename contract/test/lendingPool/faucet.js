@@ -4,7 +4,7 @@ import { Far } from '@endo/marshal';
 import { assertProposalShape } from '@agoric/zoe/src/contractSupport/index.js';
 
 // A Faucet providing RUN so we can provide initial liquidity to the AMM so the
-// VaultFactory can reliably liquidate.
+// LoanFactory can reliably liquidate.
 
 /** @type {ContractStartFn} */
 export async function start(zcf, privateArgs) {

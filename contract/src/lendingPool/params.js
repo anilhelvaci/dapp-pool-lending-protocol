@@ -60,7 +60,7 @@ const makeLoanTimingManager = initialValues => {
 /**
  * @param {Rates} rates
  */
-const makeVaultParamManager = rates => {
+const makeLoanParamManager = rates => {
   return makeParamManagerSync({
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
     [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
@@ -87,7 +87,7 @@ const makePoolParamManager = rates => {
  * @param {ERef<ZoeService>} zoe
  * @param {Invitation} electorateInvitation
  * @returns {Promise<{
- *   getParams: GetGovernedVaultParams,
+ *   getParams: GetGovernedLoanParams,
  *   getInvitationAmount: (name: string) => Amount,
  *   getInternalParamValue: (name: string) => Invitation,
  *   updateElectorate: (invitation: Invitation) => void,
@@ -124,7 +124,7 @@ const makeGovernedTerms = (
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
 
-  const rateParamMgr = makeVaultParamManager(rates);
+  const rateParamMgr = makeLoanParamManager(rates);
 
   return harden({
     ammPublicFacet,
@@ -139,7 +139,7 @@ const makeGovernedTerms = (
   });
 };
 
-harden(makeVaultParamManager);
+harden(makeLoanParamManager);
 harden(makePoolParamManager);
 harden(makeElectorateParamManager);
 harden(makeGovernedTerms);
@@ -148,7 +148,7 @@ harden(makeElectorateParams);
 
 export {
   makeElectorateParamManager,
-  makeVaultParamManager,
+  makeLoanParamManager,
   makePoolParamManager,
   makeGovernedTerms,
   makeLoanParams,

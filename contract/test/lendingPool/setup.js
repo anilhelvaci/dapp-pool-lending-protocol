@@ -1,6 +1,5 @@
 // @ts-check
 
-import bundleSource from '@endo/bundle-source';
 import { E, Far } from '@endo/far';
 import { makeLoopback } from '@endo/captp';
 
@@ -19,7 +18,7 @@ import { makeAmmTerms } from '@agoric/run-protocol/src/vpool-xyk-amm/params.js';
 import { AmountMath } from '@agoric/ertp';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeGovernedTerms } from '../../src/lendingPool/params.js';
-import { liquidationDetailTerms } from '@agoric/run-protocol/src/vaultFactory/liquidation.js';
+// import {liquidationDetailTerms} from "../../src/lendingPool/liquidation.js";
 
 const { details: X } = assert;
 
@@ -192,7 +191,7 @@ export const startLendingPool = async (
       zoe,
       economicCommitteeCreatorFacet: electorateCreatorFacet,
     },
-    produce, // {  vaultFactoryCreator }
+    produce, // {  loanFactoryCreator }
     brand: {
       consume: { [COMPARE_CURRENCY_ISSUER_NAME]: compareBrandP },
     },
@@ -225,9 +224,9 @@ export const startLendingPool = async (
   const compareBrand = await compareBrandP;
 
   /**
-   * Types for the governed params for the vaultFactory; addVaultType() sets actual values
+   * Types for the governed params for the loanFactory; addLoanType() sets actual values
    *
-   * @type {VaultManagerParamValues}
+   * @type {LoanManagerParamValues}
    */
   const poolManagerParams = {
     // XXX the values aren't used. May be addressed by https://github.com/Agoric/agoric-sdk/issues/4861
@@ -252,7 +251,7 @@ export const startLendingPool = async (
   const priceManager = await priceManagerP;
   const timer = await chainTimerService;
 
-  const vaultFactoryTerms = makeGovernedTerms(
+  const loanFactoryTerms = makeGovernedTerms(
     priceManager, // priceMan here
     loanParams,
     installations.liquidate,
@@ -263,13 +262,13 @@ export const startLendingPool = async (
     undefined,
     compareBrand
   );
-  // console.log("vaultFactoryTerms", vaultFactoryTerms)
+  // console.log("loanFactoryTerms", loanFactoryTerms)
   const governorTerms = harden({
     timer,
     electorateInstance,
     governedContractInstallation: installations.LendingPool,
     governed: {
-      terms: vaultFactoryTerms,
+      terms: loanFactoryTerms,
       issuerKeywordRecord: {},
       privateArgs: harden({ initialPoserInvitation }),
     },

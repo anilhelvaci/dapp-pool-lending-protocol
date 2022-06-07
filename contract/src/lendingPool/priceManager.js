@@ -10,7 +10,7 @@ import { AmountMath } from '@agoric/ertp';
 export const makePriceManager = (options) => {
   /** @type {MapStore<Brand, PriceAuthority>} */
   const priceAuthorities = makeScalarMap('priceAuthorities');
-  /** @type {MapStore<string, InnerVault>} */
+  /** @type {MapStore<string, InnerLoan>} */
   const supportedAssetPublicFacets = makeScalarMap('supportedAssetPublicFacets');
 
   /**
@@ -32,7 +32,7 @@ export const makePriceManager = (options) => {
     supportedAssetPublicFacets.init(key, value);
   }
 
-  const getPriceAuthority = (key) => {
+  const getWrappedPriceAuthority = (key) => {
     return priceAuthorities.get(key);
   }
 
@@ -43,7 +43,7 @@ export const makePriceManager = (options) => {
   const priceManager = Far('PriceManager', {
     addNewWrappedPriceAuthority,
     addNewSupportedAssetPublicFacet,
-    getPriceAuthority,
+    getWrappedPriceAuthority: getWrappedPriceAuthority,
     getsupportedAssetPublicFacets
   })
 

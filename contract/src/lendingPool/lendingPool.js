@@ -18,8 +18,6 @@ import { Far } from '@endo/marshal';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
-// import { makeLiquidationStrategy } from './liquidateMinimum.js';
-import { makeMakeCollectFeesInvitation } from './collectRewardFees.js';
 import { makePoolParamManager, makeElectorateParamManager } from './params.js';
 import { assert } from '@agoric/assert';
 
@@ -57,7 +55,7 @@ export const start = async (zcf, privateArgs) => {
     const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
     const { brand: protocolBrand } = protocolMint.getIssuerRecord();
     const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
-    // We create only one vault per collateralType.
+    // We create only one loan per collateralType.
     assert(
       !poolTypes.has(underlyingBrand),
       `Collateral brand ${underlyingBrand} has already been added`,
@@ -72,14 +70,6 @@ export const start = async (zcf, privateArgs) => {
     /** a powerful object; can modify parameters */
     const poolParamManager = makePoolParamManager(ratesUpdated);
     poolParamManagers.init(underlyingBrand, poolParamManager);
-
-    // TODO Create liquidation for dynamic underdlying assets
-    // const { creatorFacet: liquidationFacet } = await E(zoe).startInstance(
-    //   liquidationInstall,
-    //   harden({ RUN: runIssuer, Collateral: underlyingIssuer }),
-    //   harden({ amm: ammPublicFacet }),
-    // );
-    // const liquidationStrategy = makeLiquidationStrategy(liquidationFacet); ??/
 
     const startTimeStamp = await E(timerService).getCurrentTimestamp();
     const priceAuthNotifier = await E(priceManager).addNewWrappedPriceAuthority(underlyingBrand, priceAuthority, compareCurrencyBrand);
@@ -96,7 +86,6 @@ export const start = async (zcf, privateArgs) => {
       priceManager,
       loanTimingParams,
       poolParamManager.getParams,
-      // reallocateWithFee,
       timerService,
       startTimeStamp,
       getExchangeRateForPool,
@@ -180,7 +169,7 @@ export const start = async (zcf, privateArgs) => {
     getPool: (brand) => poolTypes.get(brand),
     makeBorrowInvitation,
     makeRedeemInvitation,
-    getAmountKeywordRecord: (keyword, brand, value) => {
+    getAmountKeywordRecord: (keyword, brand, value) => { // This is for repl testing, might remove later
       const amountKeywordRecord = {};
       amountKeywordRecord[keyword] = AmountMath.make(brand, value);
       return amountKeywordRecord;
@@ -198,7 +187,7 @@ export const start = async (zcf, privateArgs) => {
       },
     });
 
-  /** @type {VaultFactory} */
+  /** @type {LoanFactory} */
   const lendingPool = Far('lendingPool machine', {
     helloFromCreator: () => 'Hello From the creator',
     addPoolType
@@ -216,4 +205,4 @@ export const start = async (zcf, privateArgs) => {
     publicFacet
   });
 };
-/** @typedef {Awaited<ReturnType<typeof start>>['publicFacet']} VaultFactoryPublicFacet */
+/** @typedef {Awaited<ReturnType<typeof start>>['publicFacet']} LoanFactoryPublicFacet */
