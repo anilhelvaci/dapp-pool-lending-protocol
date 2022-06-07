@@ -24,6 +24,7 @@ const trace = makeTracer('LIQ');
  * @param {Issuer} collateralUnderlyingIssuer
  * @param {Ratio} penaltyRate
  * @param {TransferLiquidatedFund} transferLiquidatedFund
+ * @param {DebtPaid} debtPaid
  * @returns {Promise<Vault>}
  */
 const liquidate = async (
@@ -34,21 +35,17 @@ const liquidate = async (
   collateralBrand,
   collateralUnderlyingIssuer,
   penaltyRate,
-  transferLiquidatedFund
+  transferLiquidatedFund,
+  debtPaid
 ) => {
   trace('liquidate start', vault);
   vault.liquidating();
-  console.log("collateralBrand", collateralBrand);
-  // console.log("collateralUnderlyingIssuer", collateralUnderlyingIssuer);
-  // const collateralUnderlyingBrand = await E(collateralUnderlyingIssuer).getBrand();
+
   const debt = vault.getCurrentDebt();
 
   const vaultZcfSeat = vault.getVaultSeat();
-  const testSeat = zcf.makeEmptySeatKit().zcfSeat;
 
   const collateralToSell = vaultZcfSeat.getAmountAllocated('Collateral');
-
-  console.log("vaultCollateralBefore", vaultZcfSeat.getCurrentAllocation());
 
   const { deposited: redeemDeposited, userSeatPromise: redeemSeat } = await offerTo(
     zcf,
@@ -62,11 +59,6 @@ const liquidate = async (
     vaultZcfSeat,
     undefined
   );
-
-  console.log("redeemDeposited", await redeemDeposited);
-  console.log("redeemOfferResult", await E(redeemSeat).getOfferResult());
-  console.log("redeemUnderlying", await E(redeemSeat).getCurrentAllocation());
-  console.log("vaultCollateralAfter", vaultZcfSeat.getCurrentAllocation());
 
   trace(`liq prep`, { collateralToSell, debt, liquidator });
 
@@ -88,12 +80,8 @@ const liquidate = async (
 
   await deposited;
   transferLiquidatedFund(vaultZcfSeat);
-  // console.log("testAfter", testSeat.getCurrentAllocation());
-  console.log("liqOfferResult", await E(liqSeat).getOfferResult());
-  console.log("liqCurrnetAllocation", await E(liqSeat).getCurrentAllocation());
-  console.log("vaultSeatAfter", vaultZcfSeat.getCurrentAllocation());
+  debtPaid(debt);
   vault.liquidated(AmountMath.makeEmpty(debt.brand));
-
   return vault;
 };
 

@@ -7,6 +7,7 @@ import {
 import { resolve as importMetaResolve } from 'import-meta-resolve';
 import { makeTracer } from '../../src/makeTracer.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
+import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -52,6 +53,40 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   const protocolAmount = await E(protocolIssuer).getAmountOf(protocolReceived);
   return { payment: protocolReceived, amount: protocolAmount };
 };
+
+export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPayment, collateralUnderlyingPool, underlyingValue, debtBrand, debtValue) => {
+  const [collateralUnderlyingBrand, protocolBrand, protocolIssuer] = await Promise.all([
+    E(collateralUnderlyingPool).getUnderlyingBrand(),
+    E(collateralUnderlyingPool).getProtocolBrand(),
+    E(collateralUnderlyingPool).getProtocolIssuer(),
+  ]);
+
+  const [collateralPayment, depositedMoneyMinusLoan] =
+    await E(protocolIssuer).split(poolDepositedMoneyPayment,
+      floorDivideBy(AmountMath.make(collateralUnderlyingBrand, underlyingValue), await E(collateralUnderlyingPool).getExchangeRate()));
+
+  // build the proppsal
+  const debtProposal = {
+    give: { Collateral: await E(protocolIssuer).getAmountOf(collateralPayment) },
+    want: { Debt: AmountMath.make(debtBrand, debtValue) },
+  };
+
+  const debtPaymentKeywordRecord = {
+    Collateral: collateralPayment,
+  };
+
+  // Get a loan for Alice
+  const borrowSeat = await E(zoe).offer(
+    E(lendingPoolPublicFacet).makeBorrowInvitation(),
+    debtProposal,
+    debtPaymentKeywordRecord,
+    { collateralUnderlyingBrand: collateralUnderlyingBrand },
+  );
+
+  const borrowVaultKit = await E(borrowSeat).getOfferResult();
+
+  return { moneyLeftInPool: depositedMoneyMinusLoan, vaultKit: borrowVaultKit }
+}
 
 /**
  * Helper function to add a new pool to the protocol

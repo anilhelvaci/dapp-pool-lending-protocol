@@ -136,6 +136,7 @@ export const makeInnerVault = (
     idInManager,
     manager,
     outerUpdater: null,
+    vaultKey: null,
     phase: VaultPhase.ACTIVE,
     debtPriceAuthority,
     collateralPriceAuthority,
@@ -198,16 +199,16 @@ export const makeInnerVault = (
 
   /**
    * @param {Amount} oldDebt - prior principal and all accrued interest
-   * @param {Amount} oldCollateral - actual collateral
    * @param {Amount} newDebt - actual principal and all accrued interest
    */
-  const updateDebtAccounting = (oldDebt, oldCollateral, newDebt) => {
+  const updateDebtAccounting = (oldDebt, newDebt) => {
     // const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
     // update vault manager which tracks total debt
     manager.applyDebtDelta(oldDebt, newDebt);
     // update position of this vault in liquidation priority queue
-    // manager.updateVaultPriority(oldDebt, oldCollateral, idInManager);
+    // manager.refreshLoanPriority(getNormalizedDebt(), oldCollateral, idInManager);
+    state.vaultKey = manager.refreshLoanPriorityByKey(state.vaultKey, idInManager);
   };
 
   /**
@@ -704,7 +705,7 @@ export const makeInnerVault = (
     manager.transferDebt(clientSeat, getCurrentDebt());
     manager.reallocateBetweenSeats(vaultSeat, clientSeat);
 
-    updateDebtAccounting(oldDebt, oldCollateral, newDebt);
+    updateDebtAccounting(oldDebt, newDebt);
 
     updateUiState();
     clientSeat.exit();
@@ -722,8 +723,9 @@ export const makeInnerVault = (
    * @param {ZCFSeat} poolSeat
    * @param {InnerVault} innerVault
    * @param {Ratio} exchangeRate
+   * @param {String} vaultKey
    */
-  const initVaultKit = async (borrowerSeat, poolSeat, innerVault, exchangeRate) => {
+  const initVaultKit = async (borrowerSeat, poolSeat, innerVault, exchangeRate, vaultKey) => {
     assert(
       AmountMath.isEmpty(state.debtSnapshot),
       X`vault must be empty initially`,
@@ -767,11 +769,11 @@ export const makeInnerVault = (
     );
     zcf.reallocate(borrowerSeat, vaultSeat, poolSeat);
 
-    updateDebtAccounting(oldDebt, oldCollateral, proposedDebtAmount);
-
     const vaultKit = makeVaultKit(innerVault, state.assetNotifier);
     state.outerUpdater = vaultKit.vaultUpdater;
     updateUiState();
+    state.vaultKey = vaultKey;
+    updateDebtAccounting(oldDebt, proposedDebtAmount);
 
     return vaultKit;
   };
@@ -795,7 +797,7 @@ export const makeInnerVault = (
   const innerVault = Far('innerVault', {
     getVaultSeat: () => state.vaultSeat,
 
-    initVaultKit: (seat, poolSeat, exchangeRate) => initVaultKit(seat, poolSeat, innerVault, exchangeRate),
+    initVaultKit: (seat, poolSeat, exchangeRate, vaultKey) => initVaultKit(seat, poolSeat, innerVault, exchangeRate, vaultKey),
     liquidating,
     liquidated,
 
