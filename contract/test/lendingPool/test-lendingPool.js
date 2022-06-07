@@ -384,7 +384,7 @@ test('deposit', async t => {
   );
 
   t.is(await E(vanPoolMan).getProtocolLiquidity(), 5555555550n);
-  t.is(await E(vanPoolMan).getUnderlyingLiquidity(), 111111111n);
+  t.deepEqual(await E(vanPoolMan).getUnderlyingLiquidity(), AmountMath.make(vanBrand, 111111111n));
   t.is(message, 'Finished');
 });
 
@@ -1742,6 +1742,7 @@ test('debt-price-up-liquidate', async t => {
   const debtWithPenalty = floorMultiplyBy(aliceDebtProposal.want.Debt, panRates.penaltyRate);
   const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
   const panPoolCurrentLiquidity = await E(panPoolMan).getUnderlyingLiquidity();
+  const currentVaultDebt = await E(aliceVault).getCurrentDebt();
   t.truthy(AmountMath.isGTE(panPoolCurrentLiquidity, panPoolInitialLiquidity)
     && AmountMath.isGTE(
       AmountMath.add(debtWithPenalty, panPoolInitialLiquidity),
@@ -1770,10 +1771,10 @@ test('debt-price-up-col-price-down-liquidate', async t => {
     AmountMath.make(vanBrand, 900n),
     buildManualTimer(console.log, 0n, secondsPerDay),
     secondsPerDay,
-    1n * 100n * 10n ** 6n ,
-    1n * 100n * 10n ** 6n,
-    90n * 10n ** 8n * 100n,
-    100n * 10n ** 8n * 100n
+    100n * 10n ** 6n * 100n,
+    193n * 10n ** 6n * 100n,
+     10n ** 8n * 100n,
+    10n ** 8n * 100n
   );
 
   await waitForPromisesToSettle();

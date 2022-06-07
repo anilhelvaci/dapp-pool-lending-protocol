@@ -80,6 +80,7 @@ const start = async zcf => {
       amountIn,
       paid: debtorSeat.getCurrentAllocation(),
       amounts,
+      debtPriceInCollateral
     });
     console.log("LiqOfferResult", await E(liqSeat).getOfferResult());
     // Now we need to know how much was sold so we can pay off the debt.

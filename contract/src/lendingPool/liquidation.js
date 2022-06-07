@@ -59,7 +59,7 @@ const liquidate = async (
     vaultZcfSeat,
     undefined
   );
-
+  await redeemDeposited;
   trace(`liq prep`, { collateralToSell, debt, liquidator });
 
   const collateralUnderlyingToSell = vaultZcfSeat.getAmountAllocated('CollateralUnderlying', collateralBrand);
