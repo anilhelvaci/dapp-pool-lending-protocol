@@ -13,7 +13,7 @@ import { makeTracer } from '../makeTracer.js';
 const trace = makeTracer('LiqMin', false);
 
 /**
- * This contract liquidates the minimum amount of vault's collateral necessary
+ * This contract liquidates the minimum amount of loan's collateral necessary
  * to satisfy the debt. It uses the AMM's swapOut, which sells no more than
  * necessary. Because it has offer safety, it can refuse the trade. When that
  * happens, we fall back to selling using the default strategy, which currently

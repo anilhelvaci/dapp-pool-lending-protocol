@@ -9,7 +9,7 @@ import { makeTracer } from '../makeTracer.js';
 const trace = makeTracer('LIQ');
 
 /**
- * Liquidates a Vault, using the strategy to parameterize the particular
+ * Liquidates a Loan, using the strategy to parameterize the particular
  * contract being used. The strategy provides a KeywordMapping and proposal
  * suitable for `offerTo()`, and an invitation.
  *
@@ -17,7 +17,7 @@ const trace = makeTracer('LIQ');
  * necessary to cover the debt and return the remainder.
  *
  * @param {ZCF} zcf
- * @param {Vault} vault
+ * @param {Loan} loan
  * @param {Liquidator}  liquidator
  * @param {MakeRedeemInvitation} makeRedeemInvitation
  * @param {Brand} collateralBrand
@@ -25,11 +25,11 @@ const trace = makeTracer('LIQ');
  * @param {Ratio} penaltyRate
  * @param {TransferLiquidatedFund} transferLiquidatedFund
  * @param {DebtPaid} debtPaid
- * @returns {Promise<Vault>}
+ * @returns {Promise<Loan>}
  */
 const liquidate = async (
   zcf,
-  vault,
+  loan,
   liquidator,
   makeRedeemInvitation,
   collateralBrand,
@@ -38,14 +38,14 @@ const liquidate = async (
   transferLiquidatedFund,
   debtPaid
 ) => {
-  trace('liquidate start', vault);
-  vault.liquidating();
+  trace('liquidate start', loan);
+  loan.liquidating();
 
-  const debt = vault.getCurrentDebt();
+  const debt = loan.getCurrentDebt();
 
-  const vaultZcfSeat = vault.getVaultSeat();
+  const loanZcfSeat = loan.getLoanSeat();
 
-  const collateralToSell = vaultZcfSeat.getAmountAllocated('Collateral');
+  const collateralToSell = loanZcfSeat.getAmountAllocated('Collateral');
 
   const { deposited: redeemDeposited, userSeatPromise: redeemSeat } = await offerTo(
     zcf,
@@ -55,14 +55,14 @@ const liquidate = async (
       give: { Protocol: collateralToSell },
       want: { Underlying: AmountMath.makeEmpty(collateralBrand) },
     }),
-    vaultZcfSeat,
-    vaultZcfSeat,
+    loanZcfSeat,
+    loanZcfSeat,
     undefined
   );
   await redeemDeposited;
   trace(`liq prep`, { collateralToSell, debt, liquidator });
 
-  const collateralUnderlyingToSell = vaultZcfSeat.getAmountAllocated('CollateralUnderlying', collateralBrand);
+  const collateralUnderlyingToSell = loanZcfSeat.getAmountAllocated('CollateralUnderlying', collateralBrand);
 
   const { deposited, userSeatPromise: liqSeat } = await offerTo(
     zcf,
@@ -72,17 +72,17 @@ const liquidate = async (
       give: { In: collateralUnderlyingToSell },
       want: { Out: AmountMath.makeEmpty(debt.brand) },
     }),
-    vaultZcfSeat,
-    vaultZcfSeat,
+    loanZcfSeat,
+    loanZcfSeat,
     harden({ debt, penaltyRate }),
   );
   trace(` offeredTo`, { collateralToSell, debt });
 
   await deposited;
-  transferLiquidatedFund(vaultZcfSeat);
+  transferLiquidatedFund(loanZcfSeat);
   debtPaid(debt);
-  vault.liquidated(AmountMath.makeEmpty(debt.brand));
-  return vault;
+  loan.liquidated(AmountMath.makeEmpty(debt.brand));
+  return loan;
 };
 
 const liquidationDetailTerms = debtBrand =>

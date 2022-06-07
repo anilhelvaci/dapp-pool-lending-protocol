@@ -14,8 +14,7 @@ import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 
 import { makeScalarMap } from '@agoric/store';
-import { makeInnerVault } from './vault.js';
-import { liquidate, liquidationDetailTerms } from './liquidation.js';
+import { makeInnerLoan } from './loan.js';
 import { makeTracer } from '../makeTracer.js';
 import {
   RECORDING_PERIOD_KEY,
@@ -31,7 +30,6 @@ import {
 import { chargeInterest } from '../interest.js';
 import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate } from '../protocolMath.js';
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
-import { makeQuoteManager } from './quoteManager.js';
 import { floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const trace = makeTracer('VM');
@@ -45,9 +43,9 @@ const trace = makeTracer('VM');
  * }} AssetState */
 
 /**
- * Each VaultManager manages a single collateral type.
+ * Each LoanManager manages a single collateral type.
  *
- * It manages some number of outstanding loans, each called a Vault, for which
+ * It manages some number of outstanding loans, each called a Loan, for which
  * the collateral is provided in exchange for borrowed RUN.
  *
  * @param {ContractFacet} zcf
@@ -63,16 +61,14 @@ const trace = makeTracer('VM');
  *  ChargingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  *  RecordingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  * }} timingParams
- * @param {GetGovernedVaultParams} getLoanParams
- * @param {ReallocateWithFee} reallocateWithFee
+ * @param {GetGovernedLoanParams} getLoanParams
  * @param {ERef<TimerService>} timerService
- * @param {LiquidationStrategy} liquidationStrategy
  * @param {Timestamp} startTimeStamp
  * @param {GetExchangeRateForPool} getExchangeRateForPool
  * @param {MakeRedeemInvitation} makeRedeemInvitation
  * @param {Installation} liquidationInstall
  * @param {XYKAMMPublicFacet} ammPublicFacet
- * @returns {VaultManager}
+ * @returns {LoanManager}
  */
 export const makePoolManager = (
   zcf,
@@ -86,9 +82,7 @@ export const makePoolManager = (
   priceManager,
   timingParams,
   getLoanParams,
-  // reallocateWithFee = undefined,
   timerService,
-  // liquidationStrategy,
   startTimeStamp,
   getExchangeRateForPool,
   makeRedeemInvitation,
@@ -101,7 +95,7 @@ export const makePoolManager = (
   let totalDebt = AmountMath.makeEmpty(underlyingBrand, 'nat');
   let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
 
-  /** @type {GetVaultParams} */
+  /** @type {GetLoanParams} */
   const shared = {
     // loans below this margin may be liquidated
     getLiquidationMargin: () => getLoanParams()[LIQUIDATION_MARGIN_KEY].value,
@@ -116,7 +110,7 @@ export const makePoolManager = (
       const exchangeRate = getExchangeRate();
       return ceilDivideBy(depositAmount, exchangeRate);
     },
-    getPriceAuthorityForBrand: brand => E(priceManager).getPriceAuthority(brand),
+    getPriceAuthorityForBrand: brand => E(priceManager).getWrappedPriceAuthority(brand),
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
     getProtocolBrand: () => protocolBrand,
@@ -140,8 +134,6 @@ export const makePoolManager = (
       return floorMultiplyBy(protocolAmount, exchangeRate);
     }
   };
-
-  let vaultCounter = 0;
 
   /**
    * @type {MapStore<Brand, DebtsPerCollateral>}
@@ -203,8 +195,8 @@ export const makePoolManager = (
    * @param {bigint} updateTime
    * @param {ZCFSeat} poolIncrementSeat
    */
-  const chargeAllVaults = async (updateTime, poolIncrementSeat) => {
-    trace('chargeAllVaults', { updateTime });
+  const chargeAllLoans = async (updateTime, poolIncrementSeat) => {
+    trace('chargeAllLoans', { updateTime });
     const interestRate = shared.getCurrentBorrowingRate();
 
     // Update local state with the results of charging interest
@@ -232,19 +224,19 @@ export const makePoolManager = (
     });
     assetUpdater.updateState(payload);
 
-    trace('chargeAllVaults complete', payload);
+    trace('chargeAllLoans complete', payload);
 
   };
 
   /**
-   * Update total debt of this manager given the change in debt on a vault
+   * Update total debt of this manager given the change in debt on a loan
    *
-   * @param {Amount<NatValue>} oldDebtOnVault
-   * @param {Amount<NatValue>} newDebtOnVault
+   * @param {Amount<NatValue>} oldDebtOnLoan
+   * @param {Amount<NatValue>} newDebtOnLoan
    */
   // TODO https://github.com/Agoric/agoric-sdk/issues/4599
-  const applyDebtDelta = (oldDebtOnVault, newDebtOnVault) => {
-    const delta = newDebtOnVault.value - oldDebtOnVault.value;
+  const applyDebtDelta = (oldDebtOnLoan, newDebtOnLoan) => {
+    const delta = newDebtOnLoan.value - oldDebtOnLoan.value;
     trace(`updating total debt ${totalDebt} by ${delta}`);
     if (delta === 0n) {
       // nothing to do
@@ -256,9 +248,9 @@ export const makePoolManager = (
   };
 
 
-  const liquidateVault = async (collateralUnderlyingBrand) => {
+  const liquidateLoan = async (collateralUnderlyingBrand) => {
     const debtPerCollateral = debtsPerCollateralStore.get(collateralUnderlyingBrand);
-    return await debtPerCollateral.liquidateFirstVault();
+    return await debtPerCollateral.liquidateFirstLoan();
   }
 
   /**
@@ -288,16 +280,16 @@ export const makePoolManager = (
     }
   };
 
-  const transferLiquidatedFund = vaultSeat => {
-    const vaultAllocations = vaultSeat.getCurrentAllocation();
-    assert(vaultAllocations.Debt && vaultAllocations.Debt !== undefined, 'The vault has no liquidated funds');
+  const transferLiquidatedFund = loanSeat => {
+    const loanAllocations = loanSeat.getCurrentAllocation();
+    assert(loanAllocations.Debt && loanAllocations.Debt !== undefined, 'The loan has no liquidated funds');
     const {
       Debt: liquidatedAmount
-    } = vaultSeat.getCurrentAllocation();
+    } = loanSeat.getCurrentAllocation();
     console.log("underlyingAssetSeatBefore", underlyingAssetSeat.getCurrentAllocation());
-    vaultSeat.decrementBy(harden({Debt: liquidatedAmount}));
+    loanSeat.decrementBy(harden({Debt: liquidatedAmount}));
     underlyingAssetSeat.incrementBy(harden({ Underlying: liquidatedAmount }));
-    zcf.reallocate(vaultSeat, underlyingAssetSeat);
+    zcf.reallocate(loanSeat, underlyingAssetSeat);
     console.log("underlyingAssetSeatAfter", underlyingAssetSeat.getCurrentAllocation());
   }
 
@@ -309,9 +301,10 @@ export const makePoolManager = (
     }
   }
 
-  const reallocateBetweenSeats = (vaultSeat, clientSeat) => {
+  const reallocateBetweenSeats = (loanSeat, clientSeat) => {
+    // TODO use Array.map() here
     const seatList = [];
-    addIfHasStagedAllocation(seatList, vaultSeat);
+    addIfHasStagedAllocation(seatList, loanSeat);
     addIfHasStagedAllocation(seatList, clientSeat);
     addIfHasStagedAllocation(seatList, underlyingAssetSeat);
     trace("seatList", seatList);
@@ -332,8 +325,8 @@ export const makePoolManager = (
     updateState: updateTime =>{
       console.log('[CHARGING_INTEREST]', updateTime);
       if (!AmountMath.isEmpty(totalDebt)) {
-        chargeAllVaults(updateTime, poolIncrementSeat).catch(e =>
-          console.error('🚨 vaultManager failed to charge interest', e),
+        chargeAllLoans(updateTime, poolIncrementSeat).catch(e =>
+          console.error('🚨 loanManager failed to charge interest', e),
         )
       }
     },
@@ -352,7 +345,7 @@ export const makePoolManager = (
 
   observeNotifier(periodNotifier, timeObserver);
 
-  /** @type {Parameters<typeof makeInnerVault>[1]} */
+  /** @type {Parameters<typeof makeInnerLoan>[1]} */
   const managerFacet = harden({
     ...shared,
     applyDebtDelta,
@@ -388,7 +381,7 @@ export const makePoolManager = (
     const collateralBrand = exchangeRate.numerator.brand;
 
     if (!debtsPerCollateralStore.has(collateralBrand)) {
-      const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
+      const wrappedCollateralPriceAuthority = await E(priceManager).getWrappedPriceAuthority(collateralBrand); // should change the method name
       debtsPerCollateralStore.init(collateralBrand, await makeDebtsPerCollateral(
         zcf,
         collateralBrand,
@@ -405,12 +398,12 @@ export const makePoolManager = (
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
     console.log("debtsPerCollateral: ", debtsPerCollateral)
-    const [vaultKit] = await Promise.all([
-      debtsPerCollateral.addNewVault(seat, underlyingAssetSeat, exchangeRate),
+    const [loanKit] = await Promise.all([
+      debtsPerCollateral.addNewLoan(seat, underlyingAssetSeat, exchangeRate),
       debtsPerCollateral.setupLiquidator(liquidationInstall, ammPublicFacet)
     ]);
-    trace('VaultKit', vaultKit);
-    return vaultKit;
+    trace('LoanKit', loanKit);
+    return loanKit;
   };
 
   /**
@@ -475,12 +468,12 @@ export const makePoolManager = (
     return zcf.makeInvitation(depositHook, 'depositFund');
   }
 
-  /** @type {VaultManager} */
-  return Far('vault manager', {
+  /** @type {LoanManager} */
+  return Far('loan manager', {
     ...shared,
     makeBorrowKit,
     redeemHook,
     makeDepositInvitation,
-    liquidateVault
+    liquidateLoan
   });
 };

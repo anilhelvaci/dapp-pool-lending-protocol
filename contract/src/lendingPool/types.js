@@ -1,8 +1,8 @@
 // @ts-check
 
 /** @typedef {import('./vault').VaultUIState} VaultUIState */
-/** @typedef {import('./vaultKit').VaultKit} VaultKit */
-/** @typedef {VaultKit['vault']} Vault */
+/** @typedef {import('./loanKit').LoanKit} LoanKit */
+/** @typedef {LoanKit['vault']} Vault */
 
 /**
  * @typedef  {Object} AutoswapLocal
@@ -136,7 +136,7 @@
 
 /**
  * @typedef {Object} VaultManagerBase
- * @property {(seat: ZCFSeat) => Promise<VaultKit>}  makeVaultKit
+ * @property {(seat: ZCFSeat) => Promise<LoanKit>}  makeLoanKit
  * @property {() => void} liquidateAll
  */
 

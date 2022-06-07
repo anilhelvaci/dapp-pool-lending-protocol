@@ -1,5 +1,5 @@
 import { makeScalarMap} from '@agoric/store';
-import { makeInnerVault } from './vault.js';
+import { makeInnerLoan } from './loan.js';
 import { E } from '@agoric/eventual-send';
 import { Far } from '@endo/marshal';
 import {
@@ -38,11 +38,11 @@ export const makeDebtsPerCollateral = async (
   const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0n;
   const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0n;
 
-  let vaultCounter = 0;
+  let loanCounter = 0;
 
-  /** @type {MapStore<string, InnerVault>} */
-  const vaults = makeScalarMap('vaults');
-  const vaultsToLiquidate = makeScalarMap('vaultsToLiquidate');
+  /** @type {MapStore<string, InnerLoan>} */
+  const loans = makeScalarMap('loans');
+  const loansToLiquidate = makeScalarMap('loansToLiquidate');
   const orderedLoans = makeLoanStoreUtils();
   const managerMethods = harden({
     ...manager,
@@ -56,7 +56,7 @@ export const makeDebtsPerCollateral = async (
     wrappedCollateralPriceAuthority,
     wrappedDebtPriceAuthority: { priceAuthority: underlyingPriceAuthority, notifier: underlyingPriceNotifier },
     liquidationMargin: manager.getLiquidationMargin(),
-    vaultData: {
+    loanData: {
       collateralUnderlyingDecimals: collateralDecimalPlaces,
       debtDecimals: debtDecimalPlaces,
       debtBrand,
@@ -71,51 +71,51 @@ export const makeDebtsPerCollateral = async (
     liquidator: undefined
   }
 
-  const addNewVault = async (seat, underlyingAssetSeat, exchangeRate) => {
-    vaultCounter += 1;
-    const vaultId = String(vaultCounter);
-    console.log("addNewVault")
-    const innerVault = makeInnerVault(
+  const addNewLoan = async (seat, underlyingAssetSeat, exchangeRate) => {
+    loanCounter += 1;
+    const loanId = String(loanCounter);
+    console.log("addNewLoan")
+    const innerLoan = makeInnerLoan(
       zcf,
       managerMethods,
       assetNotifier,
-      vaultId,
+      loanId,
       debtBrand,
       underlyingPriceAuthority,
       wrappedCollateralPriceAuthority.priceAuthority,
     );
 
-    const vaultKey = orderedLoans.addLoan(vaultId, innerVault);
-    const vaultKit = await innerVault.initVaultKit(seat, underlyingAssetSeat, exchangeRate, vaultKey);
+    const loanKey = orderedLoans.addLoan(loanId, innerLoan);
+    const loanKit = await innerLoan.initLoanKit(seat, underlyingAssetSeat, exchangeRate, loanKey);
     seat.exit();
-    return vaultKit;
+    return loanKit;
   };
 
   const scheduleLiquidation = async () => {
-    const closestVault = orderedLoans.firstDebtRatio();
-    if (!closestVault) {
+    const closestLoan = orderedLoans.firstDebtRatio();
+    if (!closestLoan) {
       return;
     }
     const {
       colLatestQuote,
       debtLatestQuote,
-      vault,
-    } = await liquidationObserver.schedule(closestVault);
+      loan,
+    } = await liquidationObserver.schedule(closestLoan);
 
     Array.from(orderedLoans.entries()).forEach(
-      ([key, vault]) => {
+      ([key, loan]) => {
 
-        const collateralValInCompareCurrency = liquidationObserver.getValInCompareCurrency(vault.getCollateralAmount(),
+        const collateralValInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCollateralAmount(),
           colLatestQuote, collateralBrand, collateralDecimalPlaces, manager.getExchangeRateForPool(collateralBrand));
 
-        const debtValueInCompareCurrency = liquidationObserver.getValInCompareCurrency(vault.getCurrentDebt(),
+        const debtValueInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCurrentDebt(),
           debtLatestQuote, manager.getUnderlyingBrand(), debtDecimalPlaces);
 
-        const vaultDebtToCollateral = makeRatioFromAmounts(collateralValInCompareCurrency, debtValueInCompareCurrency);
+        const loanDebtToCollateral = makeRatioFromAmounts(collateralValInCompareCurrency, debtValueInCompareCurrency);
 
-        if (ratioGTE(manager.getLiquidationMargin(), vaultDebtToCollateral)) {
+        if (ratioGTE(manager.getLiquidationMargin(), loanDebtToCollateral)) {
           console.log("satıyorum")
-          vaultsToLiquidate.init(key, vault);
+          loansToLiquidate.init(key, loan);
           orderedLoans.removeLoan(key);
         }
       },
@@ -127,34 +127,20 @@ export const makeDebtsPerCollateral = async (
 
   orderedLoans.setRescheduler(scheduleLiquidation);
 
-  const liquidateFirstVault = async () => {
-    const firstVault = vaults.get("1");
-    await liquidate(
-      zcf,
-      firstVault,
-      liquidation.liquidator,
-      manager.makeRedeemInvitation,
-      collateralBrand,
-      debtIssuer,
-      manager.getPenaltyRate(),
-      manager.transferLiquidatedFund
-    )
-  }
-
   const executeLiquidation = async () => {
     console.log("insideExecuteLiquidation")
-    console.log("vaultsToLiquidateSize", Array.from(vaultsToLiquidate.entries()).length)
+    console.log("loansToLiquidateSize", Array.from(loansToLiquidate.entries()).length)
     // Start all promises in parallel
     // XXX we should have a direct method to map over entries
-    const liquidations = Array.from(vaultsToLiquidate.entries()).map(
-      async ([key, vault]) => {
-        trace('liquidating', vault.getVaultSeat().getProposal());
+    const liquidations = Array.from(loansToLiquidate.entries()).map(
+      async ([key, loan]) => {
+        trace('liquidating', loan.getLoanSeat().getProposal());
 
         try {
-          // Start liquidation (vaultState: LIQUIDATING)
+          // Start liquidation (loanState: LIQUIDATING)
           await liquidate(
             zcf,
-            vault,
+            loan,
             liquidation.liquidator,
             manager.makeRedeemInvitation,
             collateralBrand,
@@ -164,7 +150,7 @@ export const makeDebtsPerCollateral = async (
             manager.debtPaid
           )
 
-          vaultsToLiquidate.delete(key);
+          loansToLiquidate.delete(key);
         } catch (e) {
           // XXX should notify interested parties
           console.error('liquidateAndRemove failed with', e);
@@ -202,12 +188,8 @@ export const makeDebtsPerCollateral = async (
     liquidation.liquidator = creatorFacet;
   };
 
-
-
   return Far('DebtsPerCollateral', {
-    addNewVault,
-    getFirstVault: () => vaults.get("1"),
+    addNewLoan,
     setupLiquidator,
-    liquidateFirstVault
   })
 };

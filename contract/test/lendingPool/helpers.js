@@ -83,9 +83,9 @@ export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPaym
     { collateralUnderlyingBrand: collateralUnderlyingBrand },
   );
 
-  const borrowVaultKit = await E(borrowSeat).getOfferResult();
+  const borrowLoanKit = await E(borrowSeat).getOfferResult();
 
-  return { moneyLeftInPool: depositedMoneyMinusLoan, vaultKit: borrowVaultKit }
+  return { moneyLeftInPool: depositedMoneyMinusLoan, loanKit: borrowLoanKit }
 }
 
 /**

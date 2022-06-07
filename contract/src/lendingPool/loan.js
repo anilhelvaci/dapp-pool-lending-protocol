@@ -16,29 +16,29 @@ import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 import { makeTracer } from '../makeTracer.js';
 import { calculateCurrentDebt, reverseInterest } from '../interest-math.js';
-import { makeVaultKit } from './vaultKit.js';
+import { makeLoanKit } from './loanKit.js';
 
 const { details: X, quote: q } = assert;
 
 const trace = makeTracer('IV');
 
 /**
- * @file This has most of the logic for a Vault, to borrow RUN against collateral.
+ * @file This has most of the logic for a Loan, to borrow RUN against collateral.
  *
- * The logic here is for InnerVault which is the majority of logic of vaults but
- * the user view is the `vault` value contained in VaultKit.
+ * The logic here is for InnerLoan which is the majority of logic of loans but
+ * the user view is the `Loan` value contained in LoanKit.
  */
 
 /**
- * Constants for vault phase.
+ * Constants for loan phase.
  *
- * ACTIVE       - vault is in use and can be changed
- * LIQUIDATING  - vault is being liquidated by the vault manager, and cannot be changed by the user
- * TRANSFER     - vault is able to be transferred (payments and debits frozen until it has a new owner)
- * CLOSED       - vault was closed by the user and all assets have been paid out
- * LIQUIDATED   - vault was closed by the manager, with remaining assets paid to owner
+ * ACTIVE       - loan is in use and can be changed
+ * LIQUIDATING  - loan is being liquidated by the loan manager, and cannot be changed by the user
+ * TRANSFER     - loan is able to be transferred (payments and debits frozen until it has a new owner)
+ * CLOSED       - loan was closed by the user and all assets have been paid out
+ * LIQUIDATED   - loan was closed by the manager, with remaining assets paid to owner
  */
-export const VaultPhase = /** @type {const} */ ({
+export const LoanPhase = /** @type {const} */ ({
   ACTIVE: 'active',
   LIQUIDATING: 'liquidating',
   CLOSED: 'closed',
@@ -47,34 +47,34 @@ export const VaultPhase = /** @type {const} */ ({
 });
 
 /**
- * @typedef {VaultPhase[keyof Omit<typeof VaultPhase, 'TRANSFER'>]} InnerPhase
+ * @typedef {LoanPhase[keyof Omit<typeof LoanPhase, 'TRANSFER'>]} InnerPhase
  * @type {{[K in InnerPhase]: Array<InnerPhase>}}
  */
 const validTransitions = {
-  [VaultPhase.ACTIVE]: [VaultPhase.LIQUIDATING, VaultPhase.CLOSED],
-  [VaultPhase.LIQUIDATING]: [VaultPhase.LIQUIDATED],
-  [VaultPhase.LIQUIDATED]: [VaultPhase.CLOSED],
-  [VaultPhase.CLOSED]: [],
+  [LoanPhase.ACTIVE]: [LoanPhase.LIQUIDATING, LoanPhase.CLOSED],
+  [LoanPhase.LIQUIDATING]: [LoanPhase.LIQUIDATED],
+  [LoanPhase.LIQUIDATED]: [LoanPhase.CLOSED],
+  [LoanPhase.CLOSED]: [],
 };
-
+// TODO need to take a look at the type definitions
 /**
- * @typedef {VaultPhase[keyof typeof VaultPhase]} OuterPhase
+ * @typedef {LoanPhase[keyof typeof LoanPhase]} OuterPhase
  *
- * @typedef {Object} VaultUIState
+ * @typedef {Object} LoanUIState
  * @property {Amount<NatValue>} locked Amount of Collateral locked
  * @property {{run: Amount<NatValue>, interest: Ratio}} debtSnapshot Debt of 'run' at the point the compounded interest was 'interest'
  * @property {Ratio} interestRate Annual interest rate charge
  * @property {Ratio} liquidationRatio
- * @property {OuterPhase} vaultState
+ * @property {OuterPhase} loanState
  */
 
 /**
- * @typedef {Object} InnerVaultManagerBase
+ * @typedef {Object} InnerLoanManagerBase
  * @property {(oldDebt: Amount, newDebt: Amount) => void} applyDebtDelta
  * @property {() => Brand} getCollateralBrand
  * @property {() => void} reallocateBetweenSeats
  * @property {() => Ratio} getCompoundedInterest - coefficient on existing debt to calculate new debt
- * @property {(oldDebt: Amount, oldCollateral: Amount, vaultId: VaultId) => void} updateVaultPriority
+ * @property {(oldDebt: Amount, oldCollateral: Amount, loanId: LoanId) => void} updateLoanPriority
  * @property {() => Brand} getThirdCurrencyBrand
  * @property {(seat: ZCFSeat, currentDebt: Amount) => void} transferDebt
  * @property {(brand: Brand) => Ratio} getExchangeRateForPool
@@ -84,11 +84,11 @@ const validTransitions = {
 /**
  * @typedef {Readonly<{
  * assetNotifier: Notifier<import('./poolManager.js').AssetState>,
- * idInManager: VaultId,
- * manager: InnerVaultManagerBase & GetVaultParams,
+ * idInManager: LoanId,
+ * manager: InnerLoanManagerBase & GetLoanParams,
  * priceAuthority: ERef<PriceAuthority>,
  * mint: ZCFMint,
- * vaultSeat: ZCFSeat,
+ * loanSeat: ZCFSeat,
  * zcf: ContractFacet,
  * }>} ImmutableState
  */
@@ -98,7 +98,7 @@ const validTransitions = {
  *
  * @typedef {{
  * interestSnapshot: Ratio,
- * outerUpdater: IterationObserver<VaultUIState> | null,
+ * outerUpdater: IterationObserver<LoanUIState> | null,
  * phase: InnerPhase,
  * debtSnapshot: Amount<NatValue>,
  * }} MutableState
@@ -106,14 +106,14 @@ const validTransitions = {
 
 /**
  * @param {ContractFacet} zcf
- * @param {InnerVaultManagerBase & GetVaultParams} manager
+ * @param {InnerLoanManagerBase & GetLoanParams} manager
  * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
- * @param {VaultId} idInManager
+ * @param {LoanId} idInManager
  * @param {Brand} debtBrand
  * @param {ERef<PriceAuthority>} debtPriceAuthority
  * @param {ERef<PriceAuthority>} collateralPriceAuthority
  */
-export const makeInnerVault = (
+export const makeInnerLoan = (
   zcf,
   manager,
   assetNotifier,
@@ -125,7 +125,7 @@ export const makeInnerVault = (
   // CONSTANTS
   const collateralBrand = manager.getCollateralBrand();
   // const { brand: debtBrand } = mint.getIssuerRecord();
-  console.log("makeInnerVault")
+  console.log("makeInnerLoan")
   /**
    * State object to support virtualization when available
    *
@@ -136,19 +136,19 @@ export const makeInnerVault = (
     idInManager,
     manager,
     outerUpdater: null,
-    vaultKey: null,
-    phase: VaultPhase.ACTIVE,
+    loanKey: null,
+    phase: LoanPhase.ACTIVE,
     debtPriceAuthority,
     collateralPriceAuthority,
     // mint,
     zcf,
 
-    // vaultSeat will hold the collateral until the loan is retired. The
-    // payout from it will be handed to the user: if the vault dies early
-    // (because the vaultFactory vat died), they'll get all their
+    // loanSeat will hold the collateral until the loan is retired. The
+    // payout from it will be handed to the user: if the loan dies early
+    // (because the loanFactory vat died), they'll get all their
     // collateral back. If that happens, the issuer for the RUN will be dead,
     // so their loan will be worthless.
-    vaultSeat: zcf.makeEmptySeatKit().zcfSeat,
+    loanSeat: zcf.makeEmptySeatKit().zcfSeat,
 
     // Two values from the same moment
     interestSnapshot: manager.getCompoundedInterest(),
@@ -165,21 +165,21 @@ export const makeInnerVault = (
     const validNewPhases = validTransitions[phase];
     assert(
       validNewPhases.includes(newPhase),
-      `Vault cannot transition from ${phase} to ${newPhase}`,
+      `Loan cannot transition from ${phase} to ${newPhase}`,
     );
     state.phase = newPhase;
   };
 
   const assertActive = () => {
     const { phase } = state;
-    assert(phase === VaultPhase.ACTIVE);
+    assert(phase === LoanPhase.ACTIVE);
   };
 
   const assertCloseable = () => {
     const { phase } = state;
     assert(
-      phase === VaultPhase.ACTIVE || phase === VaultPhase.LIQUIDATED,
-      X`to be closed a vault must be active or liquidated, not ${phase}`,
+      phase === LoanPhase.ACTIVE || phase === LoanPhase.LIQUIDATED,
+      X`to be closed a loan must be active or liquidated, not ${phase}`,
     );
   };
   // #endregion
@@ -204,11 +204,11 @@ export const makeInnerVault = (
   const updateDebtAccounting = (oldDebt, newDebt) => {
     // const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
-    // update vault manager which tracks total debt
+    // update loan manager which tracks total debt
     manager.applyDebtDelta(oldDebt, newDebt);
-    // update position of this vault in liquidation priority queue
+    // update position of this loan in liquidation priority queue
     // manager.refreshLoanPriority(getNormalizedDebt(), oldCollateral, idInManager);
-    state.vaultKey = manager.refreshLoanPriorityByKey(state.vaultKey, idInManager);
+    state.loanKey = manager.refreshLoanPriorityByKey(state.loanKey, idInManager);
   };
 
   /**
@@ -216,9 +216,9 @@ export const makeInnerVault = (
    *
    * This looks like a simple getter but it does a lot of the heavy lifting for
    * interest accrual. Rather than updating all records when interest accrues,
-   * the vault manager updates just its rolling compounded interest. Here we
-   * calculate what the current debt is given what's recorded in this vault and
-   * what interest has compounded since this vault record was written.
+   * the loan manager updates just its rolling compounded interest. Here we
+   * calculate what the current debt is given what's recorded in this loan and
+   * what interest has compounded since this loan record was written.
    *
    * @see getNormalizedDebt
    * @returns {Amount<NatValue>}
@@ -243,12 +243,12 @@ export const makeInnerVault = (
 
   /**
    * The normalization puts all debts on a common time-independent scale since
-   * the launch of this vault manager. This allows the manager to order vaults
+   * the launch of this loan manager. This allows the manager to order loans
    * by their debt-to-collateral ratios without having to mutate the debts as
    * the interest accrues.
    *
    * @see getActualDebAmount
-   * @returns {Amount<NatValue>} as if the vault was open at the launch of this manager, before any interest accrued
+   * @returns {Amount<NatValue>} as if the loan was open at the launch of this manager, before any interest accrued
    */
   const getNormalizedDebt = () => {
     return reverseInterest(state.debtSnapshot, state.interestSnapshot);
@@ -260,11 +260,11 @@ export const makeInnerVault = (
   }
   const getDebtAllocated = seat => seat.getAmountAllocated('Debt', debtBrand);
 
-  const assertVaultHoldsNoRun = () => {
-    const { vaultSeat } = state;
+  const assertLoanHoldsNoRun = () => {
+    const { loanSeat } = state;
     assert(
-      AmountMath.isEmpty(getDebtAllocated(vaultSeat)),
-      X`Vault should be empty of RUN`,
+      AmountMath.isEmpty(getDebtAllocated(loanSeat)),
+      X`Loan should be empty of RUN`,
     );
   };
 
@@ -337,14 +337,14 @@ export const makeInnerVault = (
    * @returns {Amount<NatValue>}
    */
   const getCollateralAmount = () => {
-    const { vaultSeat, phase } = state;
-    console.log("vaultSeatAllocations", vaultSeat.getCurrentAllocation());
+    const { loanSeat, phase } = state;
+    console.log("loanSeatAllocations", loanSeat.getCurrentAllocation());
     console.log("Phase", phase);
-    console.log("Exited", vaultSeat.hasExited());
+    console.log("Exited", loanSeat.hasExited());
     // getCollateralAllocated would return final allocations
-    return vaultSeat.hasExited()
+    return loanSeat.hasExited()
       ? AmountMath.makeEmpty(collateralBrand)
-      : getCollateralAllocated(vaultSeat);
+      : getCollateralAllocated(loanSeat);
   };
 
   const getCurrentCollateralValueInCompareCurrencyForm = async () => {
@@ -363,7 +363,7 @@ export const makeInnerVault = (
    */
   const snapshotState = newPhase => {
     const { debtSnapshot: debt, interestSnapshot: interest } = state;
-    /** @type {VaultUIState} */
+    /** @type {LoanUIState} */
     return harden({
       // TODO move manager state to a separate notifer https://github.com/Agoric/agoric-sdk/issues/4540
       interestRate: manager.getCurrentBorrowingRate(),
@@ -371,9 +371,9 @@ export const makeInnerVault = (
       // XXX 'run' is implied by the brand in the amount
       debtSnapshot: { debt, interest },
       locked: getCollateralAmount(),
-      // newPhase param is so that makeTransferInvitation can finish without setting the vault's phase
+      // newPhase param is so that makeTransferInvitation can finish without setting the loan's phase
       // TODO refactor https://github.com/Agoric/agoric-sdk/issues/4415
-      vaultState: newPhase,
+      loanState: newPhase,
     });
   };
 
@@ -389,17 +389,17 @@ export const makeInnerVault = (
     trace('updateUiState', uiState);
 
     switch (phase) {
-      case VaultPhase.ACTIVE:
-      case VaultPhase.LIQUIDATING:
+      case LoanPhase.ACTIVE:
+      case LoanPhase.LIQUIDATING:
         outerUpdater.updateState(uiState);
         break;
-      case VaultPhase.CLOSED:
-      case VaultPhase.LIQUIDATED:
+      case LoanPhase.CLOSED:
+      case LoanPhase.LIQUIDATED:
         outerUpdater.finish(uiState);
         state.outerUpdater = null;
         break;
       default:
-        throw Error(`unreachable vault phase: ${phase}`);
+        throw Error(`unreachable loan phase: ${phase}`);
     }
   };
 
@@ -411,21 +411,21 @@ export const makeInnerVault = (
   const liquidated = newDebt => {
     updateDebtSnapshot(newDebt);
 
-    assignPhase(VaultPhase.LIQUIDATED);
+    assignPhase(LoanPhase.LIQUIDATED);
     updateUiState();
   };
 
   const liquidating = () => {
-    assignPhase(VaultPhase.LIQUIDATING);
+    assignPhase(LoanPhase.LIQUIDATING);
     updateUiState();
   };
 
   /** @type {OfferHandler} */
   const closeHook = async seat => {
     assertCloseable();
-    const { phase, vaultSeat } = state;
+    const { phase, loanSeat } = state;
     const proposal = seat.getProposal();
-    if (phase === VaultPhase.ACTIVE) {
+    if (phase === LoanPhase.ACTIVE) {
       assertProposalShape(seat, {
         give: { Debt: null },
         want: { Collateral: null },
@@ -448,36 +448,36 @@ export const makeInnerVault = (
 
       // Return any overpayment
       seat.incrementBy(
-        vaultSeat.decrementBy(
-          harden({ Collateral: getCollateralAllocated(vaultSeat) }),
+        loanSeat.decrementBy(
+          harden({ Collateral: getCollateralAllocated(loanSeat) }),
         ),
       );
       manager.stageUnderlyingAllocation(proposal);
       seat.decrementBy(harden({ Debt: debtOffered }));
-      manager.reallocateBetweenSeats(seat, vaultSeat);
-    } else if (phase === VaultPhase.LIQUIDATED) {
-      // Simply reallocate vault assets to the offer seat.
-      // Don't take anything from the offer, even if vault is underwater.
-      seat.incrementBy(vaultSeat.decrementBy(vaultSeat.getCurrentAllocation()));
-      zcf.reallocate(seat, vaultSeat);
+      manager.reallocateBetweenSeats(seat, loanSeat);
+    } else if (phase === LoanPhase.LIQUIDATED) {
+      // Simply reallocate loan assets to the offer seat.
+      // Don't take anything from the offer, even if loan is underwater.
+      seat.incrementBy(loanSeat.decrementBy(loanSeat.getCurrentAllocation()));
+      zcf.reallocate(seat, loanSeat);
     } else {
-      throw new Error('only active and liquidated vaults can be closed');
+      throw new Error('only active and liquidated loans can be closed');
     }
 
     seat.exit();
-    assignPhase(VaultPhase.CLOSED);
+    assignPhase(LoanPhase.CLOSED);
     updateDebtSnapshot(AmountMath.makeEmpty(debtBrand));
     updateUiState();
 
-    assertVaultHoldsNoRun();
-    vaultSeat.exit();
+    assertLoanHoldsNoRun();
+    loanSeat.exit();
 
     return 'your loan is closed, thank you for your business';
   };
 
   const makeCloseInvitation = () => {
     assertCloseable();
-    return zcf.makeInvitation(closeHook, 'CloseVault');
+    return zcf.makeInvitation(closeHook, 'CloseLoan');
   };
 
   // The proposal is not allowed to include any keys other than these,
@@ -496,23 +496,23 @@ export const makeInnerVault = (
     );
   };
 
-  // Calculate the target level for Collateral for the vaultSeat and
+  // Calculate the target level for Collateral for the loanSeat and
   // clientSeat implied by the proposal. If the proposal wants Collateral,
-  // transfer that amount from vault to client. If the proposal gives
+  // transfer that amount from loan to client. If the proposal gives
   // Collateral, transfer the opposite direction. Otherwise, return the current level.
   const targetCollateralLevels = seat => {
-    const { vaultSeat } = state;
+    const { loanSeat } = state;
     const proposal = seat.getProposal();
-    const startVaultAmount = getCollateralAllocated(vaultSeat);
+    const startLoanAmount = getCollateralAllocated(loanSeat);
     const startClientAmount = getCollateralAllocated(seat);
     if (proposal.want.Collateral) {
       return {
-        vault: AmountMath.subtract(startVaultAmount, proposal.want.Collateral),
+        loan: AmountMath.subtract(startLoanAmount, proposal.want.Collateral),
         client: AmountMath.add(startClientAmount, proposal.want.Collateral),
       };
     } else if (proposal.give.Collateral) {
       return {
-        vault: AmountMath.add(startVaultAmount, proposal.give.Collateral),
+        loan: AmountMath.add(startLoanAmount, proposal.give.Collateral),
         client: AmountMath.subtract(
           startClientAmount,
           proposal.give.Collateral,
@@ -520,44 +520,44 @@ export const makeInnerVault = (
       };
     } else {
       return {
-        vault: startVaultAmount,
+        loan: startLoanAmount,
         client: startClientAmount,
       };
     }
   };
 
   const transferCollateral = seat => {
-    const { vaultSeat } = state;
+    const { loanSeat } = state;
     const proposal = seat.getProposal();
     if (proposal.want.Collateral) {
       seat.incrementBy(
-        vaultSeat.decrementBy(harden({ Collateral: proposal.want.Collateral })),
+        loanSeat.decrementBy(harden({ Collateral: proposal.want.Collateral })),
       );
     } else if (proposal.give.Collateral) {
-      vaultSeat.incrementBy(
+      loanSeat.incrementBy(
         seat.decrementBy(harden({ Collateral: proposal.give.Collateral })),
       );
     }
   };
 
   /**
-   * Calculate the target Debt level for the vaultSeat and clientSeat implied
+   * Calculate the target Debt level for the loanSeat and clientSeat implied
    * by the proposal. If the proposal wants collateral, transfer that amount
-   * from vault to client. If the proposal gives collateral, transfer the
+   * from loan to client. If the proposal gives collateral, transfer the
    * opposite direction. Otherwise, return the current level.
    *
    * Since we don't allow the debt to go negative, we will reduce the amount we
    * accept when the proposal says to give more Debt than are owed.
    *
    * @param {ZCFSeat} seat
-   * @returns {{vault: Amount, client: Amount}}
+   * @returns {{loan: Amount, client: Amount}}
    */
   const targetDebtLevels = seat => {
     const clientAllocation = getDebtAllocated(seat);
     const proposal = seat.getProposal();
     if (proposal.want.Debt) {
       return {
-        vault: AmountMath.makeEmpty(debtBrand),
+        loan: AmountMath.makeEmpty(debtBrand),
         client: AmountMath.add(clientAllocation, proposal.want.Debt),
       };
     } else if (proposal.give.Debt) {
@@ -569,40 +569,22 @@ export const makeInnerVault = (
         : proposal.give.Debt;
 
       return {
-        vault: acceptedDebt,
+        loan: acceptedDebt,
         client: AmountMath.subtract(clientAllocation, acceptedDebt),
       };
     } else {
       return {
-        vault: AmountMath.makeEmpty(debtBrand),
+        loan: AmountMath.makeEmpty(debtBrand),
         client: clientAllocation,
       };
     }
   };
-  //
-  // const transferDebt = seat => {
-  //   const { vaultSeat } = state;
-  //   const proposal = seat.getProposal();
-  //   if (proposal.want.Debt) {
-  //     seat.incrementBy(
-  //       vaultSeat.decrementBy(harden({ Debt: proposal.want.Debt })),
-  //     );
-  //   } else if (proposal.give.Debt) {
-  //     // We don't allow debt to be negative, so we'll refund overpayments
-  //     const currentDebt = getCurrentDebt();
-  //     const acceptedDebt = AmountMath.isGTE(proposal.give.Debt, currentDebt)
-  //       ? currentDebt
-  //       : proposal.give.Debt;
-  //
-  //     vaultSeat.incrementBy(seat.decrementBy(harden({ Debt: acceptedDebt })));
-  //   }
-  // };
 
   /**
    * Calculate the fee, the amount to mint and the resulting debt
    *
    * @param {ProposalRecord} proposal
-   * @param {{vault: Amount, client: Amount}} debtAfter
+   * @param {{loan: Amount, client: Amount}} debtAfter
    */
   const calculateNewDebt = (proposal, debtAfter) => {
     let newDebt;
@@ -610,7 +592,7 @@ export const makeInnerVault = (
     if (proposal.want.Debt) {
       newDebt = AmountMath.add(proposal.want.Debt, currentDebt);
     } else if (proposal.give.Debt) {
-      newDebt = AmountMath.subtract(currentDebt, debtAfter.vault);
+      newDebt = AmountMath.subtract(currentDebt, debtAfter.loan);
     } else {
       newDebt = currentDebt;
     }
@@ -631,10 +613,9 @@ export const makeInnerVault = (
     const oldUpdater = state.outerUpdater;
     const proposal = clientSeat.getProposal();
     const oldDebt = getCurrentDebt();
-    const oldCollateral = getCollateralAmount();
     console.log("adjustBalancesHook: proposal", proposal);
     assertOnlyKeys(proposal, ['Collateral', 'Debt']);
-    const targetCollateralAmount = targetCollateralLevels(clientSeat).vault;
+    const targetCollateralAmount = targetCollateralLevels(clientSeat).loan;
     const targetDebt = targetDebtLevels(clientSeat).client;
     // max debt supported by current Collateral as modified by proposal
     const [maxDebtForOriginalTarget, requestedQuoteInCompareBrand] =
@@ -648,7 +629,7 @@ export const makeInnerVault = (
     const requestedDebtInCompareBrand = getAmountOut(requestedQuoteInCompareBrand);
     assert(
       oldUpdater === state.outerUpdater,
-      X`Transfer during vault adjustment`,
+      X`Transfer during loan adjustment`,
     );
     assertActive();
 
@@ -657,7 +638,7 @@ export const makeInnerVault = (
       targetCollateralAmount,
     );
 
-    // After the AWAIT, we retrieve the vault's allocations again.
+    // After the AWAIT, we retrieve the loan's allocations again.
     const collateralAfter = targetCollateralLevels(clientSeat);
     const debtAfter = targetDebtLevels(clientSeat);
 
@@ -665,25 +646,25 @@ export const makeInnerVault = (
 
     // Get new balances after calling the priceAuthority, so we can compare
     // to the debt limit based on the new values.
-    const vaultCollateral =
-      collateralAfter.vault || AmountMath.makeEmpty(collateralBrand);
+    const loanCollateral =
+      collateralAfter.loan || AmountMath.makeEmpty(collateralBrand);
 
     trace('adjustBalancesHook', {
       targetCollateralAmount,
-      vaultCollateral,
+      loanCollateral,
       requestedDebtInCompareBrand,
       targetDebt,
       newDebt
     });
 
     // If the collateral decreased, we pro-rate maxDebt
-    if (AmountMath.isGTE(targetCollateralAmount, vaultCollateral)) {
+    if (AmountMath.isGTE(targetCollateralAmount, loanCollateral)) {
       // We can pro-rate maxDebt because the quote is either linear (price is
       // unchanging) or super-linear (meaning it's an AMM. When the volume sold
       // falls, the proceeds fall less than linearly, so this is a conservative
       // choice.) floorMultiply because the debt ceiling should constrain more.
       const maxDebtAfter = floorMultiplyBy(
-        vaultCollateral,
+        loanCollateral,
         priceOfCollateralInCompareBrand,
       );
       assert(
@@ -700,10 +681,10 @@ export const makeInnerVault = (
       return adjustBalancesHook(clientSeat);
     }
 
-    const { vaultSeat } = state;
+    const { loanSeat } = state;
     transferCollateral(clientSeat);
     manager.transferDebt(clientSeat, getCurrentDebt());
-    manager.reallocateBetweenSeats(vaultSeat, clientSeat);
+    manager.reallocateBetweenSeats(loanSeat, clientSeat);
 
     updateDebtAccounting(oldDebt, newDebt);
 
@@ -721,18 +702,18 @@ export const makeInnerVault = (
   /**
    * @param {ZCFSeat} borrowerSeat
    * @param {ZCFSeat} poolSeat
-   * @param {InnerVault} innerVault
+   * @param {InnerLoan} innerLoan
    * @param {Ratio} exchangeRate
-   * @param {String} vaultKey
+   * @param {String} loanKey
    */
-  const initVaultKit = async (borrowerSeat, poolSeat, innerVault, exchangeRate, vaultKey) => {
+  const initLoanKit = async (borrowerSeat, poolSeat, innerLoan, exchangeRate, loanKey) => {
     assert(
       AmountMath.isEmpty(state.debtSnapshot),
-      X`vault must be empty initially`,
+      X`loan must be empty initially`,
     );
     const oldDebt = getCurrentDebt();
     const oldCollateral = getCollateralAmount();
-    trace('initVaultKit start: collateral', { oldDebt, oldCollateral });
+    trace('initLoanKit start: collateral', { oldDebt, oldCollateral });
 
     // get the payout to provide access to the collateral if the
     // contract abandons
@@ -744,60 +725,46 @@ export const makeInnerVault = (
     console.log('[DEBT_AMOUNT]', proposedDebtAmount);
     console.log('[POOL_SEAT]', poolSeat.getCurrentAllocation());
 
-
-    // todo trigger process() check right away, in case the price dropped while we ran
-
-    // We don't want any fees
-    // const fee = ceilMultiplyBy(wantedRun, manager.getLoanFee());
-    // if (AmountMath.isEmpty(fee)) {
-    //   throw seat.fail(
-    //     Error('loan requested is too small; cannot accrue interest'),
-    //   );
-    // }
-    // trace(idInManager, 'initVault', { wantedRun, fee }, getCollateralAmount());
-    //
-    // const stagedDebt = AmountMath.add(wantedRun, fee);
     await assertSufficientCollateral(collateralAmount, proposedDebtAmount, exchangeRate);
 
-    const { vaultSeat } = state;
-    // mint.mintGains(harden({ RUN: stagedDebt }), vaultSeat); // TODO Don't mint here, just give from the pool
+    const { loanSeat } = state;
 
     const underlyingKeywordRecord = poolSeat.decrementBy(harden({ Underlying: proposedDebtAmount }));
     borrowerSeat.incrementBy(harden({Debt: underlyingKeywordRecord.Underlying}));
-    vaultSeat.incrementBy(
+    loanSeat.incrementBy(
       borrowerSeat.decrementBy(harden({ Collateral: collateralAmount })),
     );
-    zcf.reallocate(borrowerSeat, vaultSeat, poolSeat);
+    zcf.reallocate(borrowerSeat, loanSeat, poolSeat);
 
-    const vaultKit = makeVaultKit(innerVault, state.assetNotifier);
-    state.outerUpdater = vaultKit.vaultUpdater;
+    const loanKit = makeLoanKit(innerLoan, state.assetNotifier);
+    state.outerUpdater = loanKit.loanUpdater;
     updateUiState();
-    state.vaultKey = vaultKey;
+    state.loanKey = loanKey;
     updateDebtAccounting(oldDebt, proposedDebtAmount);
 
-    return vaultKit;
+    return loanKit;
   };
 
   /**
    *
    * @param {ZCFSeat} seat
-   * @returns {VaultKit}
+   * @returns {LoanKit}
    */
   const makeTransferInvitationHook = seat => {
     assertCloseable();
     seat.exit();
     // eslint-disable-next-line no-use-before-define
-    const vaultKit = makeVaultKit(innerVault, state.assetNotifier);
-    state.outerUpdater = vaultKit.vaultUpdater;
+    const loanKit = makeLoanKit(innerLoan, state.assetNotifier);
+    state.outerUpdater = loanKit.loanUpdater;
     updateUiState();
 
-    return vaultKit;
+    return loanKit;
   };
 
-  const innerVault = Far('innerVault', {
-    getVaultSeat: () => state.vaultSeat,
+  const innerLoan = Far('innerLoan', {
+    getLoanSeat: () => state.loanSeat,
 
-    initVaultKit: (seat, poolSeat, exchangeRate, vaultKey) => initVaultKit(seat, poolSeat, innerVault, exchangeRate, vaultKey),
+    initLoanKit: (seat, poolSeat, exchangeRate, loanKey) => initLoanKit(seat, poolSeat, innerLoan, exchangeRate, loanKey),
     liquidating,
     liquidated,
 
@@ -806,10 +773,10 @@ export const makeInnerVault = (
     makeTransferInvitation: () => {
       const { outerUpdater } = state;
       if (outerUpdater) {
-        outerUpdater.finish(snapshotState(VaultPhase.TRANSFER));
+        outerUpdater.finish(snapshotState(LoanPhase.TRANSFER));
         state.outerUpdater = null;
       }
-      return zcf.makeInvitation(makeTransferInvitationHook, 'TransferVault');
+      return zcf.makeInvitation(makeTransferInvitationHook, 'TransferLoan');
     },
 
     // for status/debugging
@@ -820,8 +787,8 @@ export const makeInnerVault = (
     getNormalizedDebt,
   });
 
-  // return { innerVault, testMethods: { maxDebtFor, assertSufficientCollateral } };
-  return innerVault
+  // return { innerLoan, testMethods: { maxDebtFor, assertSufficientCollateral } };
+  return innerLoan
 };
 
-/** @typedef {ReturnType<typeof makeInnerVault>} InnerVault */
+/** @typedef {ReturnType<typeof makeInnerLoan>} InnerLoan */

@@ -65,12 +65,12 @@ async function setupServices(
   await startLendingPool(space, { loanParams: loanTiming });
 
   const governorCreatorFacet = consume.lendingPoolGovernorCreator;
-  /** @type {Promise<VaultFactory & LimitedCreatorFacet<any>>} */
+  /** @type {Promise<LoanFactory & LimitedCreatorFacet<any>>} */
   const lendingPoolCreatorFacetP = /** @type { any } */ (
     E(governorCreatorFacet).getCreatorFacet()
   );
 
-  /** @type {[any, VaultFactory, VFC['publicFacet'], VaultManager, PriceAuthority]} */
+  /** @type {[any, LoanFactory, VFC['publicFacet'], LoanManager, PriceAuthority]} */
     // @ts-expect-error cast
   const [
       governorInstance,

@@ -24,7 +24,7 @@ import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAutho
 import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
 import { Nat } from '@agoric/nat';
-import { makeInnerVault } from '../../src/lendingPool/vault.js';
+import { makeInnerLoan } from '../../src/lendingPool/loan.js';
 import { depositMoney, addPool, makeRates, setupAssets, makeBundle, borrow } from './helpers.js';
 
 import {
@@ -38,7 +38,7 @@ import '../../src/lendingPool/types.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
-import { VaultPhase } from '../../src/lendingPool/vault.js';
+import { LoanPhase } from '../../src/lendingPool/loan.js';
 import { makeLiquidationObserver } from '../../src/lendingPool/liquidationObserver.js';
 import { makeScalarMap } from '@agoric/store';
 
@@ -51,12 +51,12 @@ const contractRoots = {
   amm: '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
 };
 
-/** @typedef {import('../../src/vaultFactory/vaultFactory.js').VaultFactoryPublicFacet} VaultFactoryPublicFacet */
+/** @typedef {import('../../src/loanFactory/loanFactory.js').LoanFactoryPublicFacet} LoanFactoryPublicFacet */
 
 const BASIS_POINTS = 10000n;
 const secondsPerDay = SECONDS_PER_YEAR / 365n;
 
-// Define locally to test that vaultFactory uses these values
+// Define locally to test that loanFactory uses these values
 export const Phase = /** @type {const} */ ({
   ACTIVE: 'active',
   LIQUIDATING: 'liquidating',
@@ -180,12 +180,12 @@ async function setupServices(
   await startLendingPool(space, { loanParams: loanTiming });
 
   const governorCreatorFacet = consume.lendingPoolGovernorCreator;
-  /** @type {Promise<VaultFactory & LimitedCreatorFacet<any>>} */
+  /** @type {Promise<LoanFactory & LimitedCreatorFacet<any>>} */
   const lendingPoolCreatorFacetP = /** @type { any } */ (
     E(governorCreatorFacet).getCreatorFacet()
   );
 
-  /** @type {[any, VaultFactory, VFC['publicFacet'], VaultManager, PriceAuthority]} */
+  /** @type {[any, LoanFactory, VFC['publicFacet'], LoanManager, PriceAuthority]} */
     // @ts-expect-error cast
   const [
       governorInstance,
@@ -520,18 +520,18 @@ test('borrow', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const vaultKit = await E(borrowerUserSeat).getOfferResult();
-  const vault = vaultKit.vault;
+  const loanKit = await E(borrowerUserSeat).getOfferResult();
+  const loan = loanKit.loan;
 
-  let vaultCurrentDebt = await E(vault).getCurrentDebt();
+  let loanCurrentDebt = await E(loan).getCurrentDebt();
 
-  t.deepEqual(vaultCurrentDebt, debtProposal.want.Debt);
+  t.deepEqual(loanCurrentDebt, debtProposal.want.Debt);
 
   // accrue interest
   await timer.tick();
   await timer.tick();
-  vaultCurrentDebt = await E(vault).getCurrentDebt();
-  t.notDeepEqual(vaultCurrentDebt, debtProposal.want.Debt);
+  loanCurrentDebt = await E(loan).getCurrentDebt();
+  t.notDeepEqual(loanCurrentDebt, debtProposal.want.Debt);
 });
 
 test('borrow-rate-fluctuate', async t => {
@@ -610,12 +610,12 @@ test('borrow-rate-fluctuate', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const vaultKit4B = await E(borrowerUserSeat).getOfferResult();
-  const vault4B = vaultKit4B.vault;
+  const loanKit4B = await E(borrowerUserSeat).getOfferResult();
+  const loan4B = loanKit4B.loan;
 
-  const vaultCurrentDebt4B = await E(vault4B).getCurrentDebt();
+  const loanCurrentDebt4B = await E(loan4B).getCurrentDebt();
 
-  t.deepEqual(vaultCurrentDebt4B, AmountMath.make(panBrand, 4n * 10n ** 6n));
+  t.deepEqual(loanCurrentDebt4B, AmountMath.make(panBrand, 4n * 10n ** 6n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(270n, panBrand, BASIS_POINTS));
 
   const collateral = await depositMoney(zoe, vanPoolMan, vanMint, 4n);
@@ -638,12 +638,12 @@ test('borrow-rate-fluctuate', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const vaultKit1B = await E(borrowerUserSeat).getOfferResult();
-  const vault1B = vaultKit1B.vault;
+  const loanKit1B = await E(borrowerUserSeat).getOfferResult();
+  const loan1B = loanKit1B.loan;
 
-  const vaultCurrentDebt1B = await E(vault1B).getCurrentDebt();
+  const loanCurrentDebt1B = await E(loan1B).getCurrentDebt();
 
-  t.deepEqual(vaultCurrentDebt1B, AmountMath.make(panBrand, 2000000n));
+  t.deepEqual(loanCurrentDebt1B, AmountMath.make(panBrand, 2000000n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(280n, panBrand, BASIS_POINTS));
 
   await timer.tick();
@@ -748,12 +748,12 @@ test('adjust-balances-no-interest', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
 
-  const aliceVaultCurrentDebt = await E(aliceVault).getCurrentDebt();
+  const aliceLoanCurrentDebt = await E(aliceLoan).getCurrentDebt();
 
-  t.deepEqual(aliceVaultCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
 
   const [aliceCollateralUpdatePayment, vanDepositedMoneyMinusAliceLoanUpdate] =
@@ -773,19 +773,19 @@ test('adjust-balances-no-interest', async t => {
   );
 
   const aliceUpdatedLoanSeat = await E(zoe).offer(
-    E(aliceVault).makeAdjustBalancesInvitation(),
+    E(aliceLoan).makeAdjustBalancesInvitation(),
     aliceAdjustBalanceProposal,
     aliceAdjustBalancePayment,
     { collateralUnderlyingBrand: vanBrand },
   );
 
   const aliceDebtReceivedPayment = await E(aliceUpdatedLoanSeat).getPayouts();
-  const aliceVaultCurrentDebtAfterUpdate = await E(aliceVault).getCurrentDebt();
-  const aliceVaultCollateralAfterUpdate = await E(aliceVault).getCollateralAmount();
+  const aliceLoanCurrentDebtAfterUpdate = await E(aliceLoan).getCurrentDebt();
+  const aliceLoanCollateralAfterUpdate = await E(aliceLoan).getCollateralAmount();
 
   t.deepEqual(await E(panIssuer).getAmountOf(aliceDebtReceivedPayment.Debt), AmountMath.make(panBrand, 7n * 10n ** 8n / 100n));
-  t.deepEqual(aliceVaultCurrentDebtAfterUpdate, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n)));
-  t.deepEqual(aliceVaultCollateralAfterUpdate,
+  t.deepEqual(aliceLoanCurrentDebtAfterUpdate, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n)));
+  t.deepEqual(aliceLoanCollateralAfterUpdate,
     calculateProtocolFromUnderlying(AmountMath.make(vanBrand, 3n * 10n ** 8n / 2n + 1n * 10n ** 8n), await E(vanPoolMan).getExchangeRate()));
 });
 
@@ -879,17 +879,17 @@ test('adjust-balances-interest-accrued', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
 
-  const aliceVaultCurrentDebt = await E(aliceVault).getCurrentDebt();
+  const aliceLoanCurrentDebt = await E(aliceLoan).getCurrentDebt();
 
-  t.deepEqual(aliceVaultCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
 
   await timer.tick();
   await waitForPromisesToSettle();
-  t.deepEqual(await E(aliceVault).getCurrentDebt(), AmountMath.make(panBrand, 4000000n + 280n));
+  t.deepEqual(await E(aliceLoan).getCurrentDebt(), AmountMath.make(panBrand, 4000000n + 280n));
 
   const [aliceCollateralUpdatePayment, vanDepositedMoneyMinusAliceLoanUpdate] =
     await E(agVanIssuer).split(vanPoolDepositedMoney,
@@ -908,7 +908,7 @@ test('adjust-balances-interest-accrued', async t => {
   );
 
   const aliceUpdatedLoanSeat = await E(zoe).offer(
-    E(aliceVault).makeAdjustBalancesInvitation(),
+    E(aliceLoan).makeAdjustBalancesInvitation(),
     aliceAdjustBalanceProposal,
     aliceAdjustBalancePayment,
     { collateralUnderlyingBrand: vanBrand },
@@ -919,28 +919,28 @@ test('adjust-balances-interest-accrued', async t => {
   const [
     aliceUpdateOfferResult,
     aliceDebtReceivedPayment,
-    aliceVaultCurrentDebtAfterUpdate,
-    aliceVaultCollateralAfterUpdate] = await Promise.all([
+    aliceLoanCurrentDebtAfterUpdate,
+    aliceLoanCollateralAfterUpdate] = await Promise.all([
     E(aliceUpdatedLoanSeat).getOfferResult(),
     E(aliceUpdatedLoanSeat).getPayouts(),
-    E(aliceVault).getCurrentDebt(),
-    E(aliceVault).getCollateralAmount(),
+    E(aliceLoan).getCurrentDebt(),
+    E(aliceLoan).getCollateralAmount(),
 
   ]);
 
 
   t.is(aliceUpdateOfferResult, 'We have adjusted your balances, thank you for your business');
   t.deepEqual(await E(panIssuer).getAmountOf(aliceDebtReceivedPayment.Debt), AmountMath.make(panBrand, 7n * 10n ** 8n / 100n));
-  t.deepEqual(aliceVaultCurrentDebtAfterUpdate, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n) + 280n));
-  t.deepEqual(aliceVaultCollateralAfterUpdate,
+  t.deepEqual(aliceLoanCurrentDebtAfterUpdate, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n) + 280n));
+  t.deepEqual(aliceLoanCollateralAfterUpdate,
     calculateProtocolFromUnderlying(AmountMath.make(vanBrand, 1n * 10n ** 8n), await E(vanPoolMan).getExchangeRate()));
 
   await timer.tick();
   await waitForPromisesToSettle();
 
-  const aliceVaultCurrentDebtAfterSecondInterestAccrual = await E(aliceVault).getCurrentDebt();
+  const aliceLoanCurrentDebtAfterSecondInterestAccrual = await E(aliceLoan).getCurrentDebt();
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(272n, panBrand, BASIS_POINTS));
-  t.deepEqual(aliceVaultCurrentDebtAfterSecondInterestAccrual, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n) + 280n + 809n));
+  t.deepEqual(aliceLoanCurrentDebtAfterSecondInterestAccrual, AmountMath.make(panBrand, (7n * 10n ** 8n / 100n) + (4n * 10n ** 8n / 100n) + 280n + 809n));
   await waitForPromisesToSettle();
 });
 
@@ -1034,12 +1034,12 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
 
-  const aliceVaultCurrentDebt = await E(aliceVault).getCurrentDebt();
+  const aliceLoanCurrentDebt = await E(aliceLoan).getCurrentDebt();
 
-  t.deepEqual(aliceVaultCurrentDebt, aliceDebtProposal.want.Debt);
+  t.deepEqual(aliceLoanCurrentDebt, aliceDebtProposal.want.Debt);
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(320n, panBrand, BASIS_POINTS));
 
   const amountToPay = AmountMath.make(panBrand, 7n * 10n ** 6n);
@@ -1057,7 +1057,7 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
   );
 
   const aliceUpdatedLoanSeat = await E(zoe).offer(
-    E(aliceVault).makeAdjustBalancesInvitation(),
+    E(aliceLoan).makeAdjustBalancesInvitation(),
     aliceAdjustBalanceProposal,
     aliceAdjustBalancePayment,
     { collateralUnderlyingBrand: vanBrand },
@@ -1068,18 +1068,18 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
   const [
     aliceUpdateOfferResult,
     aliceDebtReceivedPayment,
-    aliceVaultCurrentDebtAfterUpdate,
-    aliceVaultCollateralAfterUpdate] = await Promise.all([
+    aliceLoanCurrentDebtAfterUpdate,
+    aliceLoanCollateralAfterUpdate] = await Promise.all([
     E(aliceUpdatedLoanSeat).getOfferResult(),
     E(aliceUpdatedLoanSeat).getPayout('Collateral'),
-    E(aliceVault).getCurrentDebt(),
-    E(aliceVault).getCollateralAmount(),
+    E(aliceLoan).getCurrentDebt(),
+    E(aliceLoan).getCollateralAmount(),
   ]);
 
   t.is(aliceUpdateOfferResult, 'We have adjusted your balances, thank you for your business');
   t.deepEqual(await E(agVanIssuer).getAmountOf(aliceDebtReceivedPayment), aliceAdjustBalanceProposal.want.Collateral);
-  t.deepEqual(aliceVaultCurrentDebtAfterUpdate, AmountMath.make(panBrand, 28n * 10n ** 8n / 100n));
-  t.deepEqual(aliceVaultCollateralAfterUpdate,
+  t.deepEqual(aliceLoanCurrentDebtAfterUpdate, AmountMath.make(panBrand, 28n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCollateralAfterUpdate,
     calculateProtocolFromUnderlying(AmountMath.make(vanBrand, 8n * 10n ** 8n / 10n), await E(vanPoolMan).getExchangeRate()));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(306n, panBrand, BASIS_POINTS));
 })
@@ -1174,12 +1174,12 @@ test('close-loan', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
 
-  const aliceVaultCurrentDebt = await E(aliceVault).getCurrentDebt();
+  const aliceLoanCurrentDebt = await E(aliceLoan).getCurrentDebt();
 
-  t.deepEqual(aliceVaultCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
 
   const aliceCloseProposal = {
@@ -1192,18 +1192,18 @@ test('close-loan', async t => {
   };
 
   const aliceCloseSeat = await E(zoe).offer(
-    E(aliceVault).makeCloseInvitation(),
+    E(aliceLoan).makeCloseInvitation(),
     aliceCloseProposal,
     aliceClosePayment,
   );
 
   const aliceCloseOfferResult = await E(aliceCloseSeat).getOfferResult();
   const aliceClosePayout = await E(aliceCloseSeat).getPayout('Collateral');
-  const aliceVaultNotifier = await E(aliceVault).getNotifier();
-  const state = await E(aliceVaultNotifier).getUpdateSince();
+  const aliceLoanNotifier = await E(aliceLoan).getNotifier();
+  const state = await E(aliceLoanNotifier).getUpdateSince();
 
   t.is(aliceCloseOfferResult, 'your loan is closed, thank you for your business');
-  t.is(state.value.vaultState, VaultPhase.CLOSED);
+  t.is(state.value.loanState, LoanPhase.CLOSED);
   t.deepEqual(aliceClosePayout, aliceCollateralPayment);
 });
 
@@ -1294,21 +1294,21 @@ test('redeem-underlying', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const vaultKit4B = await E(borrowerUserSeat).getOfferResult();
-  const vault4B = vaultKit4B.vault;
+  const loanKit4B = await E(borrowerUserSeat).getOfferResult();
+  const loan4B = loanKit4B.loan;
 
-  const vaultCurrentDebt4B = await E(vault4B).getCurrentDebt();
+  const loanCurrentDebt4B = await E(loan4B).getCurrentDebt();
 
-  t.deepEqual(vaultCurrentDebt4B, AmountMath.make(panBrand, 4n * 10n ** 6n));
+  t.deepEqual(loanCurrentDebt4B, AmountMath.make(panBrand, 4n * 10n ** 6n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
 
   // interest time
   await timer.tick();
   await waitForPromisesToSettle();
 
-  const vault4BDebtAfterInterest = await E(vault4B).getCurrentDebt();
+  const loan4BDebtAfterInterest = await E(loan4B).getCurrentDebt();
 
-  t.deepEqual(vault4BDebtAfterInterest, AmountMath.make(panBrand, 4n * 10n ** 6n + 1960n));
+  t.deepEqual(loan4BDebtAfterInterest, AmountMath.make(panBrand, 4n * 10n ** 6n + 1960n));
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
   t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 2000004n));
 
@@ -1524,14 +1524,14 @@ test('liquidate', async t => {
   //   { collateralUnderlyingBrand: vanBrand },
   // );
   //
-  // const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  // const aliceVault = aliceVaultKit.vault;
-  // const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  // const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  // const aliceLoan = aliceLoanKit.loan;
+  // const aliceLoanNotifier = aliceLoanKit.loanNotifier;
   //
-  // await E(panPoolMan).liquidateVault(vanBrand);
+  // await E(panPoolMan).liquidateLoan(vanBrand);
   //
-  // const state = await E(aliceVaultNotifier).getUpdateSince();
-  // t.is(state.value.vaultState, VaultPhase.LIQUIDATED);
+  // const state = await E(aliceLoanNotifier).getUpdateSince();
+  // t.is(state.value.loanState, LoanPhase.LIQUIDATED);
 });
 
 test('collateral-price-drop-liquidate', async t => {
@@ -1618,9 +1618,9 @@ test('collateral-price-drop-liquidate', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
-  const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
+  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
 
   panUsdPriceAuthority.setPrice(makeRatio(200n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
@@ -1628,8 +1628,8 @@ test('collateral-price-drop-liquidate', async t => {
   // await timer.tick();
   await waitForPromisesToSettle();
 
-  const notification = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notification.value.vaultState, VaultPhase.LIQUIDATED);
+  const notification = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notification.value.loanState, LoanPhase.LIQUIDATED);
 
   const debtWithPenalty = floorMultiplyBy(aliceDebtProposal.want.Debt, panRates.penaltyRate);
   const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
@@ -1724,30 +1724,30 @@ test('debt-price-up-liquidate', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
-  const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
+  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
 
-  const notificationBefore = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notificationBefore.value.vaultState, VaultPhase.ACTIVE);
+  const notificationBefore = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notificationBefore.value.loanState, LoanPhase.ACTIVE);
 
   panUsdPriceAuthority.setPrice(makeRatio(220n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
 
   // await timer.tick();
   await waitForPromisesToSettle();
 
-  const notificationAfter = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notificationAfter.value.vaultState, VaultPhase.LIQUIDATED);
+  const notificationAfter = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notificationAfter.value.loanState, LoanPhase.LIQUIDATED);
 
   const debtWithPenalty = floorMultiplyBy(aliceDebtProposal.want.Debt, panRates.penaltyRate);
   const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
   const panPoolCurrentLiquidity = await E(panPoolMan).getUnderlyingLiquidity();
-  const currentVaultDebt = await E(aliceVault).getCurrentDebt();
+  const currentLoanDebt = await E(aliceLoan).getCurrentDebt();
   t.truthy(AmountMath.isGTE(panPoolCurrentLiquidity, panPoolInitialLiquidity)
     && AmountMath.isGTE(
       AmountMath.add(debtWithPenalty, panPoolInitialLiquidity),
       panPoolCurrentLiquidity));
-  t.deepEqual(currentVaultDebt, AmountMath.makeEmpty(panBrand));
+  t.deepEqual(currentLoanDebt, AmountMath.makeEmpty(panBrand));
 });
 
 test('debt-price-up-col-price-down-liquidate', async t => {
@@ -1836,12 +1836,12 @@ test('debt-price-up-col-price-down-liquidate', async t => {
     { collateralUnderlyingBrand: vanBrand },
   );
 
-  const aliceVaultKit = await E(aliceSeat).getOfferResult();
-  const aliceVault = aliceVaultKit.vault;
-  const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  const aliceLoanKit = await E(aliceSeat).getOfferResult();
+  const aliceLoan = aliceLoanKit.loan;
+  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
 
-  const notificationBefore = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notificationBefore.value.vaultState, VaultPhase.ACTIVE);
+  const notificationBefore = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notificationBefore.value.loanState, LoanPhase.ACTIVE);
 
   // Max quote for the below prices is 67 USD so don't liquidate
   panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
@@ -1849,8 +1849,8 @@ test('debt-price-up-col-price-down-liquidate', async t => {
 
   await waitForPromisesToSettle();
 
-  const notificationAfterFirstPriceChange = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notificationAfterFirstPriceChange.value.vaultState, VaultPhase.ACTIVE);
+  const notificationAfterFirstPriceChange = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notificationAfterFirstPriceChange.value.loanState, LoanPhase.ACTIVE);
 
   // Now make the max quote 66 USD and the value of the debt is 67 USD, so liquidate
   panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
@@ -1858,21 +1858,21 @@ test('debt-price-up-col-price-down-liquidate', async t => {
 
   await waitForPromisesToSettle();
 
-  const notificationAfter = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(notificationAfter.value.vaultState, VaultPhase.LIQUIDATED);
+  const notificationAfter = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(notificationAfter.value.loanState, LoanPhase.LIQUIDATED);
 
   const debtWithPenalty = floorMultiplyBy(aliceDebtProposal.want.Debt, panRates.penaltyRate);
   const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
   const panPoolCurrentLiquidity = await E(panPoolMan).getUnderlyingLiquidity();
-  const currentVaultDebt = await E(aliceVault).getCurrentDebt();
+  const currentLoanDebt = await E(aliceLoan).getCurrentDebt();
   t.truthy(AmountMath.isGTE(panPoolCurrentLiquidity, panPoolInitialLiquidity)
     && AmountMath.isGTE(
       AmountMath.add(debtWithPenalty, panPoolInitialLiquidity),
       panPoolCurrentLiquidity));
-  t.deepEqual(currentVaultDebt, AmountMath.makeEmpty(panBrand));
+  t.deepEqual(currentLoanDebt, AmountMath.makeEmpty(panBrand));
 });
 
-test('prices-fluctuate-multiple-vaults-liquidate', async t => {
+test('prices-fluctuate-multiple-loans-liquidate', async t => {
   const {
     vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
     compareCurrencyKit: { brand: usdBrand, mint: usdMint },
@@ -1937,40 +1937,40 @@ test('prices-fluctuate-multiple-vaults-liquidate', async t => {
 
   // Get a loan for Alice
   const {
-    vaultKit: aliceVaultKit,
+    loanKit: aliceLoanKit,
     moneyLeftInPool: vanPoolMoneyLeftAfterAliceLoan,
   } = await borrow(zoe, lendingPoolPublicFacet, vanPoolDepositedMoney.payment, vanPoolMan, 10n ** 8n, panBrand, 35n * 10n ** 6n);
 
-  const aliceVault = aliceVaultKit.vault;
-  const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  const aliceLoan = aliceLoanKit.loan;
+  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
 
   // Get a loan for Maggie
   const {
-    vaultKit: maggieVaultKit,
+    loanKit: maggieLoanKit,
     moneyLeftInPool: vanPoolMoneyLeftAfterMaggieLoan,
   } = await borrow(zoe, lendingPoolPublicFacet, vanPoolMoneyLeftAfterAliceLoan, vanPoolMan, 10n ** 8n, panBrand, 4n * 10n ** 6n);
 
-  const maggieVault = maggieVaultKit.vault;
-  const maggieVaultNotifier = maggieVaultKit.vaultNotifier;
+  const maggieLoan = maggieLoanKit.loan;
+  const maggieLoanNotifier = maggieLoanKit.loanNotifier;
 
   // Get a loan for Bob
   const {
-    vaultKit: bobVaultKit,
+    loanKit: bobLoanKit,
     moneyLeftInPool: vanPoolMoneyLeftAfterBobLoan,
   } = await borrow(zoe, lendingPoolPublicFacet, vanPoolMoneyLeftAfterMaggieLoan, vanPoolMan, 5n* 10n ** 7n, panBrand, 18n * 10n ** 6n);
 
-  const bobVault = bobVaultKit.vault;
-  const bobVaultNotifier = bobVaultKit.vaultNotifier;
+  const bobLoan = bobLoanKit.loan;
+  const bobLoanNotifier = bobLoanKit.loanNotifier;
 
   const [aliceNotificationBefore, maggieNotificationBefore, bobNotificationBefore] = await Promise.all([
-    E(aliceVaultNotifier).getUpdateSince(),
-    E(maggieVaultNotifier).getUpdateSince(),
-    E(bobVaultNotifier).getUpdateSince()
+    E(aliceLoanNotifier).getUpdateSince(),
+    E(maggieLoanNotifier).getUpdateSince(),
+    E(bobLoanNotifier).getUpdateSince()
   ]);
 
-  t.is(aliceNotificationBefore.value.vaultState, VaultPhase.ACTIVE);
-  t.is(maggieNotificationBefore.value.vaultState, VaultPhase.ACTIVE);
-  t.is(bobNotificationBefore.value.vaultState, VaultPhase.ACTIVE);
+  t.is(aliceNotificationBefore.value.loanState, LoanPhase.ACTIVE);
+  t.is(maggieNotificationBefore.value.loanState, LoanPhase.ACTIVE);
+  t.is(bobNotificationBefore.value.loanState, LoanPhase.ACTIVE);
 
   // Max quote for the below prices is 67 USD so don't liquidate
   panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
@@ -1979,14 +1979,14 @@ test('prices-fluctuate-multiple-vaults-liquidate', async t => {
   await waitForPromisesToSettle();
 
   const [aliceNotificationAfterFirstPriceChange, maggieNotificationAfterFirstPriceChange, bobNotificationAfterFirstPriceChange] = await Promise.all([
-    E(aliceVaultNotifier).getUpdateSince(),
-    E(maggieVaultNotifier).getUpdateSince(),
-    E(bobVaultNotifier).getUpdateSince(),
+    E(aliceLoanNotifier).getUpdateSince(),
+    E(maggieLoanNotifier).getUpdateSince(),
+    E(bobLoanNotifier).getUpdateSince(),
   ]);
 
-  t.is(aliceNotificationAfterFirstPriceChange.value.vaultState, VaultPhase.ACTIVE);
-  t.is(maggieNotificationAfterFirstPriceChange.value.vaultState, VaultPhase.ACTIVE);
-  t.is(bobNotificationAfterFirstPriceChange.value.vaultState, VaultPhase.ACTIVE);
+  t.is(aliceNotificationAfterFirstPriceChange.value.loanState, LoanPhase.ACTIVE);
+  t.is(maggieNotificationAfterFirstPriceChange.value.loanState, LoanPhase.ACTIVE);
+  t.is(bobNotificationAfterFirstPriceChange.value.loanState, LoanPhase.ACTIVE);
 
   // Now make the max quote 66 USD and the value of the debt is 67 USD, so liquidate
   panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
@@ -1995,24 +1995,24 @@ test('prices-fluctuate-multiple-vaults-liquidate', async t => {
   await waitForPromisesToSettle();
 
   const [aliceNotificationAfterSecondPriceChange, maggieNotificationAfterSecondPriceChange, bobNotificationAfterSecondPriceChange] = await Promise.all([
-    E(aliceVaultNotifier).getUpdateSince(),
-    E(maggieVaultNotifier).getUpdateSince(),
-    E(bobVaultNotifier).getUpdateSince(),
+    E(aliceLoanNotifier).getUpdateSince(),
+    E(maggieLoanNotifier).getUpdateSince(),
+    E(bobLoanNotifier).getUpdateSince(),
   ]);
 
-  t.is(aliceNotificationAfterSecondPriceChange.value.vaultState, VaultPhase.LIQUIDATED);
-  t.is(maggieNotificationAfterSecondPriceChange.value.vaultState, VaultPhase.ACTIVE);
-  t.is(bobNotificationAfterSecondPriceChange.value.vaultState, VaultPhase.LIQUIDATED);
+  t.is(aliceNotificationAfterSecondPriceChange.value.loanState, LoanPhase.LIQUIDATED);
+  t.is(maggieNotificationAfterSecondPriceChange.value.loanState, LoanPhase.ACTIVE);
+  t.is(bobNotificationAfterSecondPriceChange.value.loanState, LoanPhase.LIQUIDATED);
 
-  const [aliceCurrentVaultDebt, maggieCurrentVaultDebt, bobCurrentVaultDebt] = await Promise.all([
-    E(aliceVault).getCurrentDebt(),
-    E(maggieVault).getCurrentDebt(),
-    E(bobVault).getCurrentDebt(),
+  const [aliceCurrentLoanDebt, maggieCurrentLoanDebt, bobCurrentLoanDebt] = await Promise.all([
+    E(aliceLoan).getCurrentDebt(),
+    E(maggieLoan).getCurrentDebt(),
+    E(bobLoan).getCurrentDebt(),
   ]);
 
-  t.deepEqual(aliceCurrentVaultDebt, AmountMath.makeEmpty(panBrand));
-  t.deepEqual(maggieCurrentVaultDebt, AmountMath.make(panBrand, 4n * 10n ** 6n));
-  t.deepEqual(bobCurrentVaultDebt, AmountMath.makeEmpty(panBrand));
+  t.deepEqual(aliceCurrentLoanDebt, AmountMath.makeEmpty(panBrand));
+  t.deepEqual(maggieCurrentLoanDebt, AmountMath.make(panBrand, 4n * 10n ** 6n));
+  t.deepEqual(bobCurrentLoanDebt, AmountMath.makeEmpty(panBrand));
 });
 
 test('prices-hold-still-liquidates-with-interest-accrual', async t => {
@@ -2078,15 +2078,15 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // Get a loan for Alice
   const {
-    vaultKit: aliceVaultKit,
+    loanKit: aliceLoanKit,
     moneyLeftInPool: vanPoolMoneyLeftAfterAliceLoan,
   } = await borrow(zoe, lendingPoolPublicFacet, vanPoolDepositedMoney.payment, vanPoolMan, 10n ** 8n, panBrand, 4019n * 10n ** 4n);
 
-  const aliceVault = aliceVaultKit.vault;
-  const aliceVaultNotifier = aliceVaultKit.vaultNotifier;
+  const aliceLoan = aliceLoanKit.loan;
+  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
 
-  const aliceNotificationBefore = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(aliceNotificationBefore.value.vaultState, VaultPhase.ACTIVE);
+  const aliceNotificationBefore = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(aliceNotificationBefore.value.loanState, LoanPhase.ACTIVE);
 
   await timer.tick()
   await waitForPromisesToSettle();
@@ -2096,13 +2096,13 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
   vanUsdPriceAuthority.setPrice(makeRatio(108n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
   await waitForPromisesToSettle();
 
-  const aliceNotificationAfter = await E(aliceVaultNotifier).getUpdateSince();
-  t.is(aliceNotificationAfter.value.vaultState, VaultPhase.LIQUIDATED);
+  const aliceNotificationAfter = await E(aliceLoanNotifier).getUpdateSince();
+  t.is(aliceNotificationAfter.value.loanState, LoanPhase.LIQUIDATED);
 
   t.deepEqual(makeRatio(250n, panBrand, BASIS_POINTS), await E(panPoolMan).getCurrentBorrowingRate());
 
-  const aliceCurrentVaultDebt = await E(aliceVault).getCurrentDebt();
-  t.deepEqual(aliceCurrentVaultDebt, AmountMath.makeEmpty(panBrand));
+  const aliceCurrentLoanDebt = await E(aliceLoan).getCurrentDebt();
+  t.deepEqual(aliceCurrentLoanDebt, AmountMath.makeEmpty(panBrand));
 });
 
 test("price-observer-test", async t => {
@@ -2144,7 +2144,7 @@ test("price-observer-test", async t => {
       wrappedCollateralPriceAuthority: wrappedVanUsdPriceAuth,
       wrappedDebtPriceAuthority: wrappedPanUsdPriceAuth,
       liquidationMargin: makeRatio(150n, usdBrand),
-      vaultData: {
+      loanData: {
         debt: AmountMath.make(panBrand, 35n * 10n ** 6n),
         collateral: AmountMath.make(agVanBrand, 10n ** 8n * 50n),
         collateralUnderlyingDecimals: 8,
@@ -2241,20 +2241,20 @@ test('map-test', async t => {
   const testAmountNumeratorOne = AmountMath.make(vanBrand,  4n * 10n ** 7n );
   const testAmountDenominatorOne = AmountMath.make(panBrand, 50n * 10n ** 8n);
   const numberPartOne = methodUnderTest(testAmountNumeratorOne, testAmountDenominatorOne);
-  const vaultIdOne = '1';
-  const keyOne = `${numberPartOne}:${vaultIdOne}`
+  const loanIdOne = '1';
+  const keyOne = `${numberPartOne}:${loanIdOne}`
 
   const testAmountNumeratorTwo = AmountMath.make(vanBrand, 61n * 10n ** 6n);
   const testAmountDenominatorTwo = AmountMath.make(panBrand, 50n * 10n ** 8n);
   const numberPartTwo = methodUnderTest(testAmountNumeratorTwo, testAmountDenominatorTwo);
-  const vaultIdTwo = '2';
-  const keyTwo = `${numberPartTwo}:${vaultIdTwo}`
+  const loanIdTwo = '2';
+  const keyTwo = `${numberPartTwo}:${loanIdTwo}`
 
   const testAmountNumeratorThree = AmountMath.make(vanBrand, 60n * 10n ** 6n );
   const testAmountDenominatorThree = AmountMath.make(panBrand, 50n * 10n ** 8n);
   const numberPartThree = methodUnderTest(testAmountNumeratorThree, testAmountDenominatorThree);
-  const vaultIdThree = '3';
-  const keyThree = `${numberPartThree}:${vaultIdThree}`
+  const loanIdThree = '3';
+  const keyThree = `${numberPartThree}:${loanIdThree}`
 
   map.init(keyTwo, undefined);
   map.init(keyThree, undefined);
@@ -2344,13 +2344,13 @@ test('assertCollateralSufficient', async t => {
   const exchangeRate = makeRatioFromAmounts(AmountMath.make(vanBrand, 200n),
     AmountMath.make(agVanBrand, BASIS_POINTS));
 
-  const mockVaultInput = {
+  const mockLoanInput = {
     zcf: {
       makeEmptySeatKit: () => {
         return { zcfSeat: undefined };
       },
     },
-    /** @type InnerVault */
+    /** @type InnerLoan */
     manager: {
       getCollateralBrand: () => vanBrand,
       getLiquidationMargin: () => makeRatio(150n, usdBrand),
@@ -2364,9 +2364,9 @@ test('assertCollateralSufficient', async t => {
     },
   };
 
-  const vault = makeInnerVault(
-    mockVaultInput.zcf,
-    mockVaultInput.manager,
+  const loan = makeInnerLoan(
+    mockLoanInput.zcf,
+    mockLoanInput.manager,
     {},
     {},
     panBrand,
@@ -2378,16 +2378,16 @@ test('assertCollateralSufficient', async t => {
 
   t.deepEqual(protocolMintAmount, AmountMath.make(agVanBrand, 5555555550n));
 
-  t.is((await vault.testMethods.maxDebtFor(protocolMintAmount, exchangeRate)).value, 7777777770n);
-  await t.notThrowsAsync(vault.testMethods.assertSufficientCollateral(
+  t.is((await loan.testMethods.maxDebtFor(protocolMintAmount, exchangeRate)).value, 7777777770n);
+  await t.notThrowsAsync(loan.testMethods.assertSufficientCollateral(
     protocolMintAmount,
     proposedDebtAmount,
     exchangeRate));
-  await t.notThrowsAsync(vault.testMethods.assertSufficientCollateral(
+  await t.notThrowsAsync(loan.testMethods.assertSufficientCollateral(
     protocolMintAmount,
     AmountMath.make(panBrand, proposedDebtAmount.value + 1n),
     exchangeRate));
-  await t.throwsAsync(vault.testMethods.assertSufficientCollateral(
+  await t.throwsAsync(loan.testMethods.assertSufficientCollateral(
     protocolMintAmount,
     AmountMath.make(panBrand, proposedDebtAmount.value + 2n),
     exchangeRate));

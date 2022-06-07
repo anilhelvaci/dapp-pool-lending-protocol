@@ -15,7 +15,7 @@ import { E } from '@agoric/eventual-send';
 export async function start(zcf) {
 
   const priceAuthorities = makeScalarMap('priceAuthorities');
-  /** @type {MapStore<string, InnerVault>} */
+  /** @type {MapStore<string, InnerLoan>} */
   const supportedAssetPublicFacets = makeScalarMap('supportedAssetPublicFacets');
 
   /**
