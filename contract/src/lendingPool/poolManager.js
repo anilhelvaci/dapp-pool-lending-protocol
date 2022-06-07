@@ -5,10 +5,6 @@ import { E } from '@agoric/eventual-send';
 import { Nat } from '@agoric/nat';
 import {
   assertProposalShape,
-  makeRatioFromAmounts,
-  getAmountOut,
-  getAmountIn,
-  ceilMultiplyBy,
   ceilDivideBy,
   makeRatio,
 } from '@agoric/zoe/src/contractSupport/index.js';
@@ -127,6 +123,7 @@ export const makePoolManager = (
     getProtocolIssuer: () => protocolIssuer,
     getProtocolLiquidity: () => totalProtocolSupply.value,
     getUnderlyingLiquidity: () => underlyingAssetSeat.getAmountAllocated("Underlying"),
+    getUnderlyingBrand: () => underlyingBrand,
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
     async getCollateralQuote() {
@@ -138,6 +135,10 @@ export const makePoolManager = (
         debtBrand,
       );
     },
+    protocolToUnderlying: (brand, protocolAmount) => {
+      const exchangeRate = getExchangeRateForPool(brand);
+      return floorMultiplyBy(protocolAmount, exchangeRate);
+    }
   };
 
   let vaultCounter = 0;
@@ -156,11 +157,6 @@ export const makePoolManager = (
    * @type {bigint}
    */
   let latestInterestUpdate = startTimeStamp;
-
-  const liquidation = {
-    instance: undefined,
-    liquidator: undefined
-  }
 
   /**
    * @param {Amount} proposedDebtAmount
@@ -356,28 +352,6 @@ export const makePoolManager = (
 
   observeNotifier(periodNotifier, timeObserver);
 
-  const underlyingQuoteManager = makeQuoteManager();
-
-  const priceCheckObserver = {
-    updateState: newQuote => {
-      console.log('[DEBT_QUOTE_UPDATED]', getAmountOut(newQuote), getAmountIn(newQuote));
-      underlyingQuoteManager.updateLatestQuote(newQuote);
-    },
-    fail: reason => {
-      console.log('[FAIL]', reason.stack);
-      zcf.shutdownWithFailure(
-        assert.error(X`Unable to continue without a timer: ${reason}`),
-      );
-    },
-    finish: done => {
-      zcf.shutdownWithFailure(
-        assert.error(X`Unable to continue without a timer: ${done}`),
-      );
-    },
-  }
-
-  observeNotifier(priceAuthNotifier, priceCheckObserver);
-
   /** @type {Parameters<typeof makeInnerVault>[1]} */
   const managerFacet = harden({
     ...shared,
@@ -388,47 +362,12 @@ export const makePoolManager = (
     getCollateralBrand: () => collateralBrand,
     getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
-    getLatestUnderlyingQuote: () => underlyingQuoteManager.getLatestQuote(),
     getExchangeRateForPool,
     makeRedeemInvitation,
     getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value,
-    transferLiquidatedFund
+    transferLiquidatedFund,
+    debtPaid: originalDebt  => totalDebt = AmountMath.subtract(totalDebt, originalDebt)
   });
-
-  /** @param {ZCFSeat} seat */
-  const makeVaultKit = async seat => {
-    assertProposalShape(seat, {
-      give: { Collateral: null },
-      want: { RUN: null },
-    });
-
-    vaultCounter += 1;
-    const vaultId = String(vaultCounter);
-
-    const innerVault = makeInnerVault(
-      zcf,
-      managerFacet,
-      assetNotifer,
-      vaultId,
-      protocolMint,
-      priceAuthority,
-    );
-
-    // TODO Don't record the vault until it gets opened
-    assert(prioritizedVaults);
-    const addedVaultKey = prioritizedVaults.addVault(vaultId, innerVault);
-
-    try {
-      const vaultKit = await innerVault.initVaultKit(seat);
-      seat.exit();
-      return vaultKit;
-    } catch (err) {
-      // remove it from prioritizedVaults
-      // XXX openLoan shouldn't assume it's already in the prioritizedVaults
-      prioritizedVaults.removeVault(addedVaultKey);
-      throw err;
-    }
-  };
 
   /** @param {ZCFSeat} seat
    * @param {Ratio} exchangeRate
@@ -457,6 +396,7 @@ export const makePoolManager = (
         assetNotifer,
         wrappedCollateralPriceAuthority,
         priceAuthority,
+        priceAuthNotifier,
         managerFacet,
         timerService,
         timingParams
@@ -538,7 +478,6 @@ export const makePoolManager = (
   /** @type {VaultManager} */
   return Far('vault manager', {
     ...shared,
-    makeVaultKit,
     makeBorrowKit,
     redeemHook,
     makeDepositInvitation,

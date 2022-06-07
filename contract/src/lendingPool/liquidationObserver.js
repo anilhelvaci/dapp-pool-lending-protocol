@@ -12,7 +12,7 @@ import { getAmountIn } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { Nat } from '@agoric/nat';
 import { E } from '@endo/far';
 
-export const makeLiquidationObserver = async (
+export const makeLiquidationObserver = (
   {
     wrappedCollateralPriceAuthority,
     wrappedDebtPriceAuthority,
@@ -22,10 +22,10 @@ export const makeLiquidationObserver = async (
   },
 ) => {
   // console.log("liquidationMargin", liquidationMargin)
-  const { debt, collateral, collateralUnderlyingDecimals, debtDecimals,
+  const { debtBrand, collateralUnderlyingDecimals, debtDecimals,
     collateralUnderlyingBrand, compareBrand } = vaultData;
 
-  function* checkLiquidation({ colQuote, debtQuote, liqPromiseKit }) {
+  function* checkLiquidation({ colQuote, debtQuote, liqPromiseKit, vault }) {
     let colLatestQuote = colQuote;
     let debtLatestQuote = debtQuote;
     // console.log("InitialQuotes", colLatestQuote, debtLatestQuote)
@@ -39,6 +39,8 @@ export const makeLiquidationObserver = async (
       debtLatestQuote = updates.debtQuote && updates.debtQuote !== undefined ? updates.debtQuote : debtLatestQuote;
       console.log('Quotes', getAmountOut(colLatestQuote), getAmountOut(debtLatestQuote));
       console.log('Updates', updates);
+      const collateral = vault.getCollateralAmount();
+      const debt = vault.getCurrentDebt();
       const colValInCompare = getValInCompareCurrency(collateral, colLatestQuote,
         collateralUnderlyingBrand, collateralUnderlyingDecimals, getExchangeRateForPool(collateralUnderlyingBrand));
 
@@ -48,12 +50,11 @@ export const makeLiquidationObserver = async (
       const colToDebtRatio = makeRatioFromAmounts(colValInCompare, debtValInCompare);
 
       if (ratioGTE(liquidationMargin, colToDebtRatio)) {
-        liqPromiseKit.resolve({colLatestQuote, debtLatestQuote});
+        liqPromiseKit.resolve({colLatestQuote, debtLatestQuote, vault});
         return { state: 'Liquidating' };
       }
       state = 'Active';
     }
-
   }
 
   const getValInCompareCurrency = (amountIn, latestQuote, scaleBrand, scaleDecimalPlaces, collateralExchangeRate ) => {
@@ -74,23 +75,14 @@ export const makeLiquidationObserver = async (
     );
   };
 
-  const [ debtInitialQuote, colInitialQuote ] = await Promise.all([
-    E(wrappedDebtPriceAuthority.priceAuthority).quoteGiven(
-      AmountMath.make(debt.brand, 10n ** BigInt(debtDecimals)),
-      compareBrand,
-    ),
-    E(wrappedCollateralPriceAuthority.priceAuthority).quoteGiven(
-      AmountMath.make(collateralUnderlyingBrand, 10n ** BigInt(collateralUnderlyingDecimals)),
-      compareBrand,
-    ),
-  ]);
-
   let checkLiqGenerator;
 
   const colPriceObserver = {
     updateState: async newQuote => {
-      const state = checkLiqGenerator.next({ debtQuote: undefined, colQuote: newQuote });
-      console.log("ColPriceObserver-State:", state);
+      if (checkLiqGenerator !== undefined ) {
+        const state = checkLiqGenerator.next({ debtQuote: undefined, colQuote: newQuote });
+        console.log("ColPriceObserver-State:", state);
+      }
     },
     fail: reason => {
 
@@ -102,8 +94,10 @@ export const makeLiquidationObserver = async (
 
   const debtPriceObserver = {
     updateState: async newQuote => {
-      const state = checkLiqGenerator.next({ debtQuote: newQuote, colQuote: undefined });
-      console.log("DebtPriceObserver-State:", state);
+      if (checkLiqGenerator !== undefined) {
+        const state = checkLiqGenerator.next({ debtQuote: newQuote, colQuote: undefined });
+        console.log("DebtPriceObserver-State:", state);
+      }
     },
     fail: reason => {
 
@@ -116,7 +110,7 @@ export const makeLiquidationObserver = async (
   observeNotifier(wrappedCollateralPriceAuthority.notifier, colPriceObserver);
   observeNotifier(wrappedDebtPriceAuthority.notifier, debtPriceObserver);
 
-  const schedule = async () => {
+  const schedule = async (vault) => {
     if (checkLiqGenerator !== undefined) {
       checkLiqGenerator.return();
     }
@@ -124,15 +118,15 @@ export const makeLiquidationObserver = async (
     const { debtQuote, colQuote } = await getQuotes();
     const liqPromiseKit = makePromiseKit();
 
-    checkLiqGenerator = checkLiquidation({ colQuote, debtQuote, liqPromiseKit });
-
+    checkLiqGenerator = checkLiquidation({ colQuote, debtQuote, liqPromiseKit, vault });
+    checkLiqGenerator.next();
     return liqPromiseKit.promise;
   }
 
   const getQuotes = async () => {
     const [ debtQuote, colQuote ] = await Promise.all([
       E(wrappedDebtPriceAuthority.priceAuthority).quoteGiven(
-        AmountMath.make(debt.brand, 10n ** BigInt(debtDecimals)),
+        AmountMath.make(debtBrand, 10n ** BigInt(debtDecimals)),
         compareBrand,
       ),
       E(wrappedCollateralPriceAuthority.priceAuthority).quoteGiven(
@@ -144,5 +138,5 @@ export const makeLiquidationObserver = async (
     return { debtQuote, colQuote };
   }
 
-  return harden({ schedule });
+  return harden({ schedule, getValInCompareCurrency });
 }
