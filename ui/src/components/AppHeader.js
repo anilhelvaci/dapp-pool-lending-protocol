@@ -15,6 +15,7 @@ const useStyles = makeStyles(theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    top: 0,
   },
   menuButton: ({ drawerWidth }) => ({
     marginRight: theme.spacing(2),

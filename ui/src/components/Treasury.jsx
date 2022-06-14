@@ -22,6 +22,7 @@ import { VaultSummary } from './VaultSummary';
 import ErrorBoundary from './ErrorBoundary';
 
 import { setVaultToManageId, setLoadTreasuryError } from '../store';
+import { VaultStatus } from '../constants';
 
 const cardWidth = 360;
 const cardPadding = 16;
@@ -115,15 +116,21 @@ function VaultList() {
     retrySetup,
   } = useApplicationContext();
 
-  const [showClosed, setShowClosed] = useState(
-    window.localStorage.getItem('showClosedVaults') === 'true',
-  );
-
   const vaultsList = Object.entries(vaults ?? {});
-  const vaultsToRender = vaultsList.filter(
-    entry =>
-      entry[1].status !== 'Declined' &&
-      !(!showClosed && ['Closed', 'Error in offer'].includes(entry[1].status)),
+
+  const showShowClosedToggle =
+    (vaultsList?.find(entry =>
+      [VaultStatus.CLOSED, VaultStatus.ERROR].includes(entry[1].status),
+    )?.length ?? 0) > 0;
+
+  const [showClosed, setShowClosed] = useState(false);
+
+  const vaultsToRender = vaultsList.filter(([_key, { status }]) =>
+    showClosed
+      ? [VaultStatus.CLOSED, VaultStatus.ERROR].includes(status)
+      : ![VaultStatus.CLOSED, VaultStatus.ERROR, VaultStatus.DECLINED].includes(
+          status,
+        ),
   );
 
   const [redirect, setRedirect] = useState(false);
@@ -140,13 +147,8 @@ function VaultList() {
 
   const onShowClosedToggled = e => {
     const value = e.target.checked;
-    window.localStorage.setItem('showClosedVaults', value ? 'true' : 'false');
     setShowClosed(value);
   };
-
-  const showShowClosedToggle = vaultsList?.find(
-    entry => entry[1].status === 'Closed',
-  );
 
   const loadTreasuryErrorAlert = (
     <div className={classes.root}>
@@ -201,7 +203,7 @@ function VaultList() {
           <Checkbox
             color="primary"
             onChange={onShowClosedToggled}
-            checked={showClosed === true}
+            checked={showClosed}
           />
         }
         label="Show closed vaults"

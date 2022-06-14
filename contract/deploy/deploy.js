@@ -196,7 +196,7 @@ export default async function deployContract(
   const usdLiquidityAmount = await E(usdIssuer).getAmountOf(usdLiquidity);
 
   const usdPanLiquidity = await getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 5n, usdBrand, 'USD');
-  const usdPanLiquidityAmount = await E(usdIssuer).getAmountOf(usdLiquidity);
+  const usdPanLiquidityAmount = await E(usdIssuer).getAmountOf(usdPanLiquidity);
 
 
   console.log('vanLiquidity', vanLiquidity);
@@ -205,6 +205,8 @@ export default async function deployContract(
   console.log('panLiquidityAmount', panLiquidityAmount);
   console.log('usdLiquidity', usdLiquidity);
   console.log('usdLiquidityAmount', usdLiquidityAmount);
+  console.log('usdPanLiquidity', usdPanLiquidity);
+  console.log('usdPanLiquidityAmount', usdPanLiquidityAmount);
 
   const vanLiquidityAMM = {
     proposal: harden(vanLiquidityAmount),

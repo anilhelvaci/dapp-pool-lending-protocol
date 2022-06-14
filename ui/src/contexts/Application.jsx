@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useContext, useReducer } from 'react';
 
 import { E } from '@endo/captp';
 import { makeAsyncIterableFromNotifier as iterateNotifier } from '@agoric/notifier';
@@ -13,16 +13,17 @@ import {
   initVaults,
   updateVault,
   setCollaterals,
-  setRunLoCTerms,
   setTreasury,
-  setAutoswap,
   mergeBrandToInfo,
-  setUseGetRUN,
   setLoadTreasuryError,
+  mergeRUNStakeHistory,
+  setRUNStake,
+  setLoan,
+  setLoanAsset,
 } from '../store';
 import { updateBrandPetnames, storeAllBrandsFromTerms } from './storeBrandInfo';
 import WalletConnection from '../components/WalletConnection';
-import { getRunLoCTerms } from '../runLoCStub';
+import { LoanStatus, VaultStatus } from '../constants';
 
 // eslint-disable-next-line import/no-mutable-exports
 let walletP;
@@ -55,7 +56,7 @@ function watchVault(id, dispatch, offerStatus) {
     dispatch(
       updateVault({
         id,
-        vault: { status: 'Pending Wallet Acceptance' },
+        vault: { status: VaultStatus.PENDING },
       }),
     );
   } else {
@@ -63,28 +64,61 @@ function watchVault(id, dispatch, offerStatus) {
       updateVault({
         id,
         vault: {
-          status: 'Loading',
+          status: VaultStatus.LOADING,
         },
       }),
     );
   }
 
-  async function vaultUpdater() {
-    const uiNotifier = E(walletP).getUINotifier(id);
-    for await (const value of iterateNotifier(uiNotifier)) {
-      console.log('======== VAULT', id, value);
+  async function vaultUpdater(vault) {
+    for await (const vaultState of iterateNotifier(vault)) {
+      console.log('======== VAULT', id, vaultState);
       dispatch(
-        updateVault({ id, vault: { ...value, status: 'Loan Initiated' } }),
+        updateVault({
+          id,
+          vault: { ...vaultState, status: VaultStatus.INITIATED },
+        }),
       );
     }
-    dispatch(updateVault({ id, vault: { status: 'Closed' } }));
-    window.localStorage.setItem(id, 'Closed');
+    dispatch(updateVault({ id, vault: { status: VaultStatus.CLOSED } }));
+    window.localStorage.setItem(id, VaultStatus.CLOSED);
   }
 
-  vaultUpdater().catch(err => {
-    console.error('Vault watcher exception', id, err);
-    dispatch(updateVault({ id, vault: { status: 'Error in offer', err } }));
-  });
+  async function assetUpdater(asset) {
+    for await (const assetState of iterateNotifier(asset)) {
+      console.log('======== ASSET', id, assetState);
+      dispatch(
+        updateVault({
+          id,
+          vault: { asset: assetState },
+        }),
+      );
+    }
+  }
+
+  async function watch() {
+    let vault;
+    let asset;
+    try {
+      const notifiers = await E(walletP).getPublicNotifiers(id);
+      ({ vault, asset } = notifiers);
+    } catch (err) {
+      console.error('Could not get notifiers', id, err);
+      dispatch(updateVault({ id, vault: { status: VaultStatus.ERROR, err } }));
+      return;
+    }
+
+    assetUpdater(asset).catch(err => {
+      console.error('Asset watcher exception', id, err);
+    });
+
+    vaultUpdater(vault).catch(err => {
+      console.error('Vault watcher exception', id, err);
+      dispatch(updateVault({ id, vault: { status: VaultStatus.ERROR, err } }));
+    });
+  }
+
+  watch();
 }
 
 /** @type { (d: TreasuryDispatch, id: string) => void } */
@@ -109,18 +143,19 @@ function watchOffers(dispatch, INSTANCE_BOARD_ID) {
             dispatch(
               updateVault({
                 id,
-                vault: { status: 'Declined' },
+                vault: { status: VaultStatus.DECLINED },
               }),
             );
-          } else if (window.localStorage.getItem(id) === 'Closed') {
+          } else if (window.localStorage.getItem(id) === VaultStatus.CLOSED) {
             // We can cache closed vaults since their notifiers cannot update
             // anymore.
             dispatch(
               updateVault({
                 id,
-                vault: { status: 'Closed' },
+                vault: { status: VaultStatus.CLOSED },
               }),
             );
+            watchedVaults.add(id);
           } else if (!watchedVaults.has(id)) {
             watchedVaults.add(id);
             watchVault(id, dispatch, status);
@@ -173,31 +208,204 @@ const setupTreasury = async (dispatch, brandToInfo, zoe, board, instanceID) => {
   return { terms, collaterals };
 };
 
-/**
- * @param {TreasuryDispatch} dispatch
- * @param {Array<[Brand, BrandInfo]>} brandToInfo
- * @param {ERef<ZoeService>} zoe
- * @param {ERef<Board>} board
- * @param {string} instanceID
- */
-const setupAMM = async (dispatch, brandToInfo, zoe, board, instanceID) => {
-  const instance = await E(board).getValue(instanceID);
-  const [ammAPI, terms] = await Promise.all([
+// We don't know if the loan is still open or not until we get its notifier
+// data, so return a promise that resolves after we find out.
+//
+// If the notifier throws an error, or is finished, the loan is closed.
+const watchLoan = (status, id, dispatch, watchedLoans) =>
+  new Promise(resolve => {
+    const cached = window.localStorage.getItem(id);
+    if (cached !== null) {
+      watchedLoans[id] = cached;
+      resolve();
+      return;
+    }
+
+    if (status === undefined) {
+      status = LoanStatus.PROPOSED;
+    }
+
+    // If the loan is active, don't show it until we get its data.
+    if (status !== 'accept') {
+      watchedLoans[id] = status;
+      dispatch(setLoan({ id, status }));
+      resolve();
+    }
+
+    async function watchLoanAsset(asset) {
+      for await (const value of iterateNotifier(asset)) {
+        dispatch(setLoanAsset(value));
+      }
+    }
+
+    async function loanUpdater() {
+      const { vault, asset } = await E(walletP).getPublicNotifiers(id);
+
+      watchLoanAsset(asset);
+
+      let isOpen;
+      for await (const value of iterateNotifier(vault)) {
+        console.log('======== LOAN', id, value);
+        isOpen = true;
+        watchedLoans[id] = LoanStatus.OPEN;
+        resolve();
+        dispatch(setLoan({ id, status: LoanStatus.OPEN, data: value }));
+      }
+      console.log('Loan closed', id);
+      watchedLoans[id] = LoanStatus.CLOSED;
+      window.localStorage.setItem(id, LoanStatus.CLOSED);
+      if (isOpen) {
+        // The loan was open before, which means it was set as the open loan,
+        // so we want to reset back to the no-loans-open state.
+        dispatch(setLoan({}));
+      } else {
+        resolve();
+      }
+    }
+
+    loanUpdater().catch(err => {
+      console.error('Loan watcher exception', id, err);
+      watchedLoans[id] = LoanStatus.ERROR;
+      window.localStorage.setItem(id, LoanStatus.ERROR);
+      resolve();
+    });
+  });
+
+const processLoanOffers = (dispatch, instanceBoardId, watchedLoans, offers) =>
+  offers.map(
+    async ({
+      id,
+      instanceHandleBoardId,
+      continuingInvitation,
+      status,
+      proposalForDisplay,
+      meta,
+    }) => {
+      if (
+        instanceHandleBoardId === instanceBoardId &&
+        continuingInvitation === undefined
+      ) {
+        if (status === 'decline' && id in watchedLoans) {
+          dispatch(setLoan({}));
+          delete watchedLoans[id];
+        }
+        if (['accept', 'pending', 'complete', undefined].includes(status)) {
+          if (!(id in watchedLoans)) {
+            await watchLoan(status, id, dispatch, watchedLoans);
+          }
+          const loanStatus = watchedLoans[id];
+
+          if ([LoanStatus.OPEN, LoanStatus.CLOSED].includes(loanStatus)) {
+            dispatch(
+              mergeRUNStakeHistory({ [id]: { meta, proposalForDisplay } }),
+            );
+          }
+          return loanStatus;
+        }
+      } else if (
+        instanceHandleBoardId === instanceBoardId &&
+        continuingInvitation &&
+        status === 'accept'
+      ) {
+        // AdjustBalances and CloseVault offers use continuingInvitation
+        dispatch(
+          mergeRUNStakeHistory({
+            [id]: { meta, proposalForDisplay, continuingInvitation },
+          }),
+        );
+      }
+      return null;
+    },
+  );
+
+const watchLoans = async (dispatch, instanceBoardId) => {
+  const watchedLoans = {};
+
+  async function offersUpdater() {
+    const offerNotifier = E(walletP).getOffersNotifier();
+    for await (const offers of iterateNotifier(offerNotifier)) {
+      const loans = await Promise.all(
+        processLoanOffers(dispatch, instanceBoardId, watchedLoans, offers),
+      );
+      const hasLoan =
+        loans.includes(LoanStatus.OPEN) || loans.includes(LoanStatus.PROPOSED);
+      // Set loan to empty object indicating data is loaded but no loan exists.
+      if (!hasLoan) {
+        dispatch(setLoan({}));
+      }
+    }
+  }
+  offersUpdater().catch(err =>
+    console.error('runStake offers watcher exception', err),
+  );
+};
+
+const setupRUNStake = async (
+  dispatch,
+  RUNStakeMethod,
+  RUNStakeArgs,
+  board,
+  zoe,
+  RUN_STAKE_NAME,
+) => {
+  const instance = await E(walletP)[RUNStakeMethod](...RUNStakeArgs);
+  const [RUNStakeAPI, RUNStakeTerms, RUNStakeInstallation] = await Promise.all([
     E(zoe).getPublicFacet(instance),
     E(zoe).getTerms(instance),
+    E(zoe).getInstallationForInstance(instance),
   ]);
-  // TODO this uses getTerms.brands, but that includes utility tokens, etc.
-  // We need a query/notifier for what are the pools supported
-  const {
-    brands: { Central: centralBrand, ...otherBrands },
-  } = terms;
-  console.log('AMM brands retrieved', otherBrands);
-  dispatch(setAutoswap({ instance, ammAPI, centralBrand, otherBrands }));
-  await storeAllBrandsFromTerms({
-    dispatch,
-    terms,
-    brandToInfo,
+  // Get brands.
+  const brands = [
+    RUNStakeTerms.brands.Attestation,
+    RUNStakeTerms.brands.Debt,
+    RUNStakeTerms.brands.Stake,
+  ];
+  const keywords = ['LIEN', 'RUN', 'BLD'];
+  const displayInfos = await Promise.all(
+    brands.map(b => E(b).getDisplayInfo()),
+  );
+
+  const newBrandToInfo = brands.map((brand, i) => {
+    const decimalPlaces = displayInfos[i] && displayInfos[i].decimalPlaces;
+    /** @type { [Brand, BrandInfo]} */
+    const entry = [
+      brand,
+      {
+        assetKind: displayInfos[i].assetKind,
+        decimalPlaces,
+        petname: keywords[i],
+        brand,
+      },
+    ];
+    return entry;
   });
+  dispatch(mergeBrandToInfo(newBrandToInfo));
+
+  // Suggest instance/installation
+  const [instanceBoardId, installationBoardId] = await Promise.all([
+    E(board).getId(instance),
+    E(board).getId(RUNStakeInstallation),
+  ]);
+  await Promise.all([
+    E(walletP).suggestInstallation(
+      `${RUN_STAKE_NAME}Installation`,
+      installationBoardId,
+    ),
+    E(walletP).suggestInstance(`${RUN_STAKE_NAME}Instance`, instanceBoardId),
+  ]);
+
+  // Watch for loan invitations.
+  watchLoans(dispatch, instanceBoardId);
+
+  // TODO: Get notifier for governedParams.
+  dispatch(
+    setRUNStake({
+      RUNStakeAPI,
+      RUNStakeTerms,
+      instanceBoardId,
+      installationBoardId,
+    }),
+  );
 };
 
 /* eslint-disable complexity, react/prop-types */
@@ -205,36 +413,33 @@ export default function Provider({ children }) {
   const [state, dispatch] = useReducer(reducer, defaultState);
   const { brandToInfo } = state;
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const useGetRUN = urlParams.get('gr') === 'true';
-    dispatch(setUseGetRUN(useGetRUN));
-  }, []);
-
   const retrySetup = async () => {
     await refreshConfigFromWallet(walletP);
     const {
       INSTALLATION_BOARD_ID,
       INSTANCE_BOARD_ID,
       RUN_ISSUER_BOARD_ID,
-      AMM_INSTALLATION_BOARD_ID,
-      AMM_INSTANCE_BOARD_ID,
-      AMM_NAME,
+      RUN_STAKE_NAME,
+      RUN_STAKE_ON_CHAIN_CONFIG: [RUNStakeMethod, RUNStakeArgs],
     } = dappConfig;
-
     const zoe = E(walletP).getZoe();
     const board = E(walletP).getBoard();
+
+    setupRUNStake(
+      dispatch,
+      RUNStakeMethod,
+      RUNStakeArgs,
+      board,
+      zoe,
+      RUN_STAKE_NAME,
+    );
     try {
-      await Promise.all([
-        setupTreasury(dispatch, brandToInfo, zoe, board, INSTANCE_BOARD_ID),
-        setupAMM(dispatch, brandToInfo, zoe, board, AMM_INSTANCE_BOARD_ID),
-      ]);
+      await setupTreasury(dispatch, brandToInfo, zoe, board, INSTANCE_BOARD_ID);
     } catch (e) {
-      console.log('Couldnt load collaterals');
+      console.error('Couldnt load collaterals', e);
       dispatch(setLoadTreasuryError(e));
       return;
     }
-
     // The moral equivalent of walletGetPurses()
     async function watchPurses() {
       const pn = E(walletP).getPursesNotifier();
@@ -255,22 +460,15 @@ export default function Provider({ children }) {
           brandToInfo,
           issuersFromNotifier: issuers,
         });
-        const { brandInfo, terms: runLoCTerms } = await getRunLoCTerms(issuers);
-        dispatch(mergeBrandToInfo([[brandInfo.brand, brandInfo]]));
-        dispatch(setRunLoCTerms(runLoCTerms));
       }
     }
     watchBrands().catch(err => {
       console.error('got watchBrands err', err);
     });
+
     await Promise.all([
       E(walletP).suggestInstallation('Installation', INSTALLATION_BOARD_ID),
       E(walletP).suggestInstance('Instance', INSTANCE_BOARD_ID),
-      E(walletP).suggestInstallation(
-        `${AMM_NAME}Installation`,
-        AMM_INSTALLATION_BOARD_ID,
-      ),
-      E(walletP).suggestInstance(`${AMM_NAME}Instance`, AMM_INSTANCE_BOARD_ID),
       E(walletP).suggestIssuer('RUN', RUN_ISSUER_BOARD_ID),
     ]);
 
@@ -280,6 +478,7 @@ export default function Provider({ children }) {
   const setWalletP = async bridge => {
     walletP = bridge;
 
+    console.log('set walletP');
     await retrySetup();
   };
 

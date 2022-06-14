@@ -33,6 +33,7 @@ beforeEach(() => {
   state.vaults = null;
   state.brandToInfo = [];
   state.treasury = null;
+  window.localStorage.setItem('showClosedVaults', 'false');
 });
 
 test('renders a message when the dapp needs approval', () => {

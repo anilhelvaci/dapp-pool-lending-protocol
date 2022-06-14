@@ -139,8 +139,7 @@ function VaultCollateral({
       </TableRow>
     );
   };
-  console.log('COLLATERALS', collaterals);
-  console.log('LINK', collaterals[0]);
+
   return (
     <div className={classes.root}>
       <FormControl component="fieldset">

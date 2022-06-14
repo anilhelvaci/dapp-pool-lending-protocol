@@ -52,7 +52,6 @@ export default function NewVault() {
       vaultCollateral,
       treasury,
       collaterals,
-      runLoCTerms,
       purses,
       vaultConfiguration,
       approved,
@@ -94,7 +93,6 @@ export default function NewVault() {
           collaterals={collaterals}
           purses={purses}
           brandToInfo={brandToInfo}
-          runLoCTerms={runLoCTerms}
         />
       );
     }

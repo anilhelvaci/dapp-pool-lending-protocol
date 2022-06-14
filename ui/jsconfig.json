@@ -7,10 +7,5 @@
     "moduleResolution": "node",
     "jsx": "preserve"
   },
-  "include": [
-    "src/**/*.js",
-    "src/**/*.jsx",
-    "tools/**/*.js",
-    "exports.js"
-  ]
+  "include": ["src/**/*.js", "src/**/*.jsx", "tools/**/*.js", "exports.js"]
 }

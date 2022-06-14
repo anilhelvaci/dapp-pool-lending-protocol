@@ -76,15 +76,24 @@
  */
 
 /**
+ * @typedef  { import('@agoric/run-protocol/src/vaultFactory/vault').VaultUIState } VaultUIState
+ */
+
+/**
+ * @typedef { import('@agoric/run-protocol/src/vaultFactory/vaultManager').AssetState } AssetState
+ */
+
+/**
  * @typedef {{
- *   status?: 'Pending Wallet Acceptance' | 'Error in offer'| 'Loan Initiated' | 'Liquidated',
+ *   status: import('../constants').VaultStatus,
  *   liquidated?: boolean,
- *   locked?: Amount | null,
- *   collateralizationRatio?: Ratio | null,
- *   debt?: Amount | null,
- *   interestRate?:  Ratio | null,
- *   liquidationRatio?: Ratio | null,
- *   err?: Error
+ *   locked?: VaultUIState['locked'],
+ *   collateralizationRatio?: Ratio,
+ *   debtSnapshot?: VaultUIState['debtSnapshot'],
+ *   interestRate?:  VaultUIState['interestRate'],
+ *   liquidationRatio?: VaultUIState['liquidationRatio'],
+ *   asset?: AssetState,
+ *   err?: Error,
  * }} VaultData
  */
 
@@ -94,6 +103,53 @@
  *   treasuryAPI: unknown,
  *   runIssuer: Issuer,
  *   runBrand: Brand,
- *   priceAuthority: unknown,
+ *   priceAuthority: ERef<PriceAuthority>,
  * }} VaultState
+ */
+
+/**
+ * @typedef { import('@agoric/run-protocol/src/runStake/runStake').RunStakePublic } RunStakePublic
+ */
+
+/**
+ * @typedef { import('@agoric/run-protocol/src/runStake/runStake').RunStakeTerms } RunStakeTerms
+ */
+
+/**
+ * @typedef { import('../constants').LoanStatus } LoanStatus
+ */
+
+/**
+ * @typedef {{
+ * data: VaultData,
+ * id: string,
+ * status: LoanStatus
+ * }} Loan
+ */
+
+/**
+ * @typedef {{
+ *   RUNStakeAPI: RunStakePublic,
+ *   RUNStakeTerms: RunStakeTerms,
+ *   instanceBoardId: string,
+ *   installationBoardId: string,
+ * }} RUNStakeState
+ */
+
+/**
+ * @typedef { import('@agoric/wallet/api/src/types').RecordMetadata } RecordMetadata
+ */
+
+/**
+ * @typedef {{
+ *   priorOfferId?: string
+ * }} ContinuingInvitation
+ */
+
+/**
+ * @typedef {{
+ *   meta: RecordMetadata,
+ *   proposalForDisplay: Record<string, any>
+ *   continuingInvitation?: ContinuingInvitation,
+ * }} HistoryItem
  */

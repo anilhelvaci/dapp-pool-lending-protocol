@@ -5,11 +5,14 @@ import React, { useEffect, useState } from 'react';
 import { Redirect } from 'react-router-dom';
 import { Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-
-import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport';
+import {
+  makeRatioFromAmounts,
+  floorMultiplyBy,
+} from '@agoric/zoe/src/contractSupport';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@endo/nat';
 import { E } from '@endo/eventual-send';
+import { calculateCurrentDebt } from '@agoric/run-protocol/src/interest-math';
 
 import AdjustVaultForm from './AdjustVaultForm';
 import UnchangeableValues from './UnchangeableValues';
@@ -17,7 +20,6 @@ import ChangesTable from './ChangesTable';
 import CloseVaultForm from './CloseVaultForm';
 import ErrorBoundary from '../../ErrorBoundary';
 import ApproveOfferSB from '../../ApproveOfferSB';
-
 import { makeAdjustVaultOffer } from './makeAdjustVaultOffer';
 import { useApplicationContext } from '../../../contexts/Application';
 import { makeDisplayFunctions } from '../../helpers';
@@ -52,38 +54,43 @@ const VaultManagement = () => {
 
   const { state, walletP } = useApplicationContext();
 
-  const {
-    purses,
-    vaults,
-    vaultToManageId,
-    brandToInfo,
-    treasury: { priceAuthority },
-  } = state;
+  const { purses, vaults, vaultToManageId, brandToInfo, treasury } = state;
 
   /** @type { VaultData } */
-  let vaultToManage = {
-    debt: null,
-    interestRate: null,
-    liquidationRatio: null,
-    locked: null,
-  };
+  let vaultToManage;
   if (vaultToManageId && vaults) {
     vaultToManage = vaults[vaultToManageId];
-  }
-
-  const { debt, interestRate, liquidationRatio, locked } = vaultToManage;
-
-  if (locked === null || debt === null) {
+  } else {
     return <Redirect to="/vaults" />;
   }
-  assert(locked && debt);
+  const {
+    interestRate,
+    liquidationRatio,
+    locked,
+    debtSnapshot,
+    asset,
+  } = vaultToManage;
+
+  assert(
+    locked && debtSnapshot && asset,
+    `Can't manage vault with missing data: locked: ${locked}, debt: ${debtSnapshot}, asset: ${asset}`,
+  );
+  const debt = calculateCurrentDebt(
+    debtSnapshot.debt,
+    debtSnapshot.interest,
+    asset.compoundedInterest,
+  );
 
   // deposit, withdraw, noaction
   const [collateralAction, setCollateralAction] = useState('noaction');
   // borrow, repay, noaction
   const [debtAction, setDebtAction] = React.useState('noaction');
-  const [lockedInputError, setLockedInputError] = useState(null);
-  const [debtInputError, setDebtInputError] = useState(null);
+  const [lockedInputError, setLockedInputError] = useState(
+    /** @type { string | null } */ (null),
+  );
+  const [debtInputError, setDebtInputError] = useState(
+    /** @type { string | null } */ (null),
+  );
   const [lockedDelta, setLockedDelta] = useState(
     AmountMath.make(locked.brand, 0n),
   );
@@ -135,14 +142,10 @@ const VaultManagement = () => {
     setOpenApproveOfferSB(true);
   };
 
-  const calcRatio = (priceRate, newLock, newBorrow) =>
-    makeRatioFromAmounts(
-      AmountMath.make(newLock.brand, newLock.value * priceRate.numerator.value),
-      AmountMath.make(
-        newBorrow.brand,
-        newBorrow.value * priceRate.denominator.value,
-      ),
-    );
+  const calcRatio = (priceRate, newLock, newBorrow) => {
+    const lockPrice = floorMultiplyBy(newLock, priceRate);
+    return makeRatioFromAmounts(lockPrice, newBorrow);
+  };
 
   // run once when component loaded.
   // TODO: use makeQuoteNotifier
@@ -154,8 +157,11 @@ const VaultManagement = () => {
       locked.brand,
       10n ** Nat(decimalPlaces),
     );
-    assert(priceAuthority, 'priceAuthority missing');
-    const quoteP = E(priceAuthority).quoteGiven(inputAmount, debt.brand);
+    assert(treasury, 'treasury missing, need priceAuthority');
+    const quoteP = E(treasury.priceAuthority).quoteGiven(
+      inputAmount,
+      debt.brand,
+    );
 
     quoteP.then(({ quoteAmount }) => {
       const [{ amountIn, amountOut }] = quoteAmount.value;

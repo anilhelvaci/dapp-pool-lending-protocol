@@ -9,6 +9,7 @@ import { useApplicationContext } from '../../contexts/Application';
 import { makeLoanOffer } from '../../contexts/makeLoanOffer';
 import VaultConfirmation from './VaultConfirmation';
 import ErrorBoundary from '../ErrorBoundary';
+import { VaultStatus } from '../../constants';
 
 function VaultCreate({
   dispatch,
@@ -55,7 +56,7 @@ function VaultCreate({
       liquidationMargin,
       locked: toLock,
       stabilityFee,
-      status: 'Pending Wallet Acceptance',
+      status: VaultStatus.PENDING,
       liquidationPenalty: makeRatio(3n, toBorrow.brand),
     };
     dispatch(createVault({ id, vault }));
