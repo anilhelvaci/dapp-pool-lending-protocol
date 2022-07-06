@@ -52,7 +52,7 @@ export const start = async (zcf, privateArgs) => {
 
   const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => { // TODO priceAuth as an argument
     await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
-    const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT);
+    const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, { decimalPlaces: 6 });
     const { brand: protocolBrand } = protocolMint.getIssuerRecord();
     const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
     // We create only one loan per collateralType.
@@ -153,6 +153,17 @@ export const start = async (zcf, privateArgs) => {
     return zcf.makeInvitation(pm.redeemHook, 'Redeem');
   };
 
+  const makeDepositInvitation = underlyingBrand => {
+    assert(
+      poolTypes.has(underlyingBrand),
+      X`Not a supported pool type ${underlyingBrand}`,
+    );
+
+    const pm = poolTypes.get(underlyingBrand);
+
+    return pm.makeDepositInvitation();
+  }
+
   const hasKeyword = keyword => {
     return zcf.assertUniqueKeyword(keyword);
   }
@@ -162,6 +173,26 @@ export const start = async (zcf, privateArgs) => {
     return result;
   }
 
+  const getMarkets = async () => {
+    return harden(
+      Promise.all(
+        [...poolTypes.entries()].map(async ([brand, pm]) => {
+          const underlyingWrappedPriceAuthority =  await pm.getPriceAuthorityForBrand(pm.getUnderlyingBrand());
+          return {
+            brand,
+            interestRate: pm.getCurrentBorrowingRate(),
+            liquidationMargin: pm.getLiquidationMargin(),
+            underlyingBrand: pm.getUnderlyingBrand(),
+            protocolBrand: pm.getProtocolBrand(),
+            thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
+            underlyingToThirdPriceAuthority: underlyingWrappedPriceAuthority.priceAuthority,
+            exchangeRate: pm.getExchangeRate()
+          }
+        }),
+      ),
+    );
+  };
+
   const publicFacet = Far('lending pool public facet', {
     helloWorld: () => 'Hello World',
     hasPool,
@@ -169,11 +200,13 @@ export const start = async (zcf, privateArgs) => {
     getPool: (brand) => poolTypes.get(brand),
     makeBorrowInvitation,
     makeRedeemInvitation,
+    makeDepositInvitation,
     getAmountKeywordRecord: (keyword, brand, value) => { // This is for repl testing, might remove later
       const amountKeywordRecord = {};
       amountKeywordRecord[keyword] = AmountMath.make(brand, value);
       return amountKeywordRecord;
-    }
+    },
+    getMarkets
   });
 
   const getParamMgrRetriever = () =>

@@ -5,7 +5,7 @@ import { Redirect } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 
 import { Paper, Typography } from '@material-ui/core';
-
+import { E } from '@endo/captp';
 import VaultSteps from './VaultSteps';
 
 import { useApplicationContext } from '../../contexts/Application';
@@ -51,6 +51,7 @@ export default function NewVault() {
     state: {
       vaultCollateral,
       treasury,
+      lendingPool,
       collaterals,
       purses,
       vaultConfiguration,
@@ -85,6 +86,11 @@ export default function NewVault() {
   }
 
   const getCurrentVaultCreationStep = () => {
+
+    if (lendingPool) {
+      E(lendingPool.publicFacet).helloWorld().then(msg => console.log(msg, 'from LendingPool'));
+    }
+
     if (!vaultCollateral) {
       // User needs to choose which collateral brand to use in their loan
       return (

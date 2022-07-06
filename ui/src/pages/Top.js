@@ -13,6 +13,7 @@ import NewVault from '../components/vault/NewVault';
 import Treasury from '../components/Treasury';
 import VaultManagement from '../components/vault/VaultManagement/VaultManagement';
 import RunStake from '../components/runStake/RunStake';
+import LendingPool from '../components/lendingPool/LendingPool';
 
 const navigationDrawerWidth = 240;
 
@@ -53,7 +54,7 @@ function Top() {
         <div className={classes.body}>
           <ResponsiveNavigation
             drawerWidth={navigationDrawerWidth}
-            isOpen={isOpen}
+            isOpen={false}
             setIsOpen={setIsOpen}
           >
             <NavDrawer />
@@ -61,6 +62,9 @@ function Top() {
 
           <main className={classes.content}>
             <Switch>
+              <Route path="/lending-pool">
+              <LendingPool />
+              </Route>
               <Route path="/vaults">
                 <Treasury />
               </Route>

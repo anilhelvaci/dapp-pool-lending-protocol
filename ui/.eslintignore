@@ -3,3 +3,5 @@ node_modules
 .git
 .cache
 src/generated/**
+src/contexts/**
+src/components/lendingPool/**

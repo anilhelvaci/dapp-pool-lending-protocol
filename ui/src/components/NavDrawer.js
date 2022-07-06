@@ -103,6 +103,12 @@ function NavDrawer() {
           replace
         />
         <ListItemLink
+            icon={<MonetizationIcon />}
+          primary="Lending Pool"
+          to="/lending-pool"
+          replace
+        />
+        <ListItemLink
           icon={<AccountBalanceIcon />}
           primary="Vaults"
           to="/vaults"

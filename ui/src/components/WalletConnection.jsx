@@ -19,6 +19,7 @@ const WalletConnection = ({ setWalletP, dispatch }) => {
         // This is one of the only methods that the wallet connection facet allows.
         // It connects asynchronously, but you can use promise pipelining immediately.
         /** @type {ERef<WalletBridge>} */
+        console.log('idle');
         const bridge = E(walletConnection).getScopedBridge(CONTRACT_NAME);
         // You should reconstruct all state here.
         setWalletP(bridge);

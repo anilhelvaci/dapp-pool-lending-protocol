@@ -108,6 +108,13 @@
  */
 
 /**
+ * @typedef {{
+ *   instance: Instance,
+ *   publicFacet: unknown,
+ * }} LendingPool
+ */
+
+/**
  * @typedef { import('@agoric/run-protocol/src/runStake/runStake').RunStakePublic } RunStakePublic
  */
 

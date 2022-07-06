@@ -55,7 +55,8 @@
     "react-dom": "^16.14.0",
     "react-number-format": "^4.4.3",
     "react-router-dom": "^5.2.0",
-    "ses": "^0.15.7"
+    "ses": "^0.15.7",
+    "prop-types": "^15.8.1"
   },
   "devDependencies": {
     "@babel/eslint-plugin": "^7.12.1",
@@ -123,6 +124,6 @@
   },
   "prettier": {
     "trailingComma": "all",
-    "singleQuote": true
+    "singleQuote": false
   }
 }

@@ -1,29 +1,31 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer } from "react";
 
-import { E } from '@endo/captp';
-import { makeAsyncIterableFromNotifier as iterateNotifier } from '@agoric/notifier';
+import { E } from "@endo/captp";
+import { makeAsyncIterableFromNotifier as iterateNotifier } from "@agoric/notifier";
 
-import { dappConfig, refreshConfigFromWallet } from '../utils/config';
+import { dappConfig, lendingPoolDappConfig, refreshConfigFromWallet } from "../utils/config";
 
 import {
-  initial,
-  reducer,
   defaultState,
-  setPurses,
+  initial,
   initVaults,
-  updateVault,
-  setCollaterals,
-  setTreasury,
   mergeBrandToInfo,
-  setLoadTreasuryError,
   mergeRUNStakeHistory,
-  setRUNStake,
+  reducer,
+  setCollaterals,
+  setLendingPool,
+  setLoadTreasuryError,
   setLoan,
   setLoanAsset,
-} from '../store';
-import { updateBrandPetnames, storeAllBrandsFromTerms } from './storeBrandInfo';
-import WalletConnection from '../components/WalletConnection';
-import { LoanStatus, VaultStatus } from '../constants';
+  setMarkets,
+  setPurses,
+  setRUNStake,
+  setTreasury,
+  updateVault,
+} from "../store";
+import { storeAllBrandsFromTerms, updateBrandPetnames } from "./storeBrandInfo";
+import LendingPoolWalletConnection from "../components/lendingPool/LendingPoolWalletConnection";
+import { LoanStatus, VaultStatus } from "../constants";
 
 // eslint-disable-next-line import/no-mutable-exports
 let walletP;
@@ -127,43 +129,8 @@ function watchOffers(dispatch, INSTANCE_BOARD_ID) {
   async function offersUpdater() {
     const offerNotifier = E(walletP).getOffersNotifier();
     for await (const offers of iterateNotifier(offerNotifier)) {
-      for (const {
-        id,
-        instanceHandleBoardId,
-        continuingInvitation,
-        status,
-      } of offers) {
-        if (
-          instanceHandleBoardId === INSTANCE_BOARD_ID &&
-          continuingInvitation === undefined // AdjustBalances and CloseVault offers use continuingInvitation
-        ) {
-          if (status === 'decline') {
-            // We don't care about declined offers, still update the vault so
-            // the UI can hide it if needed.
-            dispatch(
-              updateVault({
-                id,
-                vault: { status: VaultStatus.DECLINED },
-              }),
-            );
-          } else if (window.localStorage.getItem(id) === VaultStatus.CLOSED) {
-            // We can cache closed vaults since their notifiers cannot update
-            // anymore.
-            dispatch(
-              updateVault({
-                id,
-                vault: { status: VaultStatus.CLOSED },
-              }),
-            );
-            watchedVaults.add(id);
-          } else if (!watchedVaults.has(id)) {
-            watchedVaults.add(id);
-            watchVault(id, dispatch, status);
-          }
-        }
-      }
-      if (!watchedVaults.size) {
-        dispatch(initVaults());
+      for (const offer of offers) {
+        console.log('======== NEW_OFFER', offer);
       }
       console.log('======== OFFERS', offers);
     }
@@ -207,6 +174,84 @@ const setupTreasury = async (dispatch, brandToInfo, zoe, board, instanceID) => {
   dispatch(setCollaterals(collaterals));
   return { terms, collaterals };
 };
+
+const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
+  /** @type { Instance } */
+  const instance = await E(board).getValue(instanceID);
+  const lendingPoolPublicFacetP = E(zoe).getPublicFacet(instance);
+  /** @type { ERef<VaultFactory> } */
+  const [lendingPoolPublicFacet, markets] = await Promise.all([
+    lendingPoolPublicFacetP,
+    E(lendingPoolPublicFacetP).getMarkets(),
+  ]);
+
+  const displayInfos = await Promise.all(
+    markets.map(async market => {
+      const [underlyingDisplayInfo, underlyingAllegedName, protocolDisplayInfo,
+        protocolAllegedName, thirdCurrencyDisplayInfo, thirdCurrencyAllegedName] =
+        await Promise.all([
+          E(market.underlyingBrand).getDisplayInfo(),
+          E(market.underlyingBrand).getAllegedName(),
+          E(market.protocolBrand).getDisplayInfo(),
+          E(market.protocolBrand).getAllegedName(),
+          E(market.thirdCurrencyBrand).getDisplayInfo(),
+          E(market.thirdCurrencyBrand).getAllegedName(),
+        ]);
+      return {
+        underlying: { displayInfo: underlyingDisplayInfo, petName: underlyingAllegedName },
+        protocol: { displayInfo: protocolDisplayInfo, petName: protocolAllegedName },
+        thirdCurrency: { displayInfo: thirdCurrencyDisplayInfo, petName: thirdCurrencyAllegedName },
+      }
+    })
+  );
+
+  const brandToInfoDeepP = markets.map((market, i) => {
+
+    const underlyingBrandDisplayInfo = displayInfos[i] &&
+      displayInfos[i].underlying;
+
+    const protocolBrandDisplayInfo = displayInfos[i] &&
+      displayInfos[i].protocol;
+
+    const thirdCurrencyBrandDisplayInfo = displayInfos[i] &&
+      displayInfos[i].thirdCurrency;
+
+    return Array.from([
+      toBrandToInfoItem(market.underlyingBrand, underlyingBrandDisplayInfo),
+      toBrandToInfoItem(market.protocolBrand, protocolBrandDisplayInfo),
+      toBrandToInfoItem(market.thirdCurrencyBrand, thirdCurrencyBrandDisplayInfo)
+    ]);
+
+  });
+
+  const brandInfoFlattenedP = brandToInfoDeepP.flat();
+  const brandToInfoFinal = await Promise.all(brandInfoFlattenedP);
+
+  dispatch(
+      setLendingPool({publicFacet: lendingPoolPublicFacet, instance}),
+  );
+
+  dispatch(
+    setMarkets(markets)
+  );
+
+  dispatch(
+    mergeBrandToInfo(brandToInfoFinal)
+  )
+};
+
+const toBrandToInfoItem = (brand, brandDisplayInfo) => {
+  const decimalPlaces = brandDisplayInfo.displayInfo.decimalPlaces;
+  return [
+    brand,
+    {
+      assetKind: brandDisplayInfo.assetKind,
+      decimalPlaces,
+      petname: brandDisplayInfo.petName,
+      brand,
+    },
+  ];
+}
 
 // We don't know if the loan is still open or not until we get its notifier
 // data, so return a promise that resolves after we find out.
@@ -440,6 +485,12 @@ export default function Provider({ children }) {
       dispatch(setLoadTreasuryError(e));
       return;
     }
+
+    const {
+      LENDING_POOL_INSTANCE_BOARD_ID,
+    } = lendingPoolDappConfig;
+
+    await setupLendingPool(dispatch, zoe, board, LENDING_POOL_INSTANCE_BOARD_ID);
     // The moral equivalent of walletGetPurses()
     async function watchPurses() {
       const pn = E(walletP).getPursesNotifier();
@@ -469,17 +520,61 @@ export default function Provider({ children }) {
     await Promise.all([
       E(walletP).suggestInstallation('Installation', INSTALLATION_BOARD_ID),
       E(walletP).suggestInstance('Instance', INSTANCE_BOARD_ID),
+      E(walletP).suggestInstance('Instance', LENDING_POOL_INSTANCE_BOARD_ID),
       E(walletP).suggestIssuer('RUN', RUN_ISSUER_BOARD_ID),
     ]);
 
     watchOffers(dispatch, INSTANCE_BOARD_ID);
   };
 
+  const retrySetupNew = async () => {
+
+    const zoe = E(walletP).getZoe();
+    const board = E(walletP).getBoard();
+
+    const {
+      LENDING_POOL_INSTANCE_BOARD_ID,
+    } = lendingPoolDappConfig;
+
+    await setupLendingPool(dispatch, zoe, board, LENDING_POOL_INSTANCE_BOARD_ID);
+    // The moral equivalent of walletGetPurses()
+    async function watchPurses() {
+      const pn = E(walletP).getPursesNotifier();
+      for await (const purses of iterateNotifier(pn)) {
+        dispatch(setPurses(purses));
+      }
+    }
+    watchPurses().catch(err =>
+      console.error('FIGME: got watchPurses err', err),
+    );
+
+    // // async function watchBrands() {
+    //   console.log('BRANDS REQUESTED');
+    //   const issuersN = E(walletP).getIssuersNotifier();
+    //   for await (const issuers of iterateNotifier(issuersN)) {
+    //     updateBrandPetnames({
+    //       dispatch,
+    //       brandToInfo,
+    //       issuersFromNotifier: issuers,
+    //     });
+    //   }
+    // }
+    // watchBrands().catch(err => {
+    //   console.error('got watchBrands err', err);
+    // });
+
+    await Promise.all([
+      E(walletP).suggestInstance('Instance', LENDING_POOL_INSTANCE_BOARD_ID),
+    ]);
+
+    watchOffers(dispatch, LENDING_POOL_INSTANCE_BOARD_ID);
+  };
+
   const setWalletP = async bridge => {
     walletP = bridge;
 
     console.log('set walletP');
-    await retrySetup();
+    await retrySetupNew();
   };
 
   return (
@@ -487,7 +582,8 @@ export default function Provider({ children }) {
       value={{ state, dispatch, walletP, retrySetup }}
     >
       {children}
-      <WalletConnection setWalletP={setWalletP} dispatch={dispatch} />
+      {/*<WalletConnection setWalletP={setWalletP} dispatch={dispatch} />*/}
+      <LendingPoolWalletConnection dispatch={dispatch} setWalletP={setWalletP}></LendingPoolWalletConnection>
     </ApplicationContext.Provider>
   );
 }

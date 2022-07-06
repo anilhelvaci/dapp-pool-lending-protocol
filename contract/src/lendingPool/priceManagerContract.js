@@ -37,7 +37,7 @@ export async function start(zcf) {
     supportedAssetPublicFacets.init(key, value);
   }
 
-  const getPriceAuthority = (key) => {
+  const getWrappedPriceAuthority = (key) => {
     return priceAuthorities.get(key);
   }
 
@@ -48,7 +48,7 @@ export async function start(zcf) {
   const publicFacet = Far('PriceManager', {
     addNewWrappedPriceAuthority,
     addNewSupportedAssetPublicFacet,
-    getPriceAuthority,
+    getWrappedPriceAuthority,
     getsupportedAssetPublicFacets
   })
 

@@ -14,6 +14,8 @@ export const initial = {
   RUNStakeHistory: /** @type {Record<string, HistoryItem>} */ ({}),
   // Vault state
   treasury: /** @type { VaultState | null } */ (null),
+  lendingPool: (null),
+  markets: (null),
   vaultCollateral: /** @type { CollateralInfo | null } */ (null),
   vaultConfiguration: null,
   vaults: /** @type {Record<string, VaultData> | null} */ (null),
@@ -67,6 +69,8 @@ export const {
     setCollaterals,
     resetState,
     setTreasury,
+    setLendingPool,
+    setMarkets,
     setVaultCollateral,
     setVaultConfiguration,
     createVault,
