@@ -252,8 +252,6 @@
 /**
  * @typedef {Object} Rates
  * @property {Ratio} liquidationMargin
- * @property {Ratio} interestRate
- * @property {Ratio} loanFee
  * @property {Ratio} baseRate
  * @property {Ratio} multipilierRate
  * @property {Ratio} initialExchangeRate

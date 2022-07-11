@@ -243,8 +243,8 @@ export const startLendingPool = async (
   const poolManagerParams = {
     // XXX the values aren't used. May be addressed by https://github.com/Agoric/agoric-sdk/issues/4861
     liquidationMargin: makeRatio(0n, compareBrand),
-    interestRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-    loanFee: makeRatio(0n, compareBrand, BASIS_POINTS),
+    // interestRate: makeRatio(0n, compareBrand, BASIS_POINTS),
+    // loanFee: makeRatio(0n, compareBrand, BASIS_POINTS),
     initialExchangeRate: makeRatio(0n, compareBrand, BASIS_POINTS),
     baseRate: makeRatio(0n, compareBrand, BASIS_POINTS),
     multiplierRate: makeRatio(0n, compareBrand, BASIS_POINTS),

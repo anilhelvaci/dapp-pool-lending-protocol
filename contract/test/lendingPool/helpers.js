@@ -117,10 +117,6 @@ export const makeRates = (underlyingBrand, compareBrand) => {
   return harden({
     // margin required to maintain a loan
     liquidationMargin: makeRatio(150n, compareBrand),
-    // periodic interest rate (per charging period)
-    interestRate: makeRatio(100n, underlyingBrand, BASIS_POINTS),
-    // charge to create or increase loan balance
-    loanFee: makeRatio(500n, underlyingBrand, BASIS_POINTS), // delete
     // base rate for dynamic borrowing rate
     baseRate: makeRatio(250n, underlyingBrand, BASIS_POINTS),
     // multipilier rate for utilizitaion rate
