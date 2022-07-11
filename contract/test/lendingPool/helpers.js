@@ -1,11 +1,9 @@
 import { Nat } from '@agoric/nat';
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
-import {
-  makeRatio,
-} from '@agoric/zoe/src/contractSupport/index.js';
+import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { resolve as importMetaResolve } from 'import-meta-resolve';
-import { makeTracer } from '../../src/makeTracer.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
@@ -16,7 +14,7 @@ const BASIS_POINTS = 10000n;
  * @param {ZoeService} zoe
  * @param {PoolManager} pm
  * @param {Mint} underlyingMint
- * @param {Amount} amountInUnit
+ * @param {bigint} amountInUnit
  * @returns {Promise<{amount: Amount, payment: Payment}>}
  */
 export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
@@ -54,6 +52,17 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   return { payment: protocolReceived, amount: protocolAmount };
 };
 
+/**
+ *
+ * @param {ZoeService} zoe
+ * @param {LendingPoolPublicFacet} lendingPoolPublicFacet
+ * @param {Payment} poolDepositedMoneyPayment
+ * @param {PoolManager} collateralUnderlyingPool
+ * @param {Nat} underlyingValue
+ * @param {Brand} debtBrand
+ * @param {Nat} debtValue
+ * @returns {Promise<{loanKit: LoanKit, moneyLeftInPool: Payment}>}
+ */
 export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPayment, collateralUnderlyingPool, underlyingValue, debtBrand, debtValue) => {
   const [collateralUnderlyingBrand, protocolBrand, protocolIssuer] = await Promise.all([
     E(collateralUnderlyingPool).getUnderlyingBrand(),
@@ -90,19 +99,18 @@ export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPaym
 
 /**
  * Helper function to add a new pool to the protocol
- * @param zoe
- * @param rates
- * @param lendingPool
- * @param underlyingIssuer
- * @param underlyingKeyword
- * @param underlyingPriceAuthority
- * @returns {Promise<*>}
+ *
+ * @param {ZoeService} zoe
+ * @param {Rates} rates
+ * @param {ERef<LendingPoolPublicFacet>} lendingPool
+ * @param {Issuer} underlyingIssuer
+ * @param {string} underlyingKeyword
+ * @param {PriceAuthority} underlyingPriceAuthority
+ * @returns {Promise<PoolManager>}
  */
 export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underlyingKeyword, underlyingPriceAuthority) => {
-  // const underlyingIssuer = underlyingMint.getIssuer();
-  const pm = await E(lendingPool).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
 
-  return pm;
+  return await E(lendingPool).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
 };
 
 export const makeRates = (underlyingBrand, compareBrand) => {
@@ -122,6 +130,10 @@ export const makeRates = (underlyingBrand, compareBrand) => {
   });
 };
 
+/**
+ * Setup test assets for lending pool
+ * @returns {*}
+ */
 export const setupAssets = () => {
   // setup collateral assets
   const vanKit = makeIssuerKit('VAN', AssetKind.NAT, harden({ decimalPlaces: 8 }));
@@ -141,6 +153,13 @@ export const setupAssets = () => {
   });
 };
 
+/**
+ * Bundle source code
+ *
+ * @param bundleSource
+ * @param sourceRoot
+ * @returns {Promise<*>}
+ */
 export const makeBundle = async (bundleSource, sourceRoot) => {
   const url = await importMetaResolve(sourceRoot, import.meta.url);
   const path = new URL(url).pathname;
@@ -149,6 +168,13 @@ export const makeBundle = async (bundleSource, sourceRoot) => {
   return contractBundle;
 };
 
+/**
+ * Start faucets necessary for testing
+ *
+ * @param {ZoeService} zoe
+ * @param {Installation} installation
+ * @returns {Promise<any>}
+ */
 export const startFaucets = async (zoe, installation) => {
 
   const installations = await Collect.allValues({
@@ -238,6 +264,14 @@ export const startFaucets = async (zoe, installation) => {
   };
 };
 
+/**
+ * We need the priceManager to be alive inside a vat. To do that we turn priceManager into a contract.
+ * Here we start that contract.
+ *
+ * @param {ZoeService} zoe
+ * @param {Installation} priceManInstallation
+ * @returns {Promise<{priceAuthorityManagerPublicFacet: PriceManager, priceAuthorityManagerInstance: Instance}>}
+ */
 export const startPriceManager = async (zoe, priceManInstallation) => {
 
   const {
@@ -254,6 +288,17 @@ export const startPriceManager = async (zoe, priceManInstallation) => {
   };
 };
 
+/**
+ * A utility function that makes it easier to receive money from a specified
+ * faucet.
+ *
+ * @param {ZoeService} zoe
+ * @param {Invitation} invitation
+ * @param {number} unit
+ * @param {Brand} brand
+ * @param {string} keyword
+ * @returns {Promise<Payment>}
+ */
 export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keyword) => {
   const displayInfo = await E(brand).getDisplayInfo();
   const proposalAmountKeywordRecord = {};

@@ -1,17 +1,29 @@
 // @ts-check
 import '@agoric/zoe/exported.js';
-// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule.js';
 import { makeScalarMap } from '@agoric/store';
 import { Far } from '@endo/marshal';
 import { Nat } from '@agoric/nat';
 import { E } from '@agoric/eventual-send';
 import { AmountMath } from '@agoric/ertp';
-/** @type PriceManager*/
+
+/**
+ * Since our LendinPool protocol works with multiple priceAuthorities,
+ * we thought that it might be a good idea to gather those priceAuthorities
+ * in a place. It served well because there are scenarios where a particular pool
+ * needs a quote from another pools priceAuthority.
+ *
+ * We create a notifier that will be giving updates everytime there's a new brandOut
+ * price for 1 unit of brandIn. This comes handy because we use these notifiers
+ * when observing the liquidation.
+ *
+ * @see LiquidationObserver
+ *
+ * @param {Object} options
+ * @returns {ERef<PriceManager>}
+ */
 export const makePriceManager = (options) => {
-  /** @type {MapStore<Brand, PriceAuthority>} */
+  /** @type {MapStore<Brand, WrappedPriceAuthority>} */
   const priceAuthorities = makeScalarMap('priceAuthorities');
-  /** @type {MapStore<string, InnerLoan>} */
-  const supportedAssetPublicFacets = makeScalarMap('supportedAssetPublicFacets');
 
   /**
    * @param {Brand} brandIn
@@ -28,24 +40,12 @@ export const makePriceManager = (options) => {
     return notifier;
   }
 
-  const addNewSupportedAssetPublicFacet = (key, value) => {
-    supportedAssetPublicFacets.init(key, value);
-  }
-
   const getWrappedPriceAuthority = (key) => {
     return priceAuthorities.get(key);
   }
 
-  const getsupportedAssetPublicFacets = (key) => {
-    return supportedAssetPublicFacets.get(key);
-  }
-
-  const priceManager = Far('PriceManager', {
+  return Far('PriceManager', {
     addNewWrappedPriceAuthority,
-    addNewSupportedAssetPublicFacet,
     getWrappedPriceAuthority: getWrappedPriceAuthority,
-    getsupportedAssetPublicFacets
-  })
-
-  return priceManager;
+  });
 }

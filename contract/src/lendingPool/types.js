@@ -1,233 +1,266 @@
-// @ts-check
-
-/** @typedef {import('./vault').VaultUIState} VaultUIState */
-/** @typedef {import('./loanKit').LoanKit} LoanKit */
-/** @typedef {LoanKit['vault']} Vault */
-
+// General
 /**
- * @typedef  {Object} AutoswapLocal
- * @property {(amount: Amount, brand: Brand) => Amount} getInputPrice
- * @property {() => Invitation} makeSwapInvitation
+ * @template T
+ * @typedef {Object} PromiseKit A reified Promise
+ * @property {(value: ERef<T>) => void} resolve
+ * @property {(reason: any) => void} reject
+ * @property {Promise<T>} promise
  */
 
 /**
- * @typedef {Object} Collateral
- * @property {Ratio} liquidationMargin
- * @property {Ratio} stabilityFee
- * @property {Ratio} marketPrice
- * @property {Ratio} interestRate
- * @property {Brand} brand
- */
-
-/**
- * @typedef {Object} Rates
- * @property {Ratio} liquidationMargin - margin below which collateral will be
- * liquidated to satisfy the debt.
- * @property {Ratio} interestRate - annual interest rate charged on loans
- * @property {Ratio} loanFee - The fee (in BasisPoints) charged when opening
- * or increasing a loan.
- * @property {Ratio} initialExchangeRate - Exchange rate between underlying
- * asset and the protocol token when protocol token supply is zero.
- * @property {Ratio} baseRate
- * @property {Ratio} multipilierRate
- * @property {Ratio} penaltyRate
- */
-
-/**
- * @callback AddVaultType
- * @param {Issuer} collateralIssuer
- * @param {Keyword} collateralKeyword
- * @param {Rates} rates
- * @returns {Promise<VaultManager>}
- */
-
-/**
- * @typedef  {Object} VaultFactory - the creator facet
- * @property {AddVaultType} addVaultType
- * @property {() => Promise<Array<Collateral>>} getCollaterals
- * @property {() => Allocation} getRewardAllocation,
- * @property {() => Instance} getContractGovernor
- * @property {() => Promise<Invitation>} makeCollectFeesInvitation
- */
-
-/**
- * @typedef {Object} ZCFSeat
- * @property {() => void} exit
- * @property {ZCFSeatFail} fail
- * @property {() => Notifier<Allocation>} getNotifier
- * @property {() => boolean} hasExited
- * @property {() => ProposalRecord} getProposal
- * @property {ZCFGetAmountAllocated} getAmountAllocated
- * @property {() => Allocation} getCurrentAllocation
- * @property {() => Allocation} getStagedAllocation
- * @property {() => boolean} hasStagedAllocation
- * @property {(newAllocation: Allocation) => boolean} isOfferSafe
- * @property {(amountKeywordRecord: AmountKeywordRecord) => AmountKeywordRecord} incrementBy
- * @property {(amountKeywordRecord: AmountKeywordRecord) => AmountKeywordRecord} decrementBy
- * @property {() => void} clear
- */
-
-/**
- * @typedef {Object} ContractFacet
+ * @callback GetExhangeRateForPool
  *
- * The Zoe interface specific to a contract instance. The Zoe Contract
- * Facet is an API object used by running contract instances to access
- * the Zoe state for that instance. The Zoe Contract Facet is accessed
- * synchronously from within the contract, and usually is referred to
- * in code as zcf.
+ * @param {Brand} brand
+ * @returns {Ratio} exchangeRate
+ */
+
+/**
+ * @callback GetValInCompareCurrency
  *
- * @property {Reallocate} reallocate - reallocate amounts among seats
- * @property {(keyword: Keyword) => void} assertUniqueKeyword - check
- * whether a keyword is valid and unique and could be added in
- * `saveIssuer`
- * @property {SaveIssuer} saveIssuer - save an issuer to ZCF and Zoe
- * and get the AmountMath and brand synchronously accessible after
- * saving
- * @property {MakeInvitation} makeInvitation
- * @property {(completion: Completion) => void} shutdown
- * @property {ShutdownWithFailure} shutdownWithFailure
- * @property {Assert} assert
- * @property {() => ERef<ZoeService>} getZoeService
- * @property {() => Issuer} getInvitationIssuer
- * @property {() => Terms} getTerms
- * @property {(issuer: Issuer) => Brand} getBrandForIssuer
- * @property {(brand: Brand) => Issuer} getIssuerForBrand
- * @property {GetAssetKindByBrand} getAssetKind
- * @property {MakeZCFMint} makeZCFMint
- * @property {ZCFRegisterFeeMint} registerFeeMint
- * @property {ZCFMakeEmptySeatKit} makeEmptySeatKit
- * @property {SetTestJig} setTestJig
- * @property {() => void} stopAcceptingOffers
- * @property {() => Instance} getInstance
+ * @param {Amount<'nat'>} amountIn
+ * @param {PriceQuote} latestQuote
+ * @param {Brand} scaleBrand
+ * @param {number} scaleDecimalPlaces
+ * @param {Ratio} [collateralExchangeRate]
+ * @returns {Amount<"nat">}
  */
 
 /**
- * @callback ReallocateWithFee
+ * @callback MakeRedeemInvitation
  *
- * Transfer the indicated amount to the vaultFactory's reward
- * pool, taken from the `fromSeat`. Then reallocate over all the seat
- * arguments and the rewardPoolSeat.
+ * @param {Brand} brand
+ * @returns {Promise<Invitation>}
+ */
+
+/**
+ * @callback DebtPaid
  *
- * @param {Amount} amount
- * @param {ZCFSeat} fromSeat
- * @param {ZCFSeat=} otherSeat
- * @returns {void}
+ * @param {Amount<'nat'>} originalDebt
+ * @returns {Amount<'nat'>}
  */
 
 /**
- * @typedef {Object} GetVaultParams
- * @property {() => Ratio} getLiquidationMargin
- * @property {() => Ratio} getLoanFee
- * @property {() => Promise<PriceQuote>} getCollateralQuote
- * @property {() => Ratio} getInterestRate - The annual interest rate on a loan
- * @property {() => Ratio} getInitialExchangeRate
- * @property {() => Ratio} getExchangeRate
- * @property {(depositAmount: Amount) => Amount} getProtocolAmountOut
- * @property {() => RelativeTime} getChargingPeriod - The period (in seconds) at
- *   which interest is charged to the loan.
- * @property {() => RelativeTime} getRecordingPeriod - The period (in seconds)
- *   at which interest is recorded to the loan.
- * @property {() => Ratio} getCurrentBorrowingRate
+ * @callback TransferLiquidatedFund
+ *
+ * @param {ZCFSeat} loanSeat
+ * @return {void}
  */
 
+// PriceManager
 /**
- * @typedef {string} VaultId
- */
-
-/**
- * @typedef {Object} VaultManagerBase
- * @property {(seat: ZCFSeat) => Promise<LoanKit>}  makeLoanKit
- * @property {() => void} liquidateAll
- */
-
-/**
- * @typedef {VaultManagerBase & GetVaultParams} VaultManager
- */
-
-/**
- * @typedef {Object} LoanTiming
+ * @typedef {Object} PriceManager
+ * @property {(brand: Brand) => ERef<WrappedPriceAuthority>} getWrappedPriceAuthority
+ * @property {(brandIn: Brand,
+ * priceAuthority: PriceAuthority,
+ * compareBrand: Brand) => ERef<Notifier<PriceQuote>>} addNewWrappedPriceAuthority
  * @property {bigint} chargingPeriod
  * @property {bigint} recordingPeriod
  * @property {bigint} priceCheckPeriod
  */
 
 /**
- * @typedef {Object} AMMFees
- * @property {bigint} poolFee
- * @property {bigint} protocolFee
+ * @typedef {Object} WrappedPriceAuthority
+ * @property {PriceAuthority} priceAuthority
+ * @property {Promise<Notifier<PriceQuote>>} notifier - This notifier is
+ * set up in way that it is fired when there is change in the price of
+ * 1 unit of (10 ** decimalPlaces) brandIn against the brandOut
+ */
+
+// DebtsPerCollateral
+/**
+ * @typedef {Object} DebtsPerCollateral
+ * @property {(seat: ZCFSeat, underlyinAssetSeat: ZCFSeat, exchangeRate: Ratio) => Promise} addNewLoan
+ * @property {(liquidationInstall: Installation, ammPublicFacet: XYKAMMPublicFacet) => Promise} setupLiquidator
+ */
+
+// PoolManager
+/**
+ * @typedef {Object} ManagerShared
+ * @property {() => Ratio} getLiquidationMargin
+ * @property {() => Ratio} getCurrentBorrowingRate
+ * @property {() => Amount} getTotalDebt
+ * @property {() => Ratio} getInitialExchangeRate
+ * @property {() => Ratio} getExchangeRate
+ * @property {(underlyingAmount: Amount) => Amount} getProtocolAmountOut
+ * @property {(brand: Brand) => WrappedPriceAuthority} getPriceAuthorityForBrand
+ * @property {() => NatValue} getChargingPeriod
+ * @property {() => NatValue} getRecordingPeriod
+ * @property {() => Brand} getProtocolBrand
+ * @property {() => Issuer} getProtocolIssuer
+ * @property {() => NatValue} getProtocolLiquidity - Returns the 'value' part of the Amount, might consider returning
+ * the actual Amount object later
+ * @property {() => Amount } getUnderlyingLiquidity
+ * @property {() => Brand} getUnderlyingBrand
+ * @property {(proposedDebtAmount: Amount) => void} enoughLiquidityForProposedDebt
+ * @property {() => Brand} getThirdCurrencyBrand
+ * @property {(brand: Brand, protocolAmount: Amount) => Amount} protocolToUnderlying
  */
 
 /**
- * @typedef {Object} LiquidationStrategy
- * @property {() => KeywordKeywordRecord} keywordMapping
- * @property {(collateral: Amount, run: Amount) => Proposal} makeProposal
- * @property {(runDebt: Amount) => Promise<Invitation>} makeInvitation
+ * @typedef {Object & ManagerShared} ManagerFacet
+ // * @extends {ManagerShared}
+ * @property {(oldDebt: Amount<'nat'>, newDebt: Amount<'nat'>) => void} applyDebtDelta
+ * @property {(loanSeat: ZCFSeat, clientSeat: ZCFSeat) => void} reallocateBetweenSeats
+ * @property {(loanSeat: ZCFSeat) => void} stageUnderlyingAllocation
+ * @property {(seat: ZCFSeat, currentDebt: Amount) => void} transferDebt
+ * @property {() => Brand} getCollateralBrand
+ * @property {() => Ratio} getCompoundedInterest
+ * @property {GetExhangeRateForPool} getExchangeRateForPool
+ * @property {(underlyingBrand: Brand) => Invitation} makeRedeemInvitation
+ * @property {TransferLiquidatedFund} transferLiquidatedFund
+ * @property {(originalDebt: Amount) => Amount} debtPaid
+ * @property {() => Ratio} getPenaltyRate
  */
 
 /**
- * @typedef {Object} LiquidationCreatorFacet
- * @property {(runDebt: Amount) => Promise<Invitation>} makeDebtorInvitation
+ * @typedef {ManagerShared} PoolManager
+ * @property {(seat:ZCFSeat, exchangeRate: Ratio) => LoanKit} makeBorrowKit
+ * @property {() => Invitation} makeDepositInvitation
+ * @property {(seat: ZCFSeat) => string} redeemHook
+ */
+
+// TODO update the properties of the AssetState
+/**
+ * @typedef {{
+ *  compoundedInterest: Ratio,
+ *  interestRate: Ratio,
+ *  latestInterestUpdate: bigint,
+ *  totalDebt: Amount<'nat'>,
+ * }} AssetState */
+
+
+// LendingPool
+/**
+ * @typedef {Object} LendingPoolCreatorFacet
+ * @property {() => string} helloFromCreator
+ * @property {(
+ * underlyingIssuer: Issuer,
+ * underlyingKeyword: string,
+ * rates: Object, priceAuthority:
+ * PriceAuthority) => ERef<PoolManager>} addPoolType
  */
 
 /**
- * @callback MakeLiquidationStrategy
- * @param {LiquidationCreatorFacet} creatorFacet
- * @returns {LiquidationStrategy}
+ * @typedef {Object} LendingPoolPublicFacet
+ * @property {() => string} helloWorld
+ * @property {(brand: Brand) => boolean} hasPool
+ * @property {(keyword: string) => void} hasKeyword
+ * @property {(brand: Brand) => PoolManager} getPool
+ * @property {() => Promise<Invitation>} makeBorrowInvitation
+ * @property {(brand: Brand) => Promise<Invitation>} makeRedeemInvitation
+ * @property {(brand: Brand) => Promise<Invitation>} makeDepositInvitation
+ *
  */
 
 /**
- * @typedef {Object} DebtStatus
- * @property {Timestamp} latestInterestUpdate
- * @property {NatValue} interest interest accrued since latestInterestUpdate
- * @property {NatValue} newDebt total including principal and interest
+ * @typedef {StandardTerms | Object} LendingPoolTerms
+ * @property {XYKAMMPublicFacet} ammPublicFacet
+ * @property {PriceManager} priceManager
+ * @property {TimerService} timerService
+ * @property {Installation} liquidationInstall
+ * @property {Object} loanTimingParams
+ * @property {Brand} compareCurrencyBrand
+ */
+
+// Loan
+/**
+ * @typedef {Object} Loan
+
+ * @property {() => ZCFSeat} getLoanSeat
+ * @property {() => void} liquidating
+ * @property {(amount: Amount<'nat'>) => void} liquidated
+ * @property {(seat: ZCFSeat, poolSeat: ZCFSeat, exchangeRate: Ratio, loanKey: string) => Promise<LoanKit>} initLoanKit
+ * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
+ * @property {() => Promise<Invitation>} makeCloseInvitation
+ * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCurrentDebt
+ * @property {() => Amount<'nat'>} getNormalizedDebt
  */
 
 /**
- * @callback Calculate
- * @param {DebtStatus} debtStatus
- * @param {Timestamp} currentTime
- * @returns {DebtStatus}
+ * @typedef {Object} LoanKit
+ * @property {Notifier<AssetState>} assetNotifier
+ * @property {Notifier<Object>} loanNotifier
+ * @property {Object} invitationMakers
+ * @property {() => Promise<Invitation>} invitationMakers.AdjustBalances
+ * @property {() => Promise<Invitation>} invitationMakers.CloseLoan
+ * @property {WrappedLoan} loan
+ * @property {any} loanUpdater
  */
 
 /**
- * @typedef {Object} CalculatorKit
- * @property {Calculate} calculate calculate new debt for charging periods up to
- * the present.
- * @property {Calculate} calculateReportingPeriod calculate new debt for
- * reporting periods up to the present. If some charging periods have elapsed
- * that don't constitute whole reporting periods, the time is not updated past
- * them and interest is not accumulated for them.
+ * @typedef {Object} WrappedLoan
+ * @property {() => Notifier<Object>} getNotifier
+ * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
+ * @property {() => Promise<Invitation>} makeCloseInvitation
+ * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCurrentDebt
+ * @property {() => Amount<'nat'>} getNormalizedDebt
  */
 
 /**
- * @typedef {Object} VaultParamManager
- * @property {() => Record<Keyword, ParamShortDescription> & {
- *  InterestRate: ParamRecord<'ratio'> & { value: Ratio },
- *  LiquidationMargin: ParamRecord<'ratio'> & { value: Ratio },
- *  LoanFee: ParamRecord<'ratio'> & { value: Ratio },
- * }} getParams
- * @property {(name: string) => bigint} getNat
- * @property {(name: string) => Ratio} getRatio
- * @property {(margin: Ratio) => void} updateLiquidationMargin
- * @property {(ratio: Ratio) => void} updateInterestRate
- * @property {(ratio: Ratio) => void} updateLoanFee
+ * @typedef {{
+ * inner: Loan | null,
+ * }} State
+ */
+
+// LoanStore
+/**
+ * @typedef {Object} LoanStore
+ * @property {(laonId: string, loan: Loan) => string} addLoan
+ * @property {(oldDebt: Amount<'nat'>, oldCollateral: Amount<'nat'>, loanId: string) => void} refreshLoanPriorityByAttributes
+ * @property {(key: string, loanId: string) => string} refreshLoanPriorityByKey
+ * @property {(key: string) => Loan} removeLoan
+ * @property {(oldDebt: Amount<'nat'>, oldCollateral: Amount<'nat'>, loanId: string) => Loan} removeLoanByAttributes
+ * @property {() => Loan} firstDebtRatio
+ * @property {Object} entries
+ * @property {(scheduler) => void} setRescheduler
+ */
+
+// LiquidationObserver
+/**
+ * @typedef {Object} LiquidationObserver
+ * @property {(loan: Loan) => Promise<{debtLatestQuote: PriceQuote, colLatestQuote: PriceQuote, loan: Loan}>} schedule
+ * @property {GetValInCompareCurrency} getValInCompareCurrency
  */
 
 /**
- * @callback GetGovernedVaultParams
- * @returns {{
- *  InterestRate: ParamRecord<'ratio'> & { value: Ratio },
- *  LiquidationMargin: ParamRecord<'ratio'> & { value: Ratio },
- *  LoanFee: ParamRecord<'ratio'> & { value: Ratio },
- * }}
+ * @typedef {Object} LiquidationObserverOptions
+ * @property {WrappedPriceAuthority} wrappedCollateralPriceAuthority
+ * @property {WrappedPriceAuthority} wrappedDebtPriceAuthority
+ * @property {Ratio} liquidationMargin
+ * @property {Object} loanData
+ * @property {GetExhangeRateForPool} getExchangeRateForPool
  */
 
-/** @typedef {import('./vault').InnerVault} InnerVault */
+/**
+ * @typedef {Object} CheckLiquidationOptions
+ * @template T
+ * @property {PriceQuote} colQuote
+ * @property {PriceQuote} debtQuote
+ * @property {PromiseKit<T>} liqPromiseKit
+ * @property {Loan} loan
+ */
+
+// Liquidator
+/**
+ * @typedef {Object} LiquidatorCreatorFacet
+ * @property {() => Promise<Invitation>} makeLiquidateInvitation
+ */
+
+// Params
+/**
+ * @typedef {Object} Rates
+ * @property {Ratio} liquidationMargin
+ * @property {Ratio} interestRate
+ * @property {Ratio} loanFee
+ * @property {Ratio} baseRate
+ * @property {Ratio} multipilierRate
+ * @property {Ratio} initialExchangeRate
+ * @property {Ratio} penaltyRate
+ */
 
 /**
- * @typedef {Object} ERef<PriceManager>
- * @property {() => void } addNewPriceAuthority
- * @property {() => void} addNewSupportedAssetPublicFacet
- * @property {() => PriceAuthority} getPriceAuthority
- * @property {() => VaultManager} getsupportedAssetPublicFacets
+ * @typedef {LoanTiming & Object} LendingPoolTiming
+ * @property {NatValue} priceCheckPeriod
  */

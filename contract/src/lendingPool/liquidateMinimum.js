@@ -1,6 +1,5 @@
 // @ts-check
 
-// import { E } from '@endo/eventual-send';
 import {
   ceilMultiplyBy,
   offerTo,
@@ -8,20 +7,25 @@ import {
 import { AmountMath } from '@agoric/ertp';
 import { Far, E } from '@endo/far';
 
-import { makeTracer } from '../makeTracer.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 
-const trace = makeTracer('LiqMin', false);
+const trace = makeTracer('LiqMin');
 
 /**
- * This contract liquidates the minimum amount of loan's collateral necessary
- * to satisfy the debt. It uses the AMM's swapOut, which sells no more than
- * necessary. Because it has offer safety, it can refuse the trade. When that
- * happens, we fall back to selling using the default strategy, which currently
- * uses the AMM's swapIn instead.
  *
- * @param {ZCF<{
- *   amm: XYKAMMPublicFacet,
- * }>} zcf
+ * This contract is a fraction of the `liquidateMinimum` contract used in the
+ * VaultFactory. We needed to implement this contract because our AMM trade is
+ * between a virtual double pool where as RUN is the CentralBrand of the AMM
+ * and VaultFactory lends RUN. Normally to sell the minimum amount of a token to
+ * receive another token, AMM lets us use swapOut methods. On the beta branch,
+ * `getPriceForOutput` method in the doublePool.js was broken, so to make the minimum
+ * amount of collateral trade happen we did two swapIn operations. The first one is to
+ * know the price of the debt in collateral, and in the second one we make the actual
+ * trade with the debt price in collateral as the 'give' and the originalDebt as
+ * the 'want'.
+ *
+ * The issue mentioned in beta branch is then resolved here:
+ * https://github.com/Agoric/agoric-sdk/issues/5490
  */
 const start = async zcf => {
   const { amm } = zcf.getTerms();
@@ -31,39 +35,45 @@ const start = async zcf => {
    * @param {object} options
    * @param {Amount<'nat'>} options.debt Debt before penalties
    * @param {Ratio} options.penaltyRate
+   * @param {Issuer} options.collateralUnderlyingIssuer
    */
   const handleLiquidationOffer = async (
     debtorSeat,
     { debt: originalDebt, penaltyRate, collateralUnderlyingIssuer },
   ) => {
-    console.log("Pools", await E(amm).getAllPoolBrands());
-    // XXX does not distribute penalties anywhere
-    const { zcfSeat: penaltyPoolSeat } = zcf.makeEmptySeatKit();
+
     const penalty = ceilMultiplyBy(originalDebt, penaltyRate);
-    const debtWithPenalty = AmountMath.add(originalDebt, penalty);
-    // const debtWithPenalty = originalDebt;
-    console.log("Proposal", debtorSeat.getProposal())
+    const debtWithPenalty = AmountMath.add(originalDebt, penalty); // Calculate debt wiht liquidationPenalty
+    trace('Proposal', debtorSeat.getProposal());
     const debtBrand = originalDebt.brand;
     const {
-      give: { In: amountIn },
+      give: { In: amountIn }, // amountIn is the whole collateral in the loan
     } = debtorSeat.getProposal();
-    // await zcf.saveIssuer(collateralUnderlyingIssuer, "In");
-    console.log("originalDebt", originalDebt)
-    console.log("debtWithPenalty", debtWithPenalty)
+
+    trace('Debts', {
+      originalDebt,
+      debtWithPenalty
+    })
+
     const { amountOut: debtPriceInCollateral } = await E(amm).getInputPrice(
-      debtWithPenalty,
+      debtWithPenalty, // The amount of collateral required in order to receive the amount of debtWithPenalty
       AmountMath.makeEmpty(amountIn.brand)
     );
 
-    const collateralToSell = AmountMath.min(debtPriceInCollateral, amountIn);
+    const collateralToSell = AmountMath.min(debtPriceInCollateral, amountIn); // Get whichever one is minimum
 
     const swapInvitation = await E(amm).makeSwapInInvitation();
     const liquidationProposal = harden({
       want: { Out: originalDebt },
       give: { In: collateralToSell },
     });
-    console.log("liquidationProposal", liquidationProposal);
-    console.log("swapInvitation", swapInvitation);
+
+    trace('liquidationProposal & swapInvitation', {
+      liquidationProposal,
+      swapInvitation
+    })
+
+    // Send offer
     const { deposited, userSeatPromise: liqSeat } = await offerTo(
       zcf,
       swapInvitation,
@@ -74,6 +84,7 @@ const start = async zcf => {
       undefined
     );
 
+    // Wait for the offer to finish
     const amounts = await deposited;
     trace(`Liq results`, {
       debtWithPenalty,
@@ -82,25 +93,15 @@ const start = async zcf => {
       amounts,
       debtPriceInCollateral
     });
-    console.log("LiqOfferResult", await E(liqSeat).getOfferResult());
-    // Now we need to know how much was sold so we can pay off the debt.
-    // We can use this seat because only liquidation adds debt brand to it..
-    const debtPaid = debtorSeat.getAmountAllocated('Out', debtBrand);
-    console.log("debtPaid", debtPaid);
 
-    // const penaltyPaid = AmountMath.min(penalty, debtPaid);
-    //
-    // // Allocate penalty portion of proceeds to a seat that will hold it for transfer to reserve
-    // // penaltyPoolSeat.incrementBy(
-    // //   debtorSeat.decrementBy(harden({ Out: penaltyPaid })),
-    // // );
-    // zcf.reallocate(debtorSeat);
+    const debtPaid = debtorSeat.getAmountAllocated('Out', debtBrand);
+    trace("DebtPaid", debtPaid);
 
     debtorSeat.exit();
   };
 
   /**
-   * @type {ERef<Liquidator>}
+   * @type {ERef<LiquidatorCreatorFacet>}
    */
   const creatorFacet = Far('debtorInvitationCreator (minimum)', {
     makeLiquidateInvitation: () =>

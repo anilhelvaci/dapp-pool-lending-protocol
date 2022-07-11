@@ -31,7 +31,7 @@ const makeElectorateParams = electorateInvitationAmount => {
 };
 
 /**
- * @param {LoanTiming} loanTiming
+ * @param {LendingPoolTiming} loanTiming
  * @param {Rates} rates
  */
 const makeLoanParams = (loanTiming, rates) => {
@@ -47,7 +47,7 @@ const makeLoanParams = (loanTiming, rates) => {
 };
 
 /**
- * @param {LoanTiming} initialValues
+ * @param {LendingPoolTiming} initialValues
  */
 const makeLoanTimingManager = initialValues => {
   return makeParamManagerSync({
@@ -108,8 +108,8 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
  * @param {Amount} invitationAmount
  * @param {Rates} rates
  * @param {XYKAMMPublicFacet} ammPublicFacet
- * @param {bigint=} bootstrapPaymentValue
  * @param {Brand} compareCurrencyBrand
+ * @param {bigint=} bootstrapPaymentValue
  */
 const makeGovernedTerms = (
   priceManager,
@@ -119,8 +119,8 @@ const makeGovernedTerms = (
   invitationAmount,
   rates,
   ammPublicFacet,
+  compareCurrencyBrand,
   bootstrapPaymentValue = 0n,
-  compareCurrencyBrand
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
 

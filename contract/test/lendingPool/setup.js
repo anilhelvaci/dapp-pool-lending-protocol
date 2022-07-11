@@ -18,7 +18,6 @@ import { makeAmmTerms } from '@agoric/run-protocol/src/vpool-xyk-amm/params.js';
 import { AmountMath } from '@agoric/ertp';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeGovernedTerms } from '../../src/lendingPool/params.js';
-// import {liquidationDetailTerms} from "../../src/lendingPool/liquidation.js";
 
 const { details: X } = assert;
 
@@ -28,6 +27,12 @@ const SECONDS_PER_HOUR = 60n * 60n;
 const SECONDS_PER_DAY = 24n * SECONDS_PER_HOUR;
 
 const BASIS_POINTS = 10_000n;
+
+/**
+ * @file This file contains methods for setting up the Agoric environment
+ * for LendingPool protocol. We inherited the logic in econ-behaviors and
+ * support.js in the VaultFactory.
+ */
 
 export const getPath = async (sourceRoot) => {
   const url = await importMetaResolve(sourceRoot, import.meta.url);
@@ -259,8 +264,8 @@ export const startLendingPool = async (
     invitationAmount,
     poolManagerParams,
     ammPublicFacet,
-    undefined,
-    compareBrand
+    compareBrand,
+    undefined
   );
   // console.log("loanFactoryTerms", loanFactoryTerms)
   const governorTerms = harden({

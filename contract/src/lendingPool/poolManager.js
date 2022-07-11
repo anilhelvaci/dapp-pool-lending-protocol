@@ -1,8 +1,6 @@
 // @ts-check
-import '@agoric/zoe/exported.js';
 
 import { E } from '@agoric/eventual-send';
-import { Nat } from '@agoric/nat';
 import {
   assertProposalShape,
   ceilDivideBy,
@@ -14,16 +12,12 @@ import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 
 import { makeScalarMap } from '@agoric/store';
-import { makeInnerLoan } from './loan.js';
-import { makeTracer } from '../makeTracer.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import {
   RECORDING_PERIOD_KEY,
   LIQUIDATION_MARGIN_KEY,
   INITIAL_EXCHANGE_RATE_KEY,
-  LOAN_FEE_KEY,
-  INTEREST_RATE_KEY,
   CHARGING_PERIOD_KEY,
-  PRICE_CHECK_PERIOD_KEY,
   MULTIPILIER_RATE_KEY,
   BASE_RATE_KEY, PENALTY_RATE_KEY,
 } from './params.js';
@@ -32,43 +26,46 @@ import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
 import { floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
-const trace = makeTracer('VM');
+const trace = makeTracer('PM');
+
 
 /**
- * @typedef {{
- *  compoundedInterest: Ratio,
- *  interestRate: Ratio,
- *  latestInterestUpdate: bigint,
- *  totalDebt: Amount<NatValue>,
- * }} AssetState */
-
-/**
- * Each LoanManager manages a single collateral type.
+ * PoolManager is the place where operations related to one type of underlying
+ * asset are gathered. There is one PoolManager for one underlyingAsset type.
+ * One PoolManager can lend its underlyingAsset against multiple type of collaterals.
+ * Important thing about the collaterals is that, they should be protocolTokens
+ * received when a user provides another type of underlyingAsset to another pool.
  *
- * It manages some number of outstanding loans, each called a Loan, for which
- * the collateral is provided in exchange for borrowed RUN.
+ * This is the place where the operations listed below happen;
+ * - Deposit underlyingAsset and receive some collateral
+ * - Borrow an underlyingAsset against some protocolToken used as collateral
+ * - Redeem the underlyingAsset deposited earlier corresponding to the received protocolToken
+ * - Charge interest on all loans
+ * - Keep the variables like totalDebt, underlyingLiquidty, protocolLiquidty updated
+ * - Calculate dynamic interest rates using the variables mentioned above
  *
- * @param {ContractFacet} zcf
+ *
+ * @param {ZCF} zcf
  * @param {ZCFMint} protocolMint
  * @param {Brand} collateralBrand
  * @param {Brand} underlyingBrand
  * @param {Brand} thirdCurrencyBrand
  * @param {string} underlyingKeyword
  * @param {ERef<PriceAuthority>} priceAuthority
- * @param {Notifier} priceAuthNotifier
+ * @param {Promise<Notifier<PriceQuote>>} priceAuthNotifier
  * @param {ERef<PriceManager>} priceManager
  * @param {{
  *  ChargingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  *  RecordingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  * }} timingParams
- * @param {GetGovernedLoanParams} getLoanParams
+ * @param {() => Object} getLoanParams
  * @param {ERef<TimerService>} timerService
  * @param {Timestamp} startTimeStamp
- * @param {GetExchangeRateForPool} getExchangeRateForPool
- * @param {MakeRedeemInvitation} makeRedeemInvitation
+ * @param {(brand: Brand) => Ratio} getExchangeRateForPool
+ * @param {(underlyingBrand: Brand) => Promise<Invitation>} makeRedeemInvitation
  * @param {Installation} liquidationInstall
  * @param {XYKAMMPublicFacet} ammPublicFacet
- * @returns {LoanManager}
+ * @returns {ERef<PoolManager>}
  */
 export const makePoolManager = (
   zcf,
@@ -95,13 +92,10 @@ export const makePoolManager = (
   let totalDebt = AmountMath.makeEmpty(underlyingBrand, 'nat');
   let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
 
-  /** @type {GetLoanParams} */
+  /** @type {ManagerShared} */
   const shared = {
     // loans below this margin may be liquidated
     getLiquidationMargin: () => getLoanParams()[LIQUIDATION_MARGIN_KEY].value,
-    // loans must initially have at least 1.2x collateralization
-    getLoanFee: () => getLoanParams()[LOAN_FEE_KEY].value,
-    getInterestRate: () => getLoanParams()[INTEREST_RATE_KEY].value,
     getCurrentBorrowingRate: () => getCurrentBorrowingRate(),
     getTotalDebt: () => totalDebt,
     getInitialExchangeRate: () => getLoanParams()[INITIAL_EXCHANGE_RATE_KEY].value,
@@ -120,15 +114,6 @@ export const makePoolManager = (
     getUnderlyingBrand: () => underlyingBrand,
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
-    async getCollateralQuote() {
-      // get a quote for one unit of the collateral
-      const displayInfo = await E(collateralBrand).getDisplayInfo();
-      const decimalPlaces = displayInfo?.decimalPlaces || 0n;
-      return E(priceAuthority).quoteGiven(
-        AmountMath.make(collateralBrand, 10n ** Nat(decimalPlaces)),
-        debtBrand,
-      );
-    },
     protocolToUnderlying: (brand, protocolAmount) => {
       const exchangeRate = getExchangeRateForPool(brand);
       return floorMultiplyBy(protocolAmount, exchangeRate);
@@ -151,6 +136,8 @@ export const makePoolManager = (
   let latestInterestUpdate = startTimeStamp;
 
   /**
+   * Checks if there is enough liquidity for the hand out the proposed debt
+   * and throws an error if the liquidity is not enough.
    * @param {Amount} proposedDebtAmount
    */
   const assertEnoughLiquidtyExists = (proposedDebtAmount) => {
@@ -164,6 +151,11 @@ export const makePoolManager = (
     console.log("assertEnoughLiquidtyExists: Enough!")
   };
 
+  /**
+   * Calculates the current exchange rate, if the pool has no liquidity just
+   * returns the initial exchange rate.
+   * @returns {Ratio}
+   * */
   const getExchangeRate = () => {
     console.log('[TOTAL_PROTOCOL_SUPPLY_EMPTY]', AmountMath.isEmpty(totalProtocolSupply));
     return AmountMath.isEmpty(totalProtocolSupply) ? shared.getInitialExchangeRate()
@@ -171,6 +163,7 @@ export const makePoolManager = (
   };
 
   /**
+   * Calculates the current borrowing rate.
    * @returns {Ratio}
    */
   const getCurrentBorrowingRate = () => {
@@ -184,14 +177,15 @@ export const makePoolManager = (
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
     harden({
       compoundedInterest,
-      interestRate: shared.getInterestRate(),
+      interestRate: shared.getCurrentBorrowingRate(),
       latestInterestUpdate,
       totalDebt,
     }),
   );
 
   /**
-   *
+   * don't reschedule price check
+   * use an overrridden version of the 'chargeInterest' method
    * @param {bigint} updateTime
    * @param {ZCFSeat} poolIncrementSeat
    */
@@ -231,8 +225,8 @@ export const makePoolManager = (
   /**
    * Update total debt of this manager given the change in debt on a loan
    *
-   * @param {Amount<NatValue>} oldDebtOnLoan
-   * @param {Amount<NatValue>} newDebtOnLoan
+   * @param {Amount<'nat'>} oldDebtOnLoan
+   * @param {Amount<'nat'>} newDebtOnLoan
    */
   // TODO https://github.com/Agoric/agoric-sdk/issues/4599
   const applyDebtDelta = (oldDebtOnLoan, newDebtOnLoan) => {
@@ -247,20 +241,14 @@ export const makePoolManager = (
     totalDebt = AmountMath.make(underlyingBrand, totalDebt.value + delta);
   };
 
-
-  const liquidateLoan = async (collateralUnderlyingBrand) => {
-    const debtPerCollateral = debtsPerCollateralStore.get(collateralUnderlyingBrand);
-    return await debtPerCollateral.liquidateFirstLoan();
-  }
-
   /**
    * Make requested transfer for. Requested transfer being either repaying a debt
    * of requesting more debt.
-   * @param seat
-   * @param currentDebt
+   * @param {ZCFSeat} seat
+   * @param {Amount} currentDebt
    */
   const transferDebt = (seat, currentDebt) => {
-
+    /** @type {Proposal}*/
     const proposal = seat.getProposal();
     if (proposal.want.Debt) {
       // decrease the requested amount of underlying asset from the underlyingSeat
@@ -280,6 +268,11 @@ export const makePoolManager = (
     }
   };
 
+  /**
+   * Transfers the underlyingAsset received from the AMM after liquidation to the
+   * pool.
+   * @param {ZCFSeat} loanSeat
+   */
   const transferLiquidatedFund = loanSeat => {
     const loanAllocations = loanSeat.getCurrentAllocation();
     assert(loanAllocations.Debt && loanAllocations.Debt !== undefined, 'The loan has no liquidated funds');
@@ -293,6 +286,10 @@ export const makePoolManager = (
     console.log("underlyingAssetSeatAfter", underlyingAssetSeat.getCurrentAllocation());
   }
 
+  /**
+   * Stage the underlying fund to the underlyingAssetSeat.
+   * @param {Proposal} proposal
+   */
   const stageUnderlyingAllocation = (proposal) => {
     if (proposal.give.Debt) {
       underlyingAssetSeat.incrementBy(harden({Underlying: proposal.give.Debt}))
@@ -301,6 +298,12 @@ export const makePoolManager = (
     }
   }
 
+  /**
+   * Reallocates the funds between loanSeat, clientSeat and underlyingSeat, checks
+   * if there's a staged allocation in the seat first.
+   * @param {ZCFSeat} loanSeat
+   * @param {ZCFSeat} clientSeat
+   */
   const reallocateBetweenSeats = (loanSeat, clientSeat) => {
     // TODO use Array.map() here
     const seatList = [];
@@ -308,13 +311,20 @@ export const makePoolManager = (
     addIfHasStagedAllocation(seatList, clientSeat);
     addIfHasStagedAllocation(seatList, underlyingAssetSeat);
     trace("seatList", seatList);
+    // @ts-ignore
     zcf.reallocate(...seatList);
   }
 
+  /**
+   * Adds the seat to the list if there's a staged allocation.
+   * @param {ZCFSeat[]} seatList
+   * @param {ZCFSeat} seat
+   */
   const addIfHasStagedAllocation = (seatList, seat) => {
     if(seat.hasStagedAllocation()) seatList.push(seat);
   }
 
+  // Set up the notifier for interest period
   const periodNotifier = E(timerService).makeNotifier(
     0n,
     timingParams[RECORDING_PERIOD_KEY].value,
@@ -345,7 +355,7 @@ export const makePoolManager = (
 
   observeNotifier(periodNotifier, timeObserver);
 
-  /** @type {Parameters<typeof makeInnerLoan>[1]} */
+  /** @type {ManagerFacet} */
   const managerFacet = harden({
     ...shared,
     applyDebtDelta,
@@ -353,16 +363,18 @@ export const makePoolManager = (
     stageUnderlyingAllocation,
     transferDebt,
     getCollateralBrand: () => collateralBrand,
-    getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
     getExchangeRateForPool,
     makeRedeemInvitation,
-    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value,
+    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value, // Penalty rate to be enforced when there's a liquidation
     transferLiquidatedFund,
-    debtPaid: originalDebt  => totalDebt = AmountMath.subtract(totalDebt, originalDebt)
+    debtPaid: originalDebt  => totalDebt = AmountMath.subtract(totalDebt, originalDebt) // Update debt after payment
   });
 
-  /** @param {ZCFSeat} seat
+  /**
+   * Creates a loan object and organizes them by their
+   * collateral type(One group for every protocol token).
+   * @param {ZCFSeat} seat
    * @param {Ratio} exchangeRate
    * */
   const makeBorrowKit = async (seat, exchangeRate) => {
@@ -381,6 +393,7 @@ export const makePoolManager = (
     const collateralBrand = exchangeRate.numerator.brand;
 
     if (!debtsPerCollateralStore.has(collateralBrand)) {
+      /** @type {WrappedPriceAuthority} */
       const wrappedCollateralPriceAuthority = await E(priceManager).getWrappedPriceAuthority(collateralBrand); // should change the method name
       debtsPerCollateralStore.init(collateralBrand, await makeDebtsPerCollateral(
         zcf,
@@ -407,6 +420,10 @@ export const makePoolManager = (
   };
 
   /**
+   * @type {OfferHandler}
+   *
+   * Offer handler for redeeming assets.
+   *
    * @param {ZCFSeat} seat
    * @returns {Promise<string>}
    */
@@ -435,8 +452,14 @@ export const makePoolManager = (
     return "Success, thanks for doing business with us";
   };
 
+  /**
+   * Returns an invitation for the depositHook offer handler.
+   * @returns {Promise<Invitation>}
+   */
   const makeDepositInvitation = () => {
-    /** @param {ZCFSeat} fundHolderSeat*/
+    /**
+     * @type {OfferHandler}
+     * @param {ZCFSeat} fundHolderSeat*/
     const depositHook = async fundHolderSeat => {
       console.log('[DEPSOSIT]: Icerdeyim');
       assertProposalShape(fundHolderSeat, {
@@ -468,12 +491,11 @@ export const makePoolManager = (
     return zcf.makeInvitation(depositHook, 'depositFund');
   }
 
-  /** @type {LoanManager} */
-  return Far('loan manager', {
+  /** @type {ERef<PoolManager>} */
+  return Far('pool manager', {
     ...shared,
     makeBorrowKit,
     redeemHook,
     makeDepositInvitation,
-    liquidateLoan
   });
 };
