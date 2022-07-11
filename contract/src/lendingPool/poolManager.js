@@ -184,8 +184,13 @@ export const makePoolManager = (
   );
 
   /**
-   * don't reschedule price check
-   * use an overrridden version of the 'chargeInterest' method
+   * The main difference of LendingPool's chargeLoan logic
+   * from the VaultFactory's chargeVault logic is that
+   * we don't reschedule a new price check on after every recording
+   * period. Also we use  an overrridden version of the 'chargeInterest' method
+   * of VaultFactory's interest.js module since we don't mint any reward for
+   * charging interest.
+   *
    * @param {bigint} updateTime
    * @param {ZCFSeat} poolIncrementSeat
    */

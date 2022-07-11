@@ -19,7 +19,6 @@ import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
 import { SECONDS_PER_YEAR } from '../src/interest.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
-import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 
 const contractRoots = {
   lendingPoolFaucet: './lendingPoolFaucet.js',

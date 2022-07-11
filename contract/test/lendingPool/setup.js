@@ -123,7 +123,14 @@ export const startEconomicCommittee = async (
 };
 harden(startEconomicCommittee);
 
-/** @param { EconomyBootstrapPowers } powers */
+/**
+ * We setup the AMM in way that the CentralBrand is the CompareCurrency brand
+ * of our LendingPool. Native AMM of Agoric uses RUN as its CentralBrand,
+ * if we decide to use RUN as our CompareCurrency we can start interacting with the
+ * native AMM directly.
+ *
+ * @param { EconomyBootstrapPowers } powers
+ * */
 export const setupAmm = async (
   {
     consume: {

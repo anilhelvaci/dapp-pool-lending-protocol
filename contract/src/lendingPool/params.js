@@ -53,7 +53,7 @@ const makeLoanTimingManager = initialValues => {
   return makeParamManagerSync({
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.recordingPeriod],
-    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod]
+    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod] // TODO this now deprecated and not being used anywhere, should remove it
   })
 };
 

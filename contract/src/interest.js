@@ -23,7 +23,8 @@ const validatedBrand = async (underlyingBrand, debt) => {
 };
 
 /**
- * Charge interest accrued between `latestInterestUpdate` and `accruedUntil`.
+ * We had to simplify the `chargeInterest` method in `interest.js` module of VaultFactory because
+ * we do not mint any rewards when an interest accrual occurs.
  *
  * @param {{
  *  underlyingBrand: Brand,
