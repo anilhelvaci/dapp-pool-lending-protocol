@@ -1,7 +1,7 @@
 // @ts-check
 import { Far } from '@endo/marshal';
 import { assertProposalShape } from '@agoric/zoe/src/contractSupport/index.js';
-import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
+import { AssetKind } from '@agoric/ertp';
 
 /**
  * This is a faucet that provides liquidity for the ertp asset created

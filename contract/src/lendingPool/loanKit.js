@@ -6,16 +6,11 @@ import { Far } from '@endo/marshal';
 const { details: X } = assert;
 
 /**
- * @typedef {{
- * inner: InnerLoan | null,
- * }} State
- */
-/**
  *
- * @param {InnerLoan} innerLoan
+ * @param {Loan} innerLoan
  */
 const wrapLoan = innerLoan => {
-  /** @type {NotifierRecord<LoanUIState>} */
+
   const { updater, notifier } = makeNotifierKit();
 
   /** @type {State} */
@@ -34,22 +29,13 @@ const wrapLoan = innerLoan => {
   /**
    * Public API of the loan.
    *
-   * @see {InnerLoan} for the internal API it wraps.
+   * @see {WrappedLoan} for the internal API it wraps.
    */
   const loan = Far('loan', {
     getNotifier: () => notifier,
     makeAdjustBalancesInvitation: () =>
       owned(loan).makeAdjustBalancesInvitation(),
     makeCloseInvitation: () => owned(loan).makeCloseInvitation(),
-    /**
-     * Starting a transfer revokes the outer loan. The associated updater will
-     * get a special notification the the loan is being transferred.
-     */
-    makeTransferInvitation: () => {
-      const tmpInner = owned(loan);
-      state.inner = null;
-      return tmpInner.makeTransferInvitation();
-    },
     // for status/debugging
     getCollateralAmount: () => owned(loan).getCollateralAmount(),
     getCurrentDebt: () => owned(loan).getCurrentDebt(),
@@ -61,23 +47,20 @@ const wrapLoan = innerLoan => {
 /**
  * Create a kit of utilities for use of the (inner) loan.
  *
- * @param {InnerLoan} inner
- * @param {Notifier<import('./poolManager.js').AssetState>} assetNotifier
+ * @param {Loan} inner
+ * @param {Notifier<AssetState>} assetNotifier
+ * @returns {LoanKit}
  */
 export const makeLoanKit = (inner, assetNotifier) => {
   const { loan, loanUpdater } = wrapLoan(inner);
-  const loanKit = harden({
+  return harden({
     assetNotifier,
     loanNotifier: loan.getNotifier(),
     invitationMakers: Far('invitation makers', {
       AdjustBalances: loan.makeAdjustBalancesInvitation,
       CloseLoan: loan.makeCloseInvitation,
-      TransferLoan: loan.makeTransferInvitation,
     }),
     loan,
     loanUpdater,
   });
-  return loanKit;
 };
-
-/** @typedef {(ReturnType<typeof makeLoanKit>)} LoanKit */

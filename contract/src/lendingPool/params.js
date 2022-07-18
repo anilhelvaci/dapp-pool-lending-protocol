@@ -14,8 +14,6 @@ export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
 export const PRICE_CHECK_PERIOD_KEY = 'PriceCheckPeriod'
 
 export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
-export const INTEREST_RATE_KEY = 'InterestRate';
-export const LOAN_FEE_KEY = 'LoanFee';
 export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
 export const BASE_RATE_KEY = 'BaseRate';
 export const MULTIPILIER_RATE_KEY = 'MultipilierRate';
@@ -31,7 +29,7 @@ const makeElectorateParams = electorateInvitationAmount => {
 };
 
 /**
- * @param {LoanTiming} loanTiming
+ * @param {LendingPoolTiming} loanTiming
  * @param {Rates} rates
  */
 const makeLoanParams = (loanTiming, rates) => {
@@ -39,21 +37,19 @@ const makeLoanParams = (loanTiming, rates) => {
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT,  loanTiming.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, loanTiming.recordingPeriod],
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
     [MULTIPILIER_RATE_KEY]: [ParamTypes.RATIO, rates.multipilierRate],
   };
 };
 
 /**
- * @param {LoanTiming} initialValues
+ * @param {LendingPoolTiming} initialValues
  */
 const makeLoanTimingManager = initialValues => {
   return makeParamManagerSync({
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.recordingPeriod],
-    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod]
+    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod] // TODO this now deprecated and not being used anywhere, should remove it
   })
 };
 
@@ -63,8 +59,6 @@ const makeLoanTimingManager = initialValues => {
 const makeLoanParamManager = rates => {
   return makeParamManagerSync({
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
   })
 };
 
@@ -74,8 +68,6 @@ const makeLoanParamManager = rates => {
 const makePoolParamManager = rates => {
   return makeParamManagerSync({
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
     [MULTIPILIER_RATE_KEY]: [ParamTypes.RATIO, rates.multipilierRate],
@@ -108,8 +100,8 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
  * @param {Amount} invitationAmount
  * @param {Rates} rates
  * @param {XYKAMMPublicFacet} ammPublicFacet
- * @param {bigint=} bootstrapPaymentValue
  * @param {Brand} compareCurrencyBrand
+ * @param {bigint=} bootstrapPaymentValue
  */
 const makeGovernedTerms = (
   priceManager,
@@ -119,8 +111,8 @@ const makeGovernedTerms = (
   invitationAmount,
   rates,
   ammPublicFacet,
+  compareCurrencyBrand,
   bootstrapPaymentValue = 0n,
-  compareCurrencyBrand
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
 

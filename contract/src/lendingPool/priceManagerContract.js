@@ -7,16 +7,14 @@ import { makeScalarMap } from '@agoric/store';
 import { E } from '@agoric/eventual-send';
 
 /**
- * This is a faucet that provides liquidity for the ertp asset created
- * using the parameter in terms. Just for demonstration purposes.
+ * This the place where we wrap the PriceManager inside a vat.
+ * @see {PriceManager} to learn more about the functionality.
  */
 
 /** @type {ContractStartFn} */
 export async function start(zcf) {
 
   const priceAuthorities = makeScalarMap('priceAuthorities');
-  /** @type {MapStore<string, InnerLoan>} */
-  const supportedAssetPublicFacets = makeScalarMap('supportedAssetPublicFacets');
 
   /**
    * @param {Brand} brandIn
@@ -41,15 +39,11 @@ export async function start(zcf) {
     return priceAuthorities.get(key);
   }
 
-  const getsupportedAssetPublicFacets = (key) => {
-    return supportedAssetPublicFacets.get(key);
-  }
 
+  /** @type ERef<PriceManager>*/
   const publicFacet = Far('PriceManager', {
     addNewWrappedPriceAuthority,
-    addNewSupportedAssetPublicFacet,
     getWrappedPriceAuthority,
-    getsupportedAssetPublicFacets
   })
 
   const creatorFacet = Far('faucetInvitationMaker', {});

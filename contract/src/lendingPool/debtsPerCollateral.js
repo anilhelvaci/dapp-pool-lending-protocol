@@ -1,3 +1,4 @@
+// @ts-check
 import { makeScalarMap} from '@agoric/store';
 import { makeInnerLoan } from './loan.js';
 import { E } from '@agoric/eventual-send';
@@ -6,13 +7,42 @@ import {
   makeRatioFromAmounts,
 } from '@agoric/zoe/src/contractSupport/index.js';
 import { liquidationDetailTerms, liquidate } from './liquidation.js';
-import { makeTracer } from '../makeTracer.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import { ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeLiquidationObserver } from './liquidationObserver.js';
 import { makeLoanStoreUtils } from './loanStoreUtils.js';
 
 const trace = makeTracer("DebtsPerCollateral");
 
+/**
+ * This is the place where we gather loans that have the same collateral type.
+ * For instance, say the underlying asset for this pool is PAN and our protocol
+ * accepts AgVAN ptorocol tokens as one collateral type. All loans that have
+ * the AgVAN as its collateral are gathered here. Public API exposed from this
+ * module is;
+ * - addNewLoan: Adds a new loan that has the same collateral type as all the others
+ *   in this one. Returns a kit that includes some utility objects to manage
+ *   the loan.
+ * - setupLiquidator: Sets a liquidator contract to support different type of
+ *   liquidation behavor for the loans stored in this module.
+ *
+ * One other important job that this module does is to keep a liquidationObserver
+ * object. DebtsPerCollateral schedules a liquidation condition by telling the
+ * liquidationObserver about the closest loan to the liquidatio margin
+ * and once the closest loan is underwater it executes the liquidation.
+ *
+ * @param {ZCF} zcf
+ * @param {Brand} collateralBrand
+ * @param {Brand} debtBrand
+ * @param {Notifier<AssetState>} assetNotifier
+ * @param {WrappedPriceAuthority} wrappedCollateralPriceAuthority
+ * @param {PriceAuthority} underlyingPriceAuthority
+ * @param {Promise<Notifier<PriceQuote>>} underlyingPriceNotifier
+ * @param {ManagerFacet} manager
+ * @param {TimerService} timer
+ * @param {Object} timingParams
+ * @returns {Promise<DebtsPerCollateral>}
+ */
 export const makeDebtsPerCollateral = async (
   zcf,
   collateralBrand,
@@ -35,14 +65,13 @@ export const makeDebtsPerCollateral = async (
     E(collateralBrand).getDisplayInfo()
   ]);
 
-  const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0n;
-  const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0n;
+  const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0;
+  const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0;
 
   let loanCounter = 0;
 
-  /** @type {MapStore<string, InnerLoan>} */
-  const loans = makeScalarMap('loans');
   const loansToLiquidate = makeScalarMap('loansToLiquidate');
+  /** @type {LoanStore}*/
   const orderedLoans = makeLoanStoreUtils();
   const managerMethods = harden({
     ...manager,
@@ -52,6 +81,7 @@ export const makeDebtsPerCollateral = async (
     removeLoanByAttributes: orderedLoans.removeLoanByAttributes
   });
 
+  /** @type LiquidationObserver */
   const liquidationObserver = makeLiquidationObserver({
     wrappedCollateralPriceAuthority,
     wrappedDebtPriceAuthority: { priceAuthority: underlyingPriceAuthority, notifier: underlyingPriceNotifier },
@@ -71,10 +101,17 @@ export const makeDebtsPerCollateral = async (
     liquidator: undefined
   }
 
+  /**
+   *
+   * @param {ZCFSeat} seat
+   * @param {ZCFSeat} underlyingAssetSeat
+   * @param {Ratio} exchangeRate
+   * @returns {Promise<LoanKit>}
+   */
   const addNewLoan = async (seat, underlyingAssetSeat, exchangeRate) => {
     loanCounter += 1;
     const loanId = String(loanCounter);
-    console.log("addNewLoan")
+    /** @type Loan */
     const innerLoan = makeInnerLoan(
       zcf,
       managerMethods,
@@ -91,6 +128,10 @@ export const makeDebtsPerCollateral = async (
     return loanKit;
   };
 
+  /**
+   *
+   *
+   */
   const scheduleLiquidation = async () => {
     const closestLoan = orderedLoans.firstDebtRatio();
     if (!closestLoan) {
@@ -99,7 +140,7 @@ export const makeDebtsPerCollateral = async (
     const {
       colLatestQuote,
       debtLatestQuote,
-      loan,
+      loan
     } = await liquidationObserver.schedule(closestLoan);
 
     Array.from(orderedLoans.entries()).forEach(
@@ -114,7 +155,6 @@ export const makeDebtsPerCollateral = async (
         const loanDebtToCollateral = makeRatioFromAmounts(collateralValInCompareCurrency, debtValueInCompareCurrency);
 
         if (ratioGTE(manager.getLiquidationMargin(), loanDebtToCollateral)) {
-          console.log("satıyorum")
           loansToLiquidate.init(key, loan);
           orderedLoans.removeLoan(key);
         }
@@ -127,6 +167,10 @@ export const makeDebtsPerCollateral = async (
 
   orderedLoans.setRescheduler(scheduleLiquidation);
 
+  /**
+   *
+   * @return {Promise<Awaited<unknown>[]>}
+   */
   const executeLiquidation = async () => {
     console.log("insideExecuteLiquidation")
     console.log("loansToLiquidateSize", Array.from(loansToLiquidate.entries()).length)
@@ -160,6 +204,11 @@ export const makeDebtsPerCollateral = async (
     return Promise.all(liquidations);
   };
 
+  /**
+   *
+   * @param {Installation} liquidationInstall
+   * @param {XYKAMMPublicFacet} ammPublicFacet
+   */
   const setupLiquidator = async (
     liquidationInstall,
     ammPublicFacet

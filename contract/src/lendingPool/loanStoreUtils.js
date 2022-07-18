@@ -1,36 +1,46 @@
-import { keyEQ, keyLT, makeScalarMap } from '@agoric/store';
+import { keyEQ, keyLT } from '@agoric/store';
 import { AmountMath } from '@agoric/ertp';
+import { toVaultKey } from '@agoric/run-protocol/src/vaultFactory/storeUtils.js';
+import { makeOrderedVaultStore } from '@agoric/run-protocol/src/vaultFactory/orderedVaultStore.js';
 
+/**
+ * This module is somehow similar to the ~/run-protocol/vaultFactory/prioritizedVaults.js.
+ * Every DebtsPerCollateral instance has one LoanStore to group the loans
+ * with the same collateral type. The module uses the ~/run-protocol/vaultFactory/orderedVaults.js
+ * module since our Loans are similar to the vaults in the vaultFactory.
+ *
+ * The reason why this module is implemented instead of directly using prioritizedVaults.js
+ * module is we need to keep track of the actual Loan object as our element.
+ * Instead, prioritizedVaults.js returns only the debt/collateral ratio. We need
+ * the actual Loan object because the LendinPool's logic to keep track of the
+ * liquidation treshold differs from the VaultFactory. The main reason for this
+ * difference is that LendingPool can lend any type of asset and accept any type
+ * of protocolToken. That's why the need for slightly different prioritizedVaults.js
+ * showed itself. To override prioritizedVaults.js module's methods was not
+ * possible because it returns a remotable object and it hardens its content.
+ *
+ * If we can find a propoer way to override prioritizedVaults.js module
+ * we can remove some of the repeated code below.
+ *
+ * @return {LoanStore}
+ */
 export const makeLoanStoreUtils = () => {
-  const store = makeScalarMap('store');
+  const store = makeOrderedVaultStore('store');
   let firstKey;
   let reschedule;
 
+  /**
+   *
+   * @param scheduler
+   */
   const setRescheduler = (scheduler) => {
     reschedule = scheduler;
   }
 
-  const calculateKeyNumberPart = (normalizedDebt, collateral) => {
-    const c = Number(collateral.value);
-    const d = normalizedDebt.value
-      ? Number(normalizedDebt.value)
-      : Number.EPSILON;
-    return ((c / d) / Number(10n ** 20n)).toFixed(50);
-  };
-
-  const toLoanKey = (normalizedDebt, collateral, loanId) => {
-    assert(normalizedDebt);
-    assert(collateral);
-    assert(loanId);
-
-    const numberPart = calculateKeyNumberPart(normalizedDebt, collateral);
-    return `${numberPart}:${loanId}`;
-  };
-
-  const fromLoanKey = key => {
-    return [key.split(':')];
-  };
-
+  /**
+   * Returns loan instead of detb/col in priotirized vaults
+   * @return {Loan}
+   */
   const firstDebtRatio = () => {
     if (store.getSize() === 0) {
       return undefined;
@@ -46,37 +56,14 @@ export const makeLoanStoreUtils = () => {
     return loan;
   };
 
-  const removeByKey = key => {
-    try {
-      const loan = store.get(key);
-      assert(loan);
-      store.delete(key);
-      return loan;
-    } catch (e) {
-      const keys = Array.from(store.keys());
-      console.error(
-        'removeByKey failed to remove',
-        key,
-        'parts:',
-        fromLoanKey(key),
-      );
-      console.error('  key literals:', keys);
-      console.error('  key parts:', keys.map(fromLoanKey));
-      throw e;
-    }
-  };
-
-  const addElement = (loanId, loan) => {
-    const debt = loan.getCurrentDebt();
-    const collateral = loan.getCollateralAmount();
-    console.log("[COLLATERAL]", collateral)
-    const key = toLoanKey(debt, collateral, loanId);
-    store.init(key, loan);
-    return key;
-  };
-
+  /**
+   *
+   * @param loanId
+   * @param loan
+   * @return {string}
+   */
   const addLoan = (loanId, loan) => {
-    const key = addElement(loanId, loan);
+    const key = store.addVault(loanId, loan);
     console.log('addLoan', firstKey, key);
     if (!firstKey || keyLT(key, firstKey)) {
       firstKey = key;
@@ -85,8 +72,13 @@ export const makeLoanStoreUtils = () => {
     return key;
   };
 
+  /**
+   *
+   * @param key
+   * @return {Loan}
+   */
   const removeLoan = key => {
-    const loan = removeByKey(key);
+    const loan = store.removeByKey(key);
     console.log('removeLoan', firstKey, key);
     if (keyEQ(key, firstKey)) {
       const [secondKey] = store.keys();
@@ -95,16 +87,35 @@ export const makeLoanStoreUtils = () => {
     return loan;
   };
 
+  /**
+   *
+   * @param {Amount<'nat'>} oldDebt
+   * @param {Amount<'nat'>} oldCollateral
+   * @param {string}  loanId
+   * @return {Loan}
+   */
   const removeLoanByAttributes = (oldDebt, oldCollateral, loanId) => {
-    const key = toLoanKey(oldDebt, oldCollateral, loanId);
+    const key = toVaultKey(oldDebt, oldCollateral, loanId);
     return removeLoan(key);
   };
 
+  /**
+   *
+   * @param {Amount<'nat'>} oldDebt
+   * @param {Amount<'nat'>} oldCollateral
+   * @param {string}  loanId
+   */
   const refreshLoanPriorityByAttributes = (oldDebt, oldCollateral, loanId) => {
     const loan = removeLoanByAttributes(oldDebt, oldCollateral, loanId);
     addLoan(loanId, loan);
   };
 
+  /**
+   *
+   * @param {string} key
+   * @param {string} loanId
+   * @return {string}
+   */
   const refreshLoanPriorityByKey = (key, loanId) => {
     const loan = removeLoan(key);
     return addLoan(loanId, loan);

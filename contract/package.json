@@ -10,6 +10,7 @@
     "@agoric/governance": "0.6.0",
     "@agoric/nat": "4.1.0",
     "@agoric/notifier": "0.4.0",
+    "@agoric/run-protocol": "0.11.0",
     "@agoric/store": "0.7.1",
     "@agoric/swingset-vat": "0.27.0",
     "@agoric/vats": "0.9.0",

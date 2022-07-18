@@ -71,7 +71,7 @@ async function setupServices(
     E(governorCreatorFacet).getCreatorFacet()
   );
 
-  /** @type {[any, LoanFactory, VFC['publicFacet'], LoanManager, PriceAuthority]} */
+  /** @type {[any, LoanFactory, VFC['publicFacet'], PoolManager, PriceAuthority]} */
     // @ts-expect-error cast
   const [
       governorInstance,
@@ -110,10 +110,15 @@ async function setupServices(
 }
 
 /**
- * What we need to deploy the lendingPool contract
- * zoe: home.zoe
- * timer: home.TimerService
- * quoteMint: makeIssuerKit?
+ * Here we deploy the actual LendingPool contract along with other contracts that
+ * LendingPool either is dependent on(amm) or needs to create the context for
+ * demonstration.
+ *
+ * After we set things up, we send some offers to the wallet to demonstrate the functionality and
+ * testing purposes. There's a plan for more sophisticated set of deploy scripts so the logic
+ * here might deprecate soon.
+ *
+ *
  */
 export default async function deployContract(
   homePromise,

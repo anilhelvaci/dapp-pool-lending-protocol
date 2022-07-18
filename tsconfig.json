@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "sourceMap": true,
+    "allowJs": true,
+    "checkJs": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "contract/src/lendingPool/*",
+    "./node_modules/@agoric/zoe/**/types.js",
+    "./node_modules/@agoric/governance/**/types.js",
+    "./node_modules/@agoric/ertp/**/types.js",
+    "./node_modules/@agoric/notifier/**/types.js",
+    "./node_modules/@agoric/swingset-vat/**/types.js",
+    "./node_modules/@agoric/run-protocol/**/types.js",
+    "./node_modules/@agoric/store/**/types.js",
+  ],
+  "exclude": [
+//    "./node_modules"
+  ]
+}
