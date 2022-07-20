@@ -74,9 +74,11 @@ export const {
     setVaultCollateral,
     setVaultConfiguration,
     createVault,
+    createMarket,
     initVaults,
     setVaultToManageId,
     updateVault,
+    updateMarket,
     resetVault,
     setLoadTreasuryError,
     mergeRUNStakeHistory,
@@ -103,6 +105,15 @@ export const {
         },
       };
     },
+    createMarket: (state, { id, market }) => {
+      return {
+        ...state,
+        markets: {
+          ...state.markets,
+          [id]: market,
+        },
+      };
+    },
     /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
     updateVault: ({ vaults, ...state }, { id, vault }) => {
       const oldVaultData = vaults && vaults[id];
@@ -112,6 +123,13 @@ export const {
       return {
         ...state,
         vaults: { ...vaults, [id]: { ...oldVaultData, ...vault, status } },
+      };
+    },
+    updateMarket: ({ markets, ...state }, { id, market }) => {
+      const oldMarketData = markets && markets[id];
+      return {
+        ...state,
+        markets: { ...markets, [id]: { ...oldMarketData, ...market } },
       };
     },
     /** @type {(state: TreasuryState) => TreasuryState} */

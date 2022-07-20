@@ -22,6 +22,8 @@ import {
   setRUNStake,
   setTreasury,
   updateVault,
+  createMarket,
+  updateMarket
 } from "../store";
 import { storeAllBrandsFromTerms, updateBrandPetnames } from "./storeBrandInfo";
 import LendingPoolWalletConnection from "../components/lendingPool/LendingPoolWalletConnection";
@@ -227,12 +229,13 @@ const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
   const brandInfoFlattenedP = brandToInfoDeepP.flat();
   const brandToInfoFinal = await Promise.all(brandInfoFlattenedP);
 
-  dispatch(
-      setLendingPool({publicFacet: lendingPoolPublicFacet, instance}),
-  );
+  markets.forEach(market => {
+    dispatch(createMarket({ id: market.brand, market }));
+    watchMarket(market.brand, market.notifier, dispatch);
+  });
 
   dispatch(
-    setMarkets(markets)
+      setLendingPool({publicFacet: lendingPoolPublicFacet, instance}),
   );
 
   dispatch(
@@ -251,6 +254,12 @@ const toBrandToInfoItem = (brand, brandDisplayInfo) => {
       brand,
     },
   ];
+}
+
+const watchMarket = async (brand, assetNotifier, dispatch) => {
+  for await (const value of iterateNotifier(assetNotifier)) {
+    dispatch(updateMarket({ id: brand, market: { ...value } }));
+  }
 }
 
 // We don't know if the loan is still open or not until we get its notifier

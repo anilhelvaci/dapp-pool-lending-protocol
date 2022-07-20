@@ -1,7 +1,8 @@
+console.log('zaa');
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
-import { Radio, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@material-ui/core";
+import { Radio, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@material-ui/core';
 import Profile from './Profile';
 import PoolDialog from './Dialog';
 import { makeDisplayFunctions, getTotalBalanceAmount } from '../helpers';
@@ -168,10 +169,11 @@ function LendingPool() {
                               <TableRow >
                                   <StyledTableCell>Underlying Asset</StyledTableCell>
                                   <StyledTableCell align='right'>APY</StyledTableCell>
+                                  <StyledTableCell align='right'>Exchange Rate</StyledTableCell>
                                   <StyledTableCell align='right'>Supply Balance</StyledTableCell>
                               </TableRow>
                           </TableHead>
-                          <TableBody>{markets.map(market =>
+                          <TableBody>{Object.values(markets).map(market =>
                             <Market
                               market={market}
                               handleClickOpen={handleClickOpen}
@@ -190,7 +192,7 @@ function LendingPool() {
                                   <StyledTableCell align='right'>% Of Limit</StyledTableCell>
                               </TableRow>
                           </TableHead>
-                          <TableBody>{markets.map(makeBorrowRow)}</TableBody>
+                          <TableBody>{Object.values(markets).map(makeBorrowRow)}</TableBody>
                       </Table>
                   </TableContainer>
               </div>
@@ -204,63 +206,13 @@ function LendingPool() {
             displayFunctions = makeDisplayFunctions(brandToInfo);
             E(lendingPool.publicFacet).helloWorld().then(msg => console.log(msg, "MOTHER FUCKER"));
             console.log("Markets:", markets);
-            const marketsLocal = [];
             return getActualUI(markets);
         } else {
             return (
               <div className={classes.body}>
-                  <div className={classes.supply}>
-                      <TableContainer component={Paper}>
-                          <Table>
-                              <TableHead>
-                                  <TableRow >
-                                      <StyledTableCell>Asset</StyledTableCell>
-                                      <StyledTableCell align='right'>APY</StyledTableCell>
-                                      <StyledTableCell align='right'>Balance</StyledTableCell>
-                                      <StyledTableCell align='right'>Collateral</StyledTableCell>
-                                  </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                  {supplyRows.map((row) => (
-                                    <StyledTableRow key={row.asset} hover={true} onClick={() => handleClickOpen(row.asset)}>
-                                        <TableCell scope='row' size='small'>
-                                            {row.asset}
-                                        </TableCell>
-                                        <TableCell align='right'>{row.apy}</TableCell>
-                                        <TableCell align='right'>{row.balance}</TableCell>
-                                        <TableCell align='right'>{row.collateral}</TableCell>
-                                    </StyledTableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                      </TableContainer>
-                  </div>
-                  <div className={classes.borrow}>
-                      <TableContainer component={Paper}>
-                          <Table>
-                              <TableHead>
-                                  <TableRow>
-                                      <StyledTableCell>Asset</StyledTableCell>
-                                      <StyledTableCell align='right'>APY</StyledTableCell>
-                                      <StyledTableCell align='right'>Balance</StyledTableCell>
-                                      <StyledTableCell align='right'>% Of Limit</StyledTableCell>
-                                  </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                  {borrowRows.map((row) => (
-                                    <StyledTableRow key={row.asset} hover={true} onClick={() => handleClickOpen(row.asset)}>
-                                        <TableCell scope='row' size='small'>
-                                            {row.asset}
-                                        </TableCell>
-                                        <TableCell align='right'>{row.apy}</TableCell>
-                                        <TableCell align='right'>{row.balance}</TableCell>
-                                        <TableCell align='right'>{row.limit}</TableCell>
-                                    </StyledTableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                      </TableContainer>
-                  </div>
+                  <Typography>
+                      Loading...
+                  </Typography>
               </div>
             )
         }

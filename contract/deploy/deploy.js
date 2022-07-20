@@ -21,6 +21,7 @@ import * as Collect from '@agoric/run-protocol/src/collect.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 import fs from 'fs';
+import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 
 const contractRoots = {
   lendingPoolFaucet: './lendingPoolFaucet.js',
@@ -29,6 +30,7 @@ const contractRoots = {
   LendingPool: '../../src/lendingPool/lendingPool.js',
   priceManagerContract: '../../src/lendingPool/priceManagerContract.js',
   amm: '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
+  manualTimerFaucet: './manualTimerFaucet.js'
 };
 
 async function setupServices(
@@ -124,14 +126,12 @@ export default async function deployContract(
   homePromise,
   { bundleSource, pathResolve },
 ) {
+  const secondsPerDay = SECONDS_PER_YEAR / 365n;
 
   const home = await homePromise;
   const board = home.board;
   const zoe = home.zoe;
   const wallet = home.wallet;
-  const timer = home.localTimerService;
-
-  const secondsPerDay = SECONDS_PER_YEAR / 365n;
 
   const bundles = await Collect.allValues({
     lendingPoolFaucet: makeBundle(bundleSource, contractRoots.lendingPoolFaucet),
@@ -140,6 +140,7 @@ export default async function deployContract(
     LendingPool: makeBundle(bundleSource, contractRoots.LendingPool),
     priceManagerContract: makeBundle(bundleSource, contractRoots.priceManagerContract),
     amm: makeBundle(bundleSource, contractRoots.amm),
+    manualTimerFaucet: makeBundle(bundleSource, contractRoots.manualTimerFaucet)
   });
 
   const contractInstallations = Collect.mapValues(bundles, bundle =>
@@ -151,6 +152,7 @@ export default async function deployContract(
     panAsset,
     usdAsset,
     priceAuthorityFaucet,
+    manualTimerFaucet,
     installations,
   } = await startFaucets(zoe, contractInstallations);
 
@@ -164,24 +166,23 @@ export default async function deployContract(
   const usdIssuer = await E(usdAsset.publicFacet).getIssuer();
   const usdBrand = await E(usdIssuer).getBrand();
 
-  const vanUsdPriceAuthority = await E(priceAuthorityFaucet.creatorFacet).makeScriptedPriceAuthority({
+  const timer = process.env.USE_MANUAL_TIMER ? await E(manualTimerFaucet.creatorFacet).makeManualTimer({
+    startValue: 0n,
+    timeStep: secondsPerDay * 7n,
+  }) : home.localTimerService;
+
+  const vanUsdPriceAuthority = await E(priceAuthorityFaucet.creatorFacet).makeManualPriceAuthority({
     actualBrandIn: vanBrand,
     actualBrandOut: usdBrand,
-    priceList: [110n],
-    timer,
-    undefined,
-    unitAmountIn: AmountMath.make(vanBrand, 10n ** 8n),
-    quoteInterval: 7n,
+    initialPrice: makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand),
+    timer
   });
 
-  const panUsdPriceAuthority = await E(priceAuthorityFaucet.creatorFacet).makeScriptedPriceAuthority({
+  const panUsdPriceAuthority = await E(priceAuthorityFaucet.creatorFacet).makeManualPriceAuthority({
     actualBrandIn: panBrand,
     actualBrandOut: usdBrand,
-    priceList: [200n],
+    initialPrice: makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand),
     timer,
-    undefined,
-    unitAmountIn: AmountMath.make(panBrand, 10n ** 8n),
-    quoteInterval: 7n,
   });
 
   const priceManInstallation = await contractInstallations.priceManagerContract;
@@ -443,11 +444,12 @@ export default async function deployContract(
   // console.log('borrowPanOfferConfig', borrowPanOfferConfig);
   // const borrowPanOfferID = await E(walletBridge).addOffer(borrowPanOfferConfig);
 
-  const [VAN_ASSET_CREATOR_FACET_ID, PAN_ASSET_CREATOR_FACET_ID, USD_ASSET_CREATOR_FACET_ID] = await Promise.all(
+  const [VAN_ASSET_CREATOR_FACET_ID, PAN_ASSET_CREATOR_FACET_ID, USD_ASSET_CREATOR_FACET_ID, TIMER_ID] = await Promise.all(
     [
       E(home.scratch).set("van_asset_creator_facet_id", vanAsset.creatorFacet),
       E(home.scratch).set("pan_asset_creator_facet_id", panAsset.creatorFacet),
       E(home.scratch).set("usd_asset_creator_facet_id", usdAsset.creatorFacet),
+      E(home.scratch).set("timer_id", timer),
     ],
   );
 
@@ -472,6 +474,7 @@ export default async function deployContract(
   console.log(`-- VAN_ASSET_CREATOR_FACET_ID: ${VAN_ASSET_CREATOR_FACET_ID} --`);
   console.log(`-- PAN_ASSET_CREATOR_FACET_ID: ${PAN_ASSET_CREATOR_FACET_ID} --`);
   console.log(`-- USD_ASSET_CREATOR_FACET_ID: ${USD_ASSET_CREATOR_FACET_ID} --`);
+  console.log(`-- TIMER_ID: ${TIMER_ID} --`);
   // console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
 
   const dappConstants = {
@@ -491,7 +494,8 @@ export default async function deployContract(
     PRICE_MANAGER_INSTANCE_BOARD_ID,
     VAN_ASSET_CREATOR_FACET_ID,
     PAN_ASSET_CREATOR_FACET_ID,
-    USD_ASSET_CREATOR_FACET_ID
+    USD_ASSET_CREATOR_FACET_ID,
+    TIMER_ID
   };
   const defaultsFile = pathResolve(`../../ui/src/generated/lendingPoolDefaults.js`);
   console.log('writing', defaultsFile);

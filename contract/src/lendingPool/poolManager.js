@@ -1,6 +1,6 @@
 // @ts-check
 
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 import {
   assertProposalShape,
   ceilDivideBy,
@@ -174,13 +174,17 @@ export const makePoolManager = (
     return calculateBorrowingRate(getLoanParams()[MULTIPILIER_RATE_KEY].value, getLoanParams()[BASE_RATE_KEY].value, utilizationRate);
   }
 
+  /** @type {AssetState} */
+  const initialAssetState = {
+    compoundedInterest,
+    latestInterestRate: getCurrentBorrowingRate(),
+    latestInterestUpdate,
+    totalDebt,
+    exchangeRate: getExchangeRate()
+  }
+
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
-    harden({
-      compoundedInterest,
-      interestRate: shared.getCurrentBorrowingRate(),
-      latestInterestUpdate,
-      totalDebt,
-    }),
+    harden(initialAssetState),
   );
 
   /**
@@ -217,9 +221,10 @@ export const makePoolManager = (
     /** @type {AssetState} */
     const payload = harden({
       compoundedInterest,
-      interestRate,
+      latestInterestRate: interestRate,
       latestInterestUpdate,
       totalDebt,
+      exchangeRate: getExchangeRate()
     });
     assetUpdater.updateState(payload);
 
@@ -502,5 +507,6 @@ export const makePoolManager = (
     makeBorrowKit,
     redeemHook,
     makeDepositInvitation,
+    getNotifier: () => assetNotifer
   });
 };

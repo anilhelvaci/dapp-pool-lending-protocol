@@ -176,6 +176,7 @@ export const startFaucets = async (zoe, installation) => {
   const installations = await Collect.allValues({
     priceAuthorityFaucet: installation.priceAuthorityFaucet,
     lendingPoolFaucet: installation.lendingPoolFaucet,
+    manualTimerFaucet: installation.manualTimerFaucet
   });
 
   // start priceAuthorityFaucet
@@ -185,6 +186,15 @@ export const startFaucets = async (zoe, installation) => {
     instance: priceAuthorityFaucetInstance,
   } = await E(zoe).startInstance(
     installations.priceAuthorityFaucet,
+  );
+
+  // start manualTimerFaucet
+  const {
+    creatorFacet: manualTimerFaucetCreatorFacet,
+    publicFacet: manualTimerFaucetPublicFacet,
+    instance: manualTimerFaucetInstance,
+  } = await E(zoe).startInstance(
+    installations.manualTimerFaucet,
   );
 
   // start vanFaucet
@@ -255,6 +265,11 @@ export const startFaucets = async (zoe, installation) => {
       creatorFacet: priceAuthorityFaucetCreatorFacet,
       publicFacet: priceAuthorityFaucetPublicFacet,
       instance: priceAuthorityFaucetInstance,
+    },
+    manualTimerFaucet: {
+      creatorFacet: manualTimerFaucetCreatorFacet,
+      publicFacet: manualTimerFaucetPublicFacet,
+      instance: manualTimerFaucetInstance
     },
     installations,
   };

@@ -244,6 +244,10 @@ export const start = async (zcf, privateArgs) => {
     return result;
   };
 
+  /**
+   *
+   * @returns {Promise<Array>}
+   */
   const getMarkets = async () => {
     return harden(
       Promise.all(
@@ -251,13 +255,14 @@ export const start = async (zcf, privateArgs) => {
           const underlyingWrappedPriceAuthority =  await pm.getPriceAuthorityForBrand(pm.getUnderlyingBrand());
           return {
             brand,
-            interestRate: pm.getCurrentBorrowingRate(),
+            latestInterestRate: pm.getCurrentBorrowingRate(),
             liquidationMargin: pm.getLiquidationMargin(),
             underlyingBrand: pm.getUnderlyingBrand(),
             protocolBrand: pm.getProtocolBrand(),
             thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
             underlyingToThirdPriceAuthority: underlyingWrappedPriceAuthority.priceAuthority,
-            exchangeRate: pm.getExchangeRate()
+            exchangeRate: pm.getExchangeRate(),
+            notifier: pm.getNotifier()
           }
         }),
       ),

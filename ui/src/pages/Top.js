@@ -62,19 +62,19 @@ function Top() {
 
           <main className={classes.content}>
             <Switch>
-              <Route path="/lending-pool">
-              <LendingPool />
+              <Route path='/lending-pool'>
+                <LendingPool />
               </Route>
-              <Route path="/vaults">
+              <Route path='/vaults'>
                 <Treasury />
               </Route>
-              <Route path="/manageVault">
+              <Route path='/manageVault'>
                 <VaultManagement />
               </Route>
-              <Route path="/run-stake">
+              <Route path='/run-stake'>
                 <RunStake />
               </Route>
-              <Route path="/">
+              <Route path='/'>
                 <NewVault />
               </Route>
             </Switch>

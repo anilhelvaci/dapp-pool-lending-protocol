@@ -117,16 +117,17 @@
  * @property {(seat:ZCFSeat, exchangeRate: Ratio) => LoanKit} makeBorrowKit
  * @property {() => Invitation} makeDepositInvitation
  * @property {(seat: ZCFSeat) => string} redeemHook
+ * @property {() => Notifier<AssetState>} getNotifier
  */
 
-// TODO update the properties of the AssetState
 /**
- * @typedef {{
- *  compoundedInterest: Ratio,
- *  interestRate: Ratio,
- *  latestInterestUpdate: bigint,
- *  totalDebt: Amount<'nat'>,
- * }} AssetState */
+ * @typedef {Object} AssetState
+ * @property {Ratio} compoundedInterest - Total amount of interest that has been applied to this pool
+ * @property {Ratio} latestInterestRate - The latest interest rate accrued to this pool, represented in annual form
+ * @property {bigint} latestInterestUpdate - The last time an interest is accrued
+ * @property {Amount<'nat'>} totalDebt
+ * @property {Ratio} exchangeRate - The rate between protoclToken and underlyingAsset, effected by totalBorrow and protocolSupply
+ */
 
 
 // LendingPool

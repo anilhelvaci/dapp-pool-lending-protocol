@@ -16,5 +16,6 @@ export default {
   "PRICE_MANAGER_INSTANCE_BOARD_ID": "board03125",
   "VAN_ASSET_CREATOR_FACET_ID": "van_asset_creator_facet_id",
   "PAN_ASSET_CREATOR_FACET_ID": "pan_asset_creator_facet_id",
-  "USD_ASSET_CREATOR_FACET_ID": "usd_asset_creator_facet_id"
+  "USD_ASSET_CREATOR_FACET_ID": "usd_asset_creator_facet_id",
+  "TIMER_ID": "timer_id"
 };
