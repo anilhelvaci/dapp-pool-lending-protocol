@@ -554,7 +554,7 @@ test('borrow', async t => {
   // Build offer
   const debtProposal = {
     give: { Collateral: vanPoolDepositedMoney.amount },
-    want: { Debt: AmountMath.make(panBrand, 4n * 10n ** 6n) },
+    want: { Debt: AmountMath.make(panBrand, 4n * 10n ** 6n) }, // 0,04 PAN
   };
 
   const debtPaymentKeywordRecord = {
@@ -585,6 +585,7 @@ test('borrow', async t => {
  * In this test we want to see that the borrowing rate fluctuates correctly
  * according to the changes in the borrow amount.
  */
+// TODO add a new test with a different number
 test('borrow-rate-fluctuate', async t => {
   // Destructure bootstraped data
   const {
@@ -821,7 +822,7 @@ test('adjust-balances-no-interest', async t => {
   // build the proppsal
   const aliceDebtProposal = {
     give: { Collateral: await E(agVanIssuer).getAmountOf(aliceCollateralPayment) },
-    want: { Debt: AmountMath.make(panBrand, 4000000n) },
+    want: { Debt: AmountMath.make(panBrand, 4000000n) }, // 0,04 PAN
   };
 
   const aliceDebtPaymentKeywordRecord = {
@@ -842,7 +843,7 @@ test('adjust-balances-no-interest', async t => {
   const aliceLoanCurrentDebt = await E(aliceLoan).getCurrentDebt();
 
   // Check if the amount borrowed is correct
-  t.deepEqual(aliceLoanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 8n / 100n)); // 0,04 PAN
   // Check if the borrowing rate is correct
   t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
 
@@ -1147,7 +1148,7 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
   // build the proppsal
   const aliceDebtProposal = {
     give: { Collateral: await E(agVanIssuer).getAmountOf(aliceCollateralPayment) },
-    want: { Debt: AmountMath.make(panBrand, 35n * 10n ** 6n) },
+    want: { Debt: AmountMath.make(panBrand, 35n * 10n ** 6n) }, // 0,35 PAN
   };
 
   const aliceDebtPaymentKeywordRecord = {
@@ -1175,7 +1176,7 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
   const aliceAdjustBalanceProposal = harden({
     give: { Debt: amountToPay },
     // we want 0,2 VAN worth AgVAN
-    want: { Collateral: AmountMath.make(agVanBrand, 2n * 10n ** 7n * 50n) },
+    want: { Collateral: AmountMath.make(agVanBrand, 2n * 10n ** 7n * 50n) }, // 0,2 VAN * 50 = AgVAN
   });
 
   const aliceAdjustBalancePayment = harden(
@@ -1206,7 +1207,7 @@ test("adjust-balances-pay-debt-get-collateral", async t => {
 
   t.is(aliceUpdateOfferResult, 'We have adjusted your balances, thank you for your business');
   t.deepEqual(await E(agVanIssuer).getAmountOf(aliceDebtReceivedPayment), aliceAdjustBalanceProposal.want.Collateral);
-  t.deepEqual(aliceLoanCurrentDebtAfterUpdate, AmountMath.make(panBrand, 28n * 10n ** 8n / 100n));
+  t.deepEqual(aliceLoanCurrentDebtAfterUpdate, AmountMath.make(panBrand, 28n * 10n ** 8n / 100n)); // 0,35 - 0,07 PAN = 0,28 PAN
   // After we receive 0,2 VAN worth AgVAN there should be 0,8 VAN worth AgVAN left in the loan as collateral
   t.deepEqual(aliceLoanCollateralAfterUpdate,
     calculateProtocolFromUnderlying(AmountMath.make(vanBrand, 8n * 10n ** 8n / 10n), await E(vanPoolMan).getExchangeRate()));
@@ -1735,6 +1736,8 @@ test('collateral-price-drop-liquidate', async t => {
     && AmountMath.isGTE(
       AmountMath.add(debtWithPenalty, panPoolInitialLiquidity),
       panPoolCurrentLiquidity));
+
+  // TODO if price drops too far this should fail
 });
 
 /**
