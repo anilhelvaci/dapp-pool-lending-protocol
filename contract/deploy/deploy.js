@@ -444,12 +444,20 @@ export default async function deployContract(
   // console.log('borrowPanOfferConfig', borrowPanOfferConfig);
   // const borrowPanOfferID = await E(walletBridge).addOffer(borrowPanOfferConfig);
 
-  const [VAN_ASSET_CREATOR_FACET_ID, PAN_ASSET_CREATOR_FACET_ID, USD_ASSET_CREATOR_FACET_ID, TIMER_ID] = await Promise.all(
+  const [
+    VAN_ASSET_CREATOR_FACET_ID,
+    PAN_ASSET_CREATOR_FACET_ID,
+    USD_ASSET_CREATOR_FACET_ID,
+    TIMER_ID,
+    VAN_USD_PRICE_AUTH_ID,
+    PAN_USD_PRICE_AUTH_ID] = await Promise.all(
     [
       E(home.scratch).set("van_asset_creator_facet_id", vanAsset.creatorFacet),
       E(home.scratch).set("pan_asset_creator_facet_id", panAsset.creatorFacet),
       E(home.scratch).set("usd_asset_creator_facet_id", usdAsset.creatorFacet),
       E(home.scratch).set("timer_id", timer),
+      E(home.scratch).set("van_usd_price_auth_id", vanUsdPriceAuthority),
+      E(home.scratch).set("pan_usd_price_auth_id", panUsdPriceAuthority),
     ],
   );
 
@@ -474,6 +482,8 @@ export default async function deployContract(
   console.log(`-- VAN_ASSET_CREATOR_FACET_ID: ${VAN_ASSET_CREATOR_FACET_ID} --`);
   console.log(`-- PAN_ASSET_CREATOR_FACET_ID: ${PAN_ASSET_CREATOR_FACET_ID} --`);
   console.log(`-- USD_ASSET_CREATOR_FACET_ID: ${USD_ASSET_CREATOR_FACET_ID} --`);
+  console.log(`-- VAN_USD_PRICE_AUTH_ID: ${VAN_USD_PRICE_AUTH_ID} --`);
+  console.log(`-- PAN_USD_PRICE_AUTH_ID: ${PAN_USD_PRICE_AUTH_ID} --`);
   console.log(`-- TIMER_ID: ${TIMER_ID} --`);
   // console.log(`-- BORROW_PAN_OFFER_ID: ${borrowPanOfferID} --`);
 
@@ -495,7 +505,9 @@ export default async function deployContract(
     VAN_ASSET_CREATOR_FACET_ID,
     PAN_ASSET_CREATOR_FACET_ID,
     USD_ASSET_CREATOR_FACET_ID,
-    TIMER_ID
+    TIMER_ID,
+    VAN_USD_PRICE_AUTH_ID,
+    PAN_USD_PRICE_AUTH_ID
   };
   const defaultsFile = pathResolve(`../../ui/src/generated/lendingPoolDefaults.js`);
   console.log('writing', defaultsFile);

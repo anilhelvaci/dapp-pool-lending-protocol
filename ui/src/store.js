@@ -16,6 +16,7 @@ export const initial = {
   treasury: /** @type { VaultState | null } */ (null),
   lendingPool: (null),
   markets: (null),
+  prices: (null), // {brandIn: quote}
   vaultCollateral: /** @type { CollateralInfo | null } */ (null),
   vaultConfiguration: null,
   vaults: /** @type {Record<string, VaultData> | null} */ (null),
@@ -24,7 +25,7 @@ export const initial = {
   loadTreasuryError: /** @type {string | null} */ null,
   RUNStake: /** @type { RUNStakeState | null } */ (null),
   loan: /** @type { Loan | null } */ (null),
-  loanAsset: /** @type { import('@agoric/run-protocol/src/runStake/runStakeManager').AssetState | null } */ (null),
+  loanAsset: /** @type { AssetState | null } */ (null),
 };
 
 /**
@@ -75,10 +76,12 @@ export const {
     setVaultConfiguration,
     createVault,
     createMarket,
+    addPrice,
     initVaults,
     setVaultToManageId,
     updateVault,
     updateMarket,
+    updatePrice,
     resetVault,
     setLoadTreasuryError,
     mergeRUNStakeHistory,
@@ -114,6 +117,15 @@ export const {
         },
       };
     },
+    addPrice: (state, { id, quote }) => {
+      return {
+        ...state,
+        prices: {
+          ...state.prices,
+          [id]: quote,
+        },
+      };
+    },
     /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
     updateVault: ({ vaults, ...state }, { id, vault }) => {
       const oldVaultData = vaults && vaults[id];
@@ -130,6 +142,12 @@ export const {
       return {
         ...state,
         markets: { ...markets, [id]: { ...oldMarketData, ...market } },
+      };
+    },
+    updatePrice: ({ prices, ...state }, { id, quote }) => {
+      return {
+        ...state,
+        prices: { ...prices, [id]: { ...quote } },
       };
     },
     /** @type {(state: TreasuryState) => TreasuryState} */

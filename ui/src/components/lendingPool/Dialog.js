@@ -29,7 +29,7 @@ const useStyles = makeStyles(() => ({
     '& .MuiDialog-container': {
       '& .MuiDialog-paperWidthSm': {
         maxWidth: 'none',
-        width: '40%',
+        width: '60%',
       }
     }
   }

@@ -33,7 +33,7 @@ const Profile = () => {
       for (const market of Object.values(markets)) {
         const totalProtocolAmount = getTotalBalanceAmount(purses, market.protocolBrand);
         const underlyingLocked = floorMultiplyBy(totalProtocolAmount, market.exchangeRate);
-        const quote = await E(market.underlyingToThirdPriceAuthority).quoteGiven(underlyingLocked, market.thirdCurrencyBrand);
+        const quote = await E(market.underlyingToThirdWrappedPriceAuthority.priceAuthority).quoteGiven(underlyingLocked, market.thirdCurrencyBrand);
         const amountOut = getAmountOut(quote);
         usdAmount += amountOut.value;
       }

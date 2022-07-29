@@ -23,7 +23,9 @@ import {
   setTreasury,
   updateVault,
   createMarket,
-  updateMarket
+  addPrice,
+  updateMarket,
+  updatePrice
 } from "../store";
 import { storeAllBrandsFromTerms, updateBrandPetnames } from "./storeBrandInfo";
 import LendingPoolWalletConnection from "../components/lendingPool/LendingPoolWalletConnection";
@@ -231,7 +233,9 @@ const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
 
   markets.forEach(market => {
     dispatch(createMarket({ id: market.brand, market }));
+    dispatch(addPrice({id: market.brand, quote: undefined}))
     watchMarket(market.brand, market.notifier, dispatch);
+    watchPrices(market.brand, market.underlyingToThirdWrappedPriceAuthority.notifier, dispatch);
   });
 
   dispatch(
@@ -259,6 +263,12 @@ const toBrandToInfoItem = (brand, brandDisplayInfo) => {
 const watchMarket = async (brand, assetNotifier, dispatch) => {
   for await (const value of iterateNotifier(assetNotifier)) {
     dispatch(updateMarket({ id: brand, market: { ...value } }));
+  }
+}
+
+const watchPrices = async (brandIn, priceNotifier, dispatch) => {
+  for await (const value of iterateNotifier(priceNotifier)) {
+    dispatch(updatePrice({ id: brandIn, quote: { ...value } }));
   }
 }
 

@@ -411,7 +411,7 @@ test('deposit', async t => {
     ),
   );
 
-  t.is(await E(vanPoolMan).getProtocolLiquidity(), 5555555550n); // We know that initial exchange rate is 0,02
+  t.deepEqual(await E(vanPoolMan).getProtocolLiquidity(), AmountMath.make(protocolBrand, 5555555550n)); // We know that initial exchange rate is 0,02
   t.deepEqual(await E(vanPoolMan).getUnderlyingLiquidity(), AmountMath.make(vanBrand, 111111111n));
   t.is(message, 'Finished');
 });

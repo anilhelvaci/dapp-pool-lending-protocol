@@ -17,5 +17,7 @@ export default {
   "VAN_ASSET_CREATOR_FACET_ID": "van_asset_creator_facet_id",
   "PAN_ASSET_CREATOR_FACET_ID": "pan_asset_creator_facet_id",
   "USD_ASSET_CREATOR_FACET_ID": "usd_asset_creator_facet_id",
-  "TIMER_ID": "timer_id"
+  "TIMER_ID": "timer_id",
+  "VAN_USD_PRICE_AUTH_ID": "van_usd_price_auth_id",
+  "PAN_USD_PRICE_AUTH_ID": "pan_usd_price_auth_id"
 };

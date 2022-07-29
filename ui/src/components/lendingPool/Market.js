@@ -1,62 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { TableCell } from '@material-ui/core';
+import { TableCell, Typography } from '@material-ui/core';
 import { StyledTableRow } from './StyledTableComponents';
-import { getTotalBalanceAmount } from '../helpers';
-import { useApplicationContext } from '../../contexts/Application';
-import { E } from '@endo/far';
-import { getAmountOut, floorMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport';
+import {
+  getAmountOut,
+  ceilMultiplyBy,
+  makeRatioFromAmounts,
+} from '@agoric/zoe/src/contractSupport';
 import { AmountMath } from '@agoric/ertp';
-import { makeAsyncIterableFromNotifier as iterable } from '@agoric/notifier';
+import { Nat } from '@endo/nat';
 
 let count = 1;
 
-const Market = ({ market, displayFunctions, handleClickOpen }) => {
+const Market = ({ market, displayFunctions, handleClickOpen, priceQuote }) => {
   console.log('Count', count);
   count++;
   const {
     displayPercent,
     displayBrandPetname,
     displayAmount,
+    getDecimalPlaces,
   } = displayFunctions;
 
-  const {
-    state: {
-      purses,
-    },
-  } = useApplicationContext();
-
-  const notifier = market.notifier;
-
-  const [valInThird, setValInThird] = useState('0');
-
   const underlyingAssetPetnameDisplay = displayBrandPetname(market.underlyingBrand);
-  const protocolPetnameDisplay = displayBrandPetname(market.protocolBrand);
-  const thirdCurrencyPetnameDisplay = displayBrandPetname(market.thirdCurrencyBrand);
-  const totalProtocolAmount = getTotalBalanceAmount(purses, market.protocolBrand);
-  const underlyingLockedAmount = floorMultiplyBy(totalProtocolAmount, market.exchangeRate);
-  const balance = displayAmount(totalProtocolAmount);
+  const compareAssetPetnameDisplay = displayBrandPetname(market.thirdCurrencyBrand);
+  const protocolTokenPetnameDisplay = displayBrandPetname(market.protocolBrand);
 
-  useEffect(() => {
-    const fetchQuote = async () => {
-      const quote = await E(market.underlyingToThirdPriceAuthority).quoteGiven(underlyingLockedAmount, market.thirdCurrencyBrand);
-      const amountOut = getAmountOut(quote);
-      const displayVal = displayAmount(amountOut);
-      setValInThird(displayVal);
-    };
+  const underlyingAmountOut = priceQuote === undefined ? AmountMath.makeEmpty(market.thirdCurrencyBrand) : getAmountOut(priceQuote);
+  const underlyingLiqInCompare = ceilMultiplyBy(
+    market.underlyingLiquidity,
+    makeRatioFromAmounts(underlyingAmountOut,
+      AmountMath.make(market.underlyingBrand, 10n ** Nat(getDecimalPlaces(market.underlyingBrand))))
+  );
 
-    fetchQuote().catch(err => {
-      console.log('PRICE', err);
-      setValInThird('-1');
-    });
-  }, [purses]);
+  const totalDebtInCompare = ceilMultiplyBy(
+    market.totalDebt,
+    makeRatioFromAmounts(underlyingAmountOut,
+      AmountMath.make(market.underlyingBrand, 10n ** Nat(getDecimalPlaces(market.underlyingBrand))))
+  );
 
   return (
     <StyledTableRow key={underlyingAssetPetnameDisplay} hover={true} onClick={() => handleClickOpen(market)}>
-      <TableCell>{underlyingAssetPetnameDisplay}</TableCell>
+      {/* Asset */}
+      <TableCell  >{underlyingAssetPetnameDisplay} </TableCell>
+      {/* Total Supply */}
+      <TableCell align='right'>
+        <Typography variant={'body2'}>
+          {displayAmount(underlyingLiqInCompare)} {compareAssetPetnameDisplay}
+        </Typography>
+        <Typography variant={'caption'}>
+          {displayAmount(market.underlyingLiquidity)} {underlyingAssetPetnameDisplay}
+        </Typography>
+      </TableCell>
+      {/* Total Protocol Supply */}
+      <TableCell align='right'>{displayAmount(market.protocolLiquidity)} {protocolTokenPetnameDisplay}</TableCell>
+      {/* Total Borrow */}
+      <TableCell align='right'>
+        <Typography variant={'body2'}>
+          {displayAmount(totalDebtInCompare)} {compareAssetPetnameDisplay}
+        </Typography>
+        <Typography variant={'caption'}>
+          {displayAmount(market.totalDebt, 6)} {underlyingAssetPetnameDisplay}
+        </Typography>
+      </TableCell>
+      {/* APY */}
       <TableCell align='right'>{displayPercent(market.latestInterestRate, 4)}%</TableCell>
-      <TableCell align='right'>{displayPercent(market.exchangeRate, 8)}%</TableCell>
-      <TableCell
-        align='right'>{balance} {protocolPetnameDisplay} / {valInThird} {thirdCurrencyPetnameDisplay}</TableCell>
+      {/* Exchange Rate */}
+      <TableCell align='right'>{displayPercent(market.exchangeRate, 8)}% </TableCell>
+      {/* MMR */}
+      <TableCell align='right'>{displayPercent(market.liquidationMargin)}% </TableCell>
     </StyledTableRow>
   );
 };

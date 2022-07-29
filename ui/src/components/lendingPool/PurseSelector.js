@@ -4,13 +4,14 @@ import { TextField, MenuItem } from '@material-ui/core';
 
 import { displayPetname } from '../helpers';
 
-const PurseSelector = ({ purses, purse, setPurse, label }) => (
+const PurseSelector = ({ purses, purse, setPurse, label, isDisabled }) => (
   <TextField
     variant="outlined"
     required
     label={label}
     select
     fullWidth
+    disabled={isDisabled}
     value={purse ? JSON.stringify(purse.pursePetname) : ''}
   >
     {purses.map(purse => (

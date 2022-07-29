@@ -187,15 +187,27 @@ export const start = async (zcf, privateArgs) => {
       assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'), '[NO_OFFER_ARGS]');
       const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
       trace('borrowHook: collateralUnderlyingBrand', collateralUnderlyingBrand);
-      const currentCollateralExchangeRate = getExchangeRateForPool(collateralUnderlyingBrand);
+      assert(
+        poolTypes.has(collateralUnderlyingBrand),
+        X`Collateral pool does not exist: ${collateralUnderlyingBrand}`,
+      );
+      /** @type PoolManager */
+      const collateralUnderlyingPool = poolTypes.get(collateralUnderlyingBrand);
 
       const {
+        give: { Collateral: { brand: collateralBrand } },
         want: { Debt: { brand: borrowBrand } },
       } = borrowerSeat.getProposal();
+
+      assert(
+        collateralBrand === collateralUnderlyingPool.getProtocolBrand(),
+        X`Not a supported collateral type ${collateralBrand}`,
+      );
       assert(
         poolTypes.has(borrowBrand),
-        X`Not a supported collateral type ${borrowBrand}`,
+        X`Not a supported pool type ${borrowBrand}`,
       );
+      const currentCollateralExchangeRate = collateralUnderlyingPool.getExchangeRate();
       const pool = poolTypes.get(borrowBrand);
       return pool.makeBorrowKit(borrowerSeat, currentCollateralExchangeRate);
     };
@@ -260,8 +272,11 @@ export const start = async (zcf, privateArgs) => {
             underlyingBrand: pm.getUnderlyingBrand(),
             protocolBrand: pm.getProtocolBrand(),
             thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
-            underlyingToThirdPriceAuthority: underlyingWrappedPriceAuthority.priceAuthority,
+            underlyingToThirdWrappedPriceAuthority: underlyingWrappedPriceAuthority,
             exchangeRate: pm.getExchangeRate(),
+            totalDebt: pm.getTotalDebt(),
+            underlyingLiquidity: pm.getUnderlyingLiquidity(),
+            protocolLiquidity: pm.getProtocolLiquidity(),
             notifier: pm.getNotifier()
           }
         }),

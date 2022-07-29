@@ -100,64 +100,20 @@ function LendingPool() {
             purses,
             approved,
             brandToInfo,
-            markets
+            markets,
+            prices,
         },
         dispatch,
         walletP,
     } = useApplicationContext();
 
     console.log(lendingPool,
-        purses,
-        approved,
-        brandToInfo, dispatch,
-        walletP);
+      purses,
+      approved,
+      brandToInfo, dispatch, prices,
+      walletP);
 
     let displayFunctions;
-
-    const makeSupplyRow = row => {
-        const {
-            displayRatio,
-            displayPercent,
-            displayBrandPetname,
-            displayAmount,
-        } = displayFunctions;
-
-        const apy = displayPercent(row.interestRate);
-        const underlyingAssetPetnameDisplay = displayBrandPetname(row.underlyingBrand);
-        const protocolPetnameDisplay = displayBrandPetname(row.protocolBrand);
-        const balance = displayAmount(getTotalBalanceAmount(purses, row.protocolBrand));
-
-        return (
-          <StyledTableRow key={underlyingAssetPetnameDisplay} hover={true} onClick={() => handleClickOpen(underlyingAssetPetnameDisplay)}>
-              <TableCell>{underlyingAssetPetnameDisplay}</TableCell>
-              <TableCell align="right">{apy}%</TableCell>
-              <TableCell align="right">{balance} {protocolPetnameDisplay}</TableCell>
-          </StyledTableRow>
-        );
-    };
-
-    const makeBorrowRow = row => {
-        const {
-            displayAmount,
-            displayPercent,
-            displayBrandPetname,
-        } = displayFunctions;
-
-        const underlyingAssetPetnameDisplay = displayBrandPetname(row.underlyingBrand);
-        const protocolPetnameDisplay = displayBrandPetname(row.protocolBrand);
-        const balance = displayAmount(getTotalBalanceAmount(purses, row.protocolBrand));
-
-        return (
-          <StyledTableRow key={underlyingAssetPetnameDisplay} hover={true} onClick={() => handleClickOpen(underlyingAssetPetnameDisplay)}>
-              <TableCell scope='row' size='small'>
-                  {underlyingAssetPetnameDisplay}
-              </TableCell>
-              <TableCell align='right'>{displayPercent(row.interestRate)}%</TableCell>
-              <TableCell align='right'>{balance} {protocolPetnameDisplay}</TableCell>
-              <TableCell align='right'>{displayPercent(row.liquidationMargin)}%</TableCell>
-          </StyledTableRow>
-        );
-    };
 
     const getActualUI = markets => {
         return (
@@ -167,32 +123,21 @@ function LendingPool() {
                       <Table>
                           <TableHead>
                               <TableRow >
-                                  <StyledTableCell>Underlying Asset</StyledTableCell>
+                                  <StyledTableCell>Asset</StyledTableCell>
+                                  <StyledTableCell align='right'>Total Supply</StyledTableCell>
+                                  <StyledTableCell align='right'>Total Protocol Supply</StyledTableCell>
+                                  <StyledTableCell align='right'>Total Borrow</StyledTableCell>
                                   <StyledTableCell align='right'>APY</StyledTableCell>
                                   <StyledTableCell align='right'>Exchange Rate</StyledTableCell>
-                                  <StyledTableCell align='right'>Supply Balance</StyledTableCell>
+                                  <StyledTableCell align='right'>MMR</StyledTableCell>
                               </TableRow>
                           </TableHead>
                           <TableBody>{Object.values(markets).map(market =>
                             <Market
                               market={market}
                               handleClickOpen={handleClickOpen}
-                              displayFunctions={displayFunctions}/>)}</TableBody>
-                      </Table>
-                  </TableContainer>
-              </div>
-              <div className={classes.borrow}>
-                  <TableContainer component={Paper}>
-                      <Table>
-                          <TableHead>
-                              <TableRow>
-                                  <StyledTableCell>Underlying Asset</StyledTableCell>
-                                  <StyledTableCell align='right'>APY</StyledTableCell>
-                                  <StyledTableCell align='right'>Balance</StyledTableCell>
-                                  <StyledTableCell align='right'>% Of Limit</StyledTableCell>
-                              </TableRow>
-                          </TableHead>
-                          <TableBody>{Object.values(markets).map(makeBorrowRow)}</TableBody>
+                              displayFunctions={displayFunctions}
+                              priceQuote={prices[market.brand]} />)}</TableBody>
                       </Table>
                   </TableContainer>
               </div>
@@ -202,9 +147,9 @@ function LendingPool() {
 
     const getUI = () => {
         console.log('inside getUI');
-        if (lendingPool && markets && brandToInfo.length > 0 && purses) {
+        if (lendingPool && markets && brandToInfo.length > 0 && purses && prices) {
             displayFunctions = makeDisplayFunctions(brandToInfo);
-            E(lendingPool.publicFacet).helloWorld().then(msg => console.log(msg, "MOTHER FUCKER"));
+            E(lendingPool.publicFacet).helloWorld().then(msg => console.log(msg, "From LendingPool"));
             console.log("Markets:", markets);
             return getActualUI(markets);
         } else {

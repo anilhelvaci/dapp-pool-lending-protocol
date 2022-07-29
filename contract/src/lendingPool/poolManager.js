@@ -109,8 +109,8 @@ export const makePoolManager = (
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
     getProtocolBrand: () => protocolBrand,
     getProtocolIssuer: () => protocolIssuer,
-    getProtocolLiquidity: () => totalProtocolSupply.value,
-    getUnderlyingLiquidity: () => underlyingAssetSeat.getAmountAllocated("Underlying"),
+    getProtocolLiquidity: () => totalProtocolSupply,
+    getUnderlyingLiquidity: (brand) => underlyingAssetSeat.getAmountAllocated("Underlying", brand),
     getUnderlyingBrand: () => underlyingBrand,
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
@@ -180,7 +180,9 @@ export const makePoolManager = (
     latestInterestRate: getCurrentBorrowingRate(),
     latestInterestUpdate,
     totalDebt,
-    exchangeRate: getExchangeRate()
+    exchangeRate: getExchangeRate(),
+    underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+    protocolLiquidity: shared.getProtocolLiquidity()
   }
 
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
@@ -224,7 +226,9 @@ export const makePoolManager = (
       latestInterestRate: interestRate,
       latestInterestUpdate,
       totalDebt,
-      exchangeRate: getExchangeRate()
+      exchangeRate: getExchangeRate(),
+      underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+      protocolLiquidity: shared.getProtocolLiquidity()
     });
     assetUpdater.updateState(payload);
 
@@ -426,6 +430,18 @@ export const makePoolManager = (
       debtsPerCollateral.setupLiquidator(liquidationInstall, ammPublicFacet)
     ]);
     trace('LoanKit', loanKit);
+
+    /** @type {AssetState} */
+    const payload = harden({
+      compoundedInterest,
+      latestInterestRate: shared.getCurrentBorrowingRate(),
+      latestInterestUpdate,
+      totalDebt,
+      exchangeRate: getExchangeRate(),
+      underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+      protocolLiquidity: shared.getProtocolLiquidity()
+    });
+    assetUpdater.updateState(payload);
     return loanKit;
   };
 
@@ -459,6 +475,18 @@ export const makePoolManager = (
     zcf.reallocate(seat, underlyingAssetSeat);
     seat.exit();
 
+    /** @type {AssetState} */
+    const payload = harden({
+      compoundedInterest,
+      latestInterestRate: shared.getCurrentBorrowingRate(),
+      latestInterestUpdate,
+      totalDebt,
+      exchangeRate: getExchangeRate(),
+      underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+      protocolLiquidity: shared.getProtocolLiquidity()
+    });
+    assetUpdater.updateState(payload);
+
     return "Success, thanks for doing business with us";
   };
 
@@ -479,13 +507,13 @@ export const makePoolManager = (
 
       const {
         give: { Underlying: fundAmount },
-        want: { Protocol: protocolAmount },
       } = fundHolderSeat.getProposal();
-      assert(AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)), X`The amounts should be equal`);
-      protocolMint.mintGains(harden({ Protocol: protocolAmount }), protocolAssetSeat);
-      totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmount);
+
+      const protocolAmountToMint = shared.getProtocolAmountOut(fundAmount);
+      protocolMint.mintGains(harden({ Protocol: protocolAmountToMint }), protocolAssetSeat);
+      totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmountToMint);
       fundHolderSeat.incrementBy(
-        protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmount })),
+        protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmountToMint })),
       );
 
       underlyingAssetSeat.incrementBy(
@@ -494,6 +522,18 @@ export const makePoolManager = (
 
       zcf.reallocate(fundHolderSeat, underlyingAssetSeat, protocolAssetSeat);
       fundHolderSeat.exit();
+
+      /** @type {AssetState} */
+      const payload = harden({
+        compoundedInterest,
+        latestInterestRate: shared.getCurrentBorrowingRate(),
+        latestInterestUpdate,
+        totalDebt,
+        exchangeRate: getExchangeRate(),
+        underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+        protocolLiquidity: shared.getProtocolLiquidity()
+      });
+      assetUpdater.updateState(payload);
 
       return 'Finished';
     }

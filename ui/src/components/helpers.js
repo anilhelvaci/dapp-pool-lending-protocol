@@ -7,6 +7,9 @@ import {
 } from '@agoric/ui-components';
 
 import { AssetKind, AmountMath } from '@agoric/ertp';
+import { ceilMultiplyBy, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
+import { Nat } from '@endo/nat';
 
 export const getPurseAssetKind = purse =>
   (purse && purse.displayInfo && purse.displayInfo.assetKind) || undefined;
@@ -17,6 +20,9 @@ export const displayPetname = pn => (Array.isArray(pn) ? pn.join('.') : pn);
 
 export const filterPursesByBrand = (purses, desiredBrand) =>
   purses.filter(({ brand }) => brand === desiredBrand);
+
+export const filterProtocolPurses = purses =>
+  purses.filter(({ brandPetname }) => brandPetname.slice(0,2) === 'Ag'); // Might consider looking for a better way
 
 export const getTotalBalanceAmount = (purses, desiredBrand) => {
   let totalValue = 0n;
@@ -64,11 +70,20 @@ export const makeDisplayFunctions = brandToInfo => {
     );
   };
 
+  const computeAmountInCompare = (quote, amountIn) => {
+    const decimalPlaces = getDecimalPlaces(amountIn.brand);
+    return ceilMultiplyBy(amountIn, makeRatioFromAmounts(
+      getAmountOut(quote),
+      AmountMath.make(amountIn.brand, 10n ** Nat(decimalPlaces)),
+    ));
+  };
+
   return {
     displayPercent,
     displayBrandPetname,
     displayRatio,
     displayAmount,
     getDecimalPlaces,
+    computeAmountInCompare,
   };
 };

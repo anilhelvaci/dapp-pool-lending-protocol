@@ -9,6 +9,7 @@ import Box from '@material-ui/core/Box';
 import { makeNatAmountInput } from '@agoric/ui-components';
 import { TextField } from '@material-ui/core';
 import Supply from "./Supply";
+import Borrow from "./Borrow.js";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -84,7 +85,7 @@ const PoolTabsLayout = ({ market, handleClose }) => {
           aria-label="simple tabs example"
           centered>
           <Tab label="Supply" {...a11yProps(0)} />
-          <Tab label="Withdraw" {...a11yProps(1)} />
+          <Tab label="Borrow" {...a11yProps(1)} />
         </Tabs>
       </AppBar>
       <TabPanel value={value} index={0}>
@@ -92,22 +93,11 @@ const PoolTabsLayout = ({ market, handleClose }) => {
           <Supply market={market} handleClose={handleClose}/>
           {/*<NatAmountInput value={test} onChange={setTest}/>*/}
         </div>
-
       </TabPanel>
       <TabPanel value={value} index={1}>
-        <Typography>
-          Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Vivamus sagittis
-          lacus vel augue laoreet rutrum faucibus dolor auctor.
-        </Typography>
+        <div className={classes.container}>
+          <Borrow market={market} handleClose={handleClose}/>
+        </div>
       </TabPanel>
     </div>
   );

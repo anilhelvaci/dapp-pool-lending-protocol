@@ -87,9 +87,8 @@
  * @property {() => NatValue} getRecordingPeriod
  * @property {() => Brand} getProtocolBrand
  * @property {() => Issuer} getProtocolIssuer
- * @property {() => NatValue} getProtocolLiquidity - Returns the 'value' part of the Amount, might consider returning
- * the actual Amount object later
- * @property {() => Amount } getUnderlyingLiquidity
+ * @property {() => Amount} getProtocolLiquidity
+ * @property {(underlyingBrand: Brand) => Amount } getUnderlyingLiquidity
  * @property {() => Brand} getUnderlyingBrand
  * @property {(proposedDebtAmount: Amount) => void} enoughLiquidityForProposedDebt
  * @property {() => Brand} getThirdCurrencyBrand
@@ -127,6 +126,8 @@
  * @property {bigint} latestInterestUpdate - The last time an interest is accrued
  * @property {Amount<'nat'>} totalDebt
  * @property {Ratio} exchangeRate - The rate between protoclToken and underlyingAsset, effected by totalBorrow and protocolSupply
+ * @property {Amount} underlyingLiquidity
+ * @property {Amount} protocolLiquidity
  */
 
 
