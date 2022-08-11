@@ -15,6 +15,8 @@ import BrandSelector from './BrandSelector.js';
 import { getAmountOut } from '@agoric/zoe/src/contractSupport/index.js';
 import { Nat } from '@endo/nat';
 import makeBorrowOffer from './offers/makeBorrowOffer.js';
+import { createLoan } from '../../store.js';
+import { LoanStatus, VaultStatus } from '../../constants.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -73,10 +75,11 @@ const Borrow = ({ market, handleClose }) => {
         publicFacet: lendingPoolPublicFacet
       }
     },
-    walletP
+    walletP,
+    dispatch
   } = useApplicationContext();
 
-  if (brandToInfo.length === 0 || !market || !purses || !walletP || !lendingPoolPublicFacet || !prices || !markets) return null;
+  if (brandToInfo.length === 0 || !market || !purses || !walletP || !lendingPoolPublicFacet || !prices || !markets || !dispatch) return null;
 
   const classes = useStyles();
 
@@ -186,6 +189,7 @@ const Borrow = ({ market, handleClose }) => {
   };
 
   const borrowConfig = {
+    id: `${Date.now()}`,
     walletP,
     lendingPoolPublicFacet,
     collateralPurse,
@@ -201,6 +205,15 @@ const Borrow = ({ market, handleClose }) => {
 
   const handleBorrow = () => {
     makeBorrowOffer(borrowConfig);
+    dispatch(createLoan({
+      id: borrowConfig.id,
+      loan: {
+        principalDebt: borrowConfig.debtAmount,
+        locked: borrowConfig.collateralAmount,
+        liquidationRatio: market.liquidationRatio,
+        loanState: LoanStatus.PENDING,
+      },
+    }));
     handleClose();
   };
 

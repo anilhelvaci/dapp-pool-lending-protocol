@@ -41,8 +41,8 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-function AppHeader({ handleDrawerToggle, children, drawerWidth }) {
-  const classes = useStyles({ drawerWidth });
+function AppHeader({ handleDrawerToggle, children }) {
+  const classes = useStyles();
 
   return (
     <div className={classes.appBar}>

@@ -26,6 +26,7 @@ export const initial = {
   RUNStake: /** @type { RUNStakeState | null } */ (null),
   loan: /** @type { Loan | null } */ (null),
   loanAsset: /** @type { AssetState | null } */ (null),
+  loans: (null),
 };
 
 /**
@@ -78,6 +79,7 @@ export const {
     createMarket,
     addPrice,
     initVaults,
+    initLoans,
     setVaultToManageId,
     updateVault,
     updateMarket,
@@ -88,6 +90,8 @@ export const {
     setRUNStake,
     setLoan,
     setLoanAsset,
+    createLoan,
+    updateLoan,
   },
   // @ts-ignore tsc can't tell that autodux is callable
 } = autodux({
@@ -97,6 +101,9 @@ export const {
     /** @type {(state: TreasuryState) => TreasuryState} */
     initVaults: state => {
       return { ...state, vaults: {} };
+    },
+    initLoans: state => {
+      return { ...state, loans: {} };
     },
     /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
     createVault: (state, { id, vault }) => {
@@ -114,6 +121,15 @@ export const {
         markets: {
           ...state.markets,
           [id]: market,
+        },
+      };
+    },
+    createLoan: (state, { id, loan }) => {
+      return {
+        ...state,
+        loans: {
+          ...state.loans,
+          [id]: loan,
         },
       };
     },
@@ -148,6 +164,13 @@ export const {
       return {
         ...state,
         prices: { ...prices, [id]: { ...quote } },
+      };
+    },
+    updateLoan: ({ loans, ...state }, { id, loan }) => {
+      const oldLoanData = loans && loans[id];
+      return {
+        ...state,
+        loans: { ...loans, [id]: { ...oldLoanData, ...loan } },
       };
     },
     /** @type {(state: TreasuryState) => TreasuryState} */

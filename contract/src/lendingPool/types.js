@@ -181,8 +181,9 @@
 
 /**
  * @typedef {Object} LoanKit
- * @property {Notifier<AssetState>} assetNotifier
- * @property {Notifier<Object>} loanNotifier
+ * @property {Object} publicNotifiers
+ * @property {Notifier<AssetState>} publicNotifiers.assetNotifier
+ * @property {Notifier<Object>} publicNotifiers.loanNotifier
  * @property {Object} invitationMakers
  * @property {() => Promise<Invitation>} invitationMakers.AdjustBalances
  * @property {() => Promise<Invitation>} invitationMakers.CloseLoan

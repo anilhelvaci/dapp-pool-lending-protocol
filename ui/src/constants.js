@@ -20,5 +20,13 @@ export const LoanStatus = /** @type {const} */ ({
   PENDING: 'pending',
   COMPLETE: 'complete',
   ERROR: 'error',
+  LOADING: 'loading',
 });
 /** @typedef {typeof LoanStatus[keyof typeof LoanStatus]} LoanStatus */
+
+export const OperationType = {
+  DEPOSIT: 'deposit',
+  BORROW: 'borrow',
+  REDEEM: 'redeem',
+  ADJUST: 'adjust',
+}

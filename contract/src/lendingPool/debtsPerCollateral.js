@@ -32,7 +32,7 @@ const trace = makeTracer("DebtsPerCollateral");
  * and once the closest loan is underwater it executes the liquidation.
  *
  * @param {ZCF} zcf
- * @param {Brand} collateralBrand
+ * @param {Brand} collateralUnderlyingBrand
  * @param {Brand} debtBrand
  * @param {Notifier<AssetState>} assetNotifier
  * @param {WrappedPriceAuthority} wrappedCollateralPriceAuthority
@@ -45,7 +45,7 @@ const trace = makeTracer("DebtsPerCollateral");
  */
 export const makeDebtsPerCollateral = async (
   zcf,
-  collateralBrand,
+  collateralUnderlyingBrand,
   debtBrand,
   assetNotifier,
   wrappedCollateralPriceAuthority,
@@ -58,11 +58,11 @@ export const makeDebtsPerCollateral = async (
   console.log("making makeDebtsPerCollateral")
 
   const debtIssuer = zcf.getIssuerForBrand(debtBrand);
-  const collateralIssuer = zcf.getIssuerForBrand(collateralBrand);
+  const collateralIssuer = zcf.getIssuerForBrand(collateralUnderlyingBrand);
 
   const [debtDisplayInfo, collateralDisplayInfo] = await Promise.all([
     E(manager.getUnderlyingBrand()).getDisplayInfo(),
-    E(collateralBrand).getDisplayInfo()
+    E(collateralUnderlyingBrand).getDisplayInfo()
   ]);
 
   const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0;
@@ -90,7 +90,7 @@ export const makeDebtsPerCollateral = async (
       collateralUnderlyingDecimals: collateralDecimalPlaces,
       debtDecimals: debtDecimalPlaces,
       debtBrand,
-      collateralUnderlyingBrand: collateralBrand,
+      collateralUnderlyingBrand,
       compareBrand: manager.getThirdCurrencyBrand()
     },
     getExchangeRateForPool: manager.getExchangeRateForPool
@@ -118,6 +118,7 @@ export const makeDebtsPerCollateral = async (
       assetNotifier,
       loanId,
       debtBrand,
+      collateralUnderlyingBrand,
       underlyingPriceAuthority,
       wrappedCollateralPriceAuthority.priceAuthority,
     );
@@ -147,7 +148,7 @@ export const makeDebtsPerCollateral = async (
       ([key, loan]) => {
 
         const collateralValInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCollateralAmount(),
-          colLatestQuote, collateralBrand, collateralDecimalPlaces, manager.getExchangeRateForPool(collateralBrand));
+          colLatestQuote, collateralUnderlyingBrand, collateralDecimalPlaces, manager.getExchangeRateForPool(collateralUnderlyingBrand));
 
         const debtValueInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCurrentDebt(),
           debtLatestQuote, manager.getUnderlyingBrand(), debtDecimalPlaces);
@@ -187,7 +188,7 @@ export const makeDebtsPerCollateral = async (
             loan,
             liquidation.liquidator,
             manager.makeRedeemInvitation,
-            collateralBrand,
+            collateralUnderlyingBrand,
             debtIssuer,
             manager.getPenaltyRate(),
             manager.transferLiquidatedFund,
@@ -214,10 +215,10 @@ export const makeDebtsPerCollateral = async (
     ammPublicFacet
   ) => {
     const zoe = zcf.getZoeService();
-    const liquidationTerms = liquidationDetailTerms(collateralBrand);
+    const liquidationTerms = liquidationDetailTerms(collateralUnderlyingBrand);
 
     trace('setup liquidator', {
-      collateralBrand,
+      collateralUnderlyingBrand,
       liquidationTerms,
     });
     const { creatorFacet, instance } = await E(zoe).startInstance(

@@ -2,25 +2,28 @@ import { E } from "@endo/far";
 import lendingPoolDefaults from "../../../generated/lendingPoolDefaults";
 import { floorMultiplyBy, oneMinus } from "@agoric/zoe/src/contractSupport/ratio";
 import { OperationType } from '../../../constants.js';
+import { makeRatio, ratiosSame } from '@agoric/zoe/src/contractSupport/ratio.js';
 
-const makeDepositOffer = async (
+const makeRedeemOffer = async (
   {
     walletP,
     lendingPoolPublicFacet,
-    supplyPurse,
+    underlyingPurse,
     protocolPurse,
-    supplyAmount,
+    underlyingAmount,
     protocolAmount,
     slippageRatio,
   }) => {
 
   const { LENDING_POOL_INSTANCE_BOARD_ID, LENDING_POOL_INSTALL_BOARD_ID } = lendingPoolDefaults;
 
-  const invitation = E(lendingPoolPublicFacet).makeDepositInvitation(supplyAmount.brand);
+  const invitation = E(lendingPoolPublicFacet).makeRedeemInvitation(underlyingAmount.brand);
+  const safeSlippage = ratiosSame(slippageRatio, makeRatio(0n, underlyingAmount.brand)) ?
+    makeRatio(1n, underlyingAmount.brand) : slippageRatio;
 
-  const protocolExpected = floorMultiplyBy(
-    protocolAmount,
-    oneMinus(slippageRatio),
+  const underlyingExpected = floorMultiplyBy(
+    underlyingAmount,
+    oneMinus(safeSlippage),
   );
 
   const offerConfig = {
@@ -30,23 +33,22 @@ const makeDepositOffer = async (
     instanceHandleBoardId: LENDING_POOL_INSTANCE_BOARD_ID,
     proposalTemplate: {
       give: {
-        Underlying: {
-          // The pursePetname identifies which purse we want to use
-          pursePetname: supplyPurse.pursePetname,
-          value: supplyAmount.value,
+        Protocol: {
+          pursePetname: protocolPurse.pursePetname,
+          value: protocolAmount.value,
         },
       },
       want: {
-        Protocol: {
-          pursePetname: protocolPurse.pursePetname,
-          value: protocolExpected.value,
+        Underlying: {
+          pursePetname: underlyingPurse.pursePetname,
+          value: underlyingExpected.value,
         },
       },
     },
-    operation: OperationType.DEPOSIT
+    operation: OperationType.REDEEM
   };
 
   return E(walletP).addOffer(offerConfig);
 };
 
-export default makeDepositOffer;
+export default makeRedeemOffer;

@@ -23,10 +23,10 @@ const setPrice = async homeP => {
     E(E(board).getValue(USD_ISSUER_BOARD_ID)).getBrand(),
   ]);
 
-  console.log('Setting PAN/USD price to 195...');
+  console.log('Setting PAN/USD price to 250...');
   await E(priceAuth).setPrice(
     makeRatio(
-      195n * 10n ** 6n, brandOut,
+      250n * 10n ** 6n, brandOut,
       10n ** 8n, brandIn
     )
   );

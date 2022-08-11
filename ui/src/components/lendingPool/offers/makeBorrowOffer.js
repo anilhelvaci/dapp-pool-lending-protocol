@@ -1,8 +1,10 @@
 import { E } from "@endo/far";
 import lendingPoolDefaults from "../../../generated/lendingPoolDefaults";
+import { OperationType } from '../../../constants.js';
 
 const makeBorrowOffer = async (
   {
+    id,
     walletP,
     lendingPoolPublicFacet,
     collateralPurse,
@@ -15,7 +17,7 @@ const makeBorrowOffer = async (
   const { LENDING_POOL_INSTANCE_BOARD_ID, LENDING_POOL_INSTALL_BOARD_ID } = lendingPoolDefaults;
 
   const offerConfig = {
-    id: `${Date.now()}`,
+    id,
     invitation: E(lendingPoolPublicFacet).makeBorrowInvitation(),
     installationHandleBoardId: LENDING_POOL_INSTALL_BOARD_ID,
     instanceHandleBoardId: LENDING_POOL_INSTANCE_BOARD_ID,
@@ -38,6 +40,7 @@ const makeBorrowOffer = async (
         collateralUnderlyingBrand,
       },
     },
+    operation: OperationType.BORROW
   };
 
   console.log('borrowPanOfferConfig', offerConfig);

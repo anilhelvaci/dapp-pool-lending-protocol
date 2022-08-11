@@ -5,3 +5,4 @@ node_modules
 src/generated/**
 src/contexts/**
 src/components/lendingPool/**
+src/pages/**

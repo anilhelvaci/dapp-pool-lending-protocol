@@ -18,12 +18,12 @@ import { makeLiquidationObserver } from '../src/lendingPool/liquidationObserver.
 import { LARGE_DENOMINATOR, SECONDS_PER_YEAR, BASIS_POINTS } from '../src/interest.js';
 import { makeScalarMap } from '@agoric/store';
 import { Far } from '@endo/marshal';
-import { fromVaultKey, toVaultKey } from '@agoric/run-protocol/src/vaultFactory/storeUtils.js';
+// import { fromVaultKey, toVaultKey } from '@agoric/inter-protocol/src/vaultFactory/storeUtils.js';
 import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 import { waitForPromisesToSettle } from './lendingPool/test-lendingPool.js';
-import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
+import { makeAsyncIterableFromNotifier, makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import { calculateExchangeRate } from '../src/protocolMath.js';
-import { makeInterestCalculator } from '@agoric/run-protocol/src/interest.js';
+// import { makeInterestCalculator } from '@agoric/inter-protocol';
 
 const { subtract } = natSafeMath;
 
@@ -341,6 +341,33 @@ test('notifier', async t => {
 
   t.is('dummy', 'dummy');
 });
+
+test('final-state', async t => {
+  const newspaper = makeNotifierKit();
+
+  const publishNewsPaper = async () => {
+    newspaper.updater.updateState('Aug 1');
+    newspaper.updater.updateState('Aug 2');
+    newspaper.updater.updateState('Aug 3');
+    newspaper.updater.finish('Nov 2');
+    console.log('step3');
+  };
+
+  const readNewspaper = async () => {
+    const iter = makeAsyncIterableFromNotifier(newspaper.notifier);
+
+    console.log('step2');
+
+    for await (const headlines of iter) {
+      console.log(headlines);
+    }
+  };
+
+  console.log('stpe1');
+  await Promise.all([publishNewsPaper(), readNewspaper()]);
+
+  t.is('test', 'test');
+})
 
 test('any', async t => {
   const pro1 = new Promise((resolve, reject) => {

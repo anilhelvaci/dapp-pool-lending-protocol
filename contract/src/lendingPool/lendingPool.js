@@ -104,8 +104,10 @@ export const start = async (zcf, privateArgs) => {
    * @returns ERef<PoolManager>
    */
   const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => { // TODO priceAuth as an argument
-    await zcf.saveIssuer(underlyingIssuer, underlyingKeyword);
-    const protocolMint = await zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, { decimalPlaces: 6 });
+    const [_, protocolMint] = await Promise.all([
+      zcf.saveIssuer(underlyingIssuer, underlyingKeyword),
+      zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, { decimalPlaces: 6 })
+    ]);
     const { brand: protocolBrand } = protocolMint.getIssuerRecord();
     const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
     // We create only one loan per collateralType.
@@ -268,6 +270,7 @@ export const start = async (zcf, privateArgs) => {
           return {
             brand,
             latestInterestRate: pm.getCurrentBorrowingRate(),
+            // compoundedInterest: pm.getCompoundedInterest(),
             liquidationMargin: pm.getLiquidationMargin(),
             underlyingBrand: pm.getUnderlyingBrand(),
             protocolBrand: pm.getProtocolBrand(),

@@ -63,6 +63,7 @@ const validTransitions = {
  * @param {Notifier<AssetState>} assetNotifier
  * @param {string} idInManager
  * @param {Brand} debtBrand
+ * @param {Brand} collateralUnderlyingBrand
  * @param {ERef<PriceAuthority>} debtPriceAuthority
  * @param {ERef<PriceAuthority>} collateralPriceAuthority
  */
@@ -72,6 +73,7 @@ export const makeInnerLoan = (
   assetNotifier,
   idInManager,
   debtBrand,
+  collateralUnderlyingBrand,
   debtPriceAuthority,
   collateralPriceAuthority
 ) => {
@@ -95,6 +97,7 @@ export const makeInnerLoan = (
     loanSeat: zcf.makeEmptySeatKit().zcfSeat,
     interestSnapshot: manager.getCompoundedInterest(),
     debtSnapshot: AmountMath.makeEmpty(debtBrand),
+    collateralUnderlyingBrand,
   };
 
   // #region Phase logic
@@ -278,21 +281,16 @@ export const makeInnerLoan = (
   };
 
   const snapshotState = newPhase => {
-    const { debtSnapshot: debt, interestSnapshot: interest } = state;
+    const { debtSnapshot: debt, interestSnapshot: interest, collateralUnderlyingBrand } = state;
 
     return harden({
-      // TODO move manager state to a separate notifer https://github.com/Agoric/agoric-sdk/issues/4540
-      interestRate: manager.getCurrentBorrowingRate(),
       liquidationRatio: manager.getLiquidationMargin(),
-      // XXX 'run' is implied by the brand in the amount
       debtSnapshot: { debt, interest },
       locked: getCollateralAmount(),
-      // newPhase param is so that makeTransferInvitation can finish without setting the loan's phase
-      // TODO refactor https://github.com/Agoric/agoric-sdk/issues/4415
       loanState: newPhase,
+      collateralUnderlyingBrand,
     });
   };
-
 
   const updateUiState = () => {
     const { outerUpdater } = state;
@@ -343,6 +341,7 @@ export const makeInnerLoan = (
     assertCloseable();
     const { phase, loanSeat } = state;
     const proposal = seat.getProposal();
+    const currentDebt = getCurrentDebt();
     if (phase === LoanPhase.ACTIVE) {
       assertProposalShape(seat, {
         give: { Debt: null },
@@ -352,7 +351,6 @@ export const makeInnerLoan = (
       // you're paying off the debt, you get everything back. If you were
       // underwater, we should have liquidated some collateral earlier: we
       // missed our chance.
-      const currentDebt = getCurrentDebt();
       const {
         give: { Debt: debtOffered },
       } = proposal;
@@ -371,7 +369,7 @@ export const makeInnerLoan = (
         ),
       );
       manager.stageUnderlyingAllocation(proposal);
-      seat.decrementBy(harden({ Debt: debtOffered }));
+      seat.decrementBy(harden({ Debt: currentDebt }));
       manager.reallocateBetweenSeats(seat, loanSeat);
     } else if (phase === LoanPhase.LIQUIDATED) {
       // Simply reallocate loan assets to the offer seat.
@@ -384,7 +382,7 @@ export const makeInnerLoan = (
 
     seat.exit();
     assignPhase(LoanPhase.CLOSED);
-    updateDebtSnapshot(AmountMath.makeEmpty(debtBrand));
+    updateDebtAccounting(currentDebt, AmountMath.makeEmpty(debtBrand));
     updateUiState();
 
     assertLoanHoldsNoRun();
@@ -676,9 +674,9 @@ export const makeInnerLoan = (
 
     const loanKit = makeLoanKit(innerLoan, state.assetNotifier);
     state.outerUpdater = loanKit.loanUpdater;
-    updateUiState();
     state.loanKey = loanKey;
     updateDebtAccounting(oldDebt, proposedDebtAmount);
+    updateUiState();
 
     return loanKit;
   };

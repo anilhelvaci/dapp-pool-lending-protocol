@@ -24,7 +24,7 @@ const styles = (theme) => ({
   }
 });
 
-const useStyles = makeStyles(() => ({
+export const useStyles = makeStyles(() => ({
   container: {
     '& .MuiDialog-container': {
       '& .MuiDialog-paperWidthSm': {
@@ -35,7 +35,7 @@ const useStyles = makeStyles(() => ({
   }
 }));
 
-const DialogTitle = withStyles(styles)((props) => {
+export const DialogTitle = withStyles(styles)((props) => {
   const { children, classes, onClose, ...other } = props;
   return (
     <MuiDialogTitle disableTypography className={classes.root} {...other}>
@@ -49,7 +49,7 @@ const DialogTitle = withStyles(styles)((props) => {
   );
 });
 
-const DialogContent = withStyles((theme) => ({
+export const DialogContent = withStyles((theme) => ({
   root: {
     padding: theme.spacing(2),
   },
@@ -85,11 +85,6 @@ const PoolDialog = ({ open, handleClose, name, market, displayFunctions }) => {
         <DialogContent dividers>
           <PoolTabsLayout market={market} handleClose={handleClose}/>
         </DialogContent>
-        {/*<DialogActions>*/}
-        {/*  <Button autoFocus onClick={handleClose} color='primary'>*/}
-        {/*    Save changes*/}
-        {/*  </Button>*/}
-        {/*</DialogActions>*/}
       </Dialog>
     </div>
   );

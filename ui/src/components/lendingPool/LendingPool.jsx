@@ -1,3 +1,5 @@
+import AppBar from '@material-ui/core/AppBar';
+
 console.log('zaa');
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
@@ -10,6 +12,13 @@ import {useApplicationContext} from '../../contexts/Application';
 import { E } from '@endo/far';
 import { StyledTableCell, StyledTableRow } from "./StyledTableComponents";
 import Market from "./Market";
+import Tabs from '@material-ui/core/Tabs';
+import Tab from '@material-ui/core/Tab';
+import { a11yProps, TabPanel } from '../TabPanelHelper.js';
+import Supply from './Supply.js';
+import Borrow from './Borrow.js';
+import Deposits from './Deposits.js';
+import Loans from './Loans.js';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -20,27 +29,18 @@ const useStyles = makeStyles((theme) => ({
     },
     profile: {
         width: '100%',
-        padding: theme.spacing(2),
+        paddingLeft: theme.spacing(2),
+        paddingRight: theme.spacing(2),
+        paddingTop: theme.spacing(2),
+        paddingBottom: theme.spacing(1),
     },
     body: {
-        display: 'flex',
+        // display: 'flex',
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'center',
         padding: theme.spacing(2),
-    },
-    supply: {
-        // textAlign: 'center',
-        marginRight: theme.spacing(1),
-        flexGrow: 1,
-        flexBasis: 0,
-    },
-    borrow: {
-        textAlign: 'center',
-        flexGrow: 1 ,
-        flexBasis: 0,
-        padding: 0,
-        marginLeft: theme.spacing(1),
+        paddingTop: theme.spacing(1)
     },
     test: {
         marginTop: 0,
@@ -52,7 +52,39 @@ const useStyles = makeStyles((theme) => ({
     },
     dialog: {
         width: 500,
-    }
+    },
+    appBar: {
+        backgroundColor: 'white',
+        marginBottom: theme.spacing(1),
+    },
+    horizontalContainer: {
+        display: 'flex',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+    supply: {
+        // textAlign: 'center',
+        flexGrow: 1,
+        marginTop: theme.spacing(1),
+        flexBasis: 0,
+    },
+    horizontalItemLeft: {
+        flexGrow: 1,
+        marginRight: theme.spacing(1),
+        flexBasis: 0,
+    },
+    horizontalItemRight: {
+        flexGrow: 1,
+        marginLeft: theme.spacing(1),
+        flexBasis: 0,
+    },
+    borrow: {
+        textAlign: 'center',
+        flexGrow: 1 ,
+        flexBasis: 0,
+        padding: 0,
+        marginLeft: theme.spacing(1),
+    },
 }));
 
 const createSupplyData = (asset, apy, balance, collateral) => {
@@ -85,6 +117,7 @@ function LendingPool() {
     const [open, setOpen] = React.useState(false);
     const [name, setName] = React.useState('-');
     const [selectedMarket, setSelectedMarket] = React.useState(null);
+    const [value, setValue] = React.useState(0);
 
     const handleClickOpen = (selectedMarket) => {
         setSelectedMarket(selectedMarket);
@@ -117,30 +150,28 @@ function LendingPool() {
 
     const getActualUI = markets => {
         return (
-          <div className={classes.body}>
-              <div className={classes.supply}>
-                  <TableContainer component={Paper}>
-                      <Table>
-                          <TableHead>
-                              <TableRow >
-                                  <StyledTableCell>Asset</StyledTableCell>
-                                  <StyledTableCell align='right'>Total Supply</StyledTableCell>
-                                  <StyledTableCell align='right'>Total Protocol Supply</StyledTableCell>
-                                  <StyledTableCell align='right'>Total Borrow</StyledTableCell>
-                                  <StyledTableCell align='right'>APY</StyledTableCell>
-                                  <StyledTableCell align='right'>Exchange Rate</StyledTableCell>
-                                  <StyledTableCell align='right'>MMR</StyledTableCell>
-                              </TableRow>
-                          </TableHead>
-                          <TableBody>{Object.values(markets).map(market =>
-                            <Market
-                              market={market}
-                              handleClickOpen={handleClickOpen}
-                              displayFunctions={displayFunctions}
-                              priceQuote={prices[market.brand]} />)}</TableBody>
-                      </Table>
-                  </TableContainer>
-              </div>
+          <div className={classes.supply} >
+              <TableContainer component={Paper}>
+                  <Table>
+                      <TableHead>
+                          <TableRow >
+                              <StyledTableCell>Asset</StyledTableCell>
+                              <StyledTableCell align='right'>Total Supply</StyledTableCell>
+                              <StyledTableCell align='right'>Total Protocol Supply</StyledTableCell>
+                              <StyledTableCell align='right'>Total Borrow</StyledTableCell>
+                              <StyledTableCell align='right'>APY</StyledTableCell>
+                              <StyledTableCell align='right'>Exchange Rate</StyledTableCell>
+                              <StyledTableCell align='right'>MMR</StyledTableCell>
+                          </TableRow>
+                      </TableHead>
+                      <TableBody>{Object.values(markets).map(market =>
+                        <Market
+                          market={market}
+                          handleClickOpen={handleClickOpen}
+                          displayFunctions={displayFunctions}
+                          priceQuote={prices[market.brand]} />)}</TableBody>
+                  </Table>
+              </TableContainer>
           </div>
         )
     };
@@ -168,7 +199,33 @@ function LendingPool() {
           <div className={classes.profile}>
               <Profile/>
           </div>
-          {getUI()}
+          <div className={classes.body}>
+              <Paper className={classes.appBar} elevation={4} >
+                  <Tabs
+                    value={value}
+                    onChange={(_, newValue) => setValue(newValue)}
+                    aria-label="simple tabs example"
+                    textColor={'primary'}
+                    indicatorColor={'primary'}
+                    centered>
+                      <Tab label="Markets" {...a11yProps(0)} />
+                      <Tab label="Activity" {...a11yProps(1)} />
+                  </Tabs>
+              </Paper>
+              <TabPanel value={value} index={0}  >
+                  {getUI()}
+              </TabPanel>
+              <TabPanel value={value} index={1} >
+                  <div className={classes.horizontalContainer}>
+                      <div className={classes.horizontalItemLeft}>
+                          <Deposits/>
+                      </div>
+                      <div className={classes.horizontalItemRight}>
+                          <Loans/>
+                      </div>
+                  </div>
+              </TabPanel>
+          </div>
           <PoolDialog open={open} name={name} handleClose={handleClose} market={selectedMarket} displayFunctions={displayFunctions}/>
       </div>
     )

@@ -31,6 +31,7 @@ import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
+import { oneMinus } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const test = unknownTest;
 
@@ -576,7 +577,7 @@ test('borrow', async t => {
   const loan = loanKit.loan;
 
   let loanCurrentDebt = await E(loan).getCurrentDebt();
-
+  trace('loanKit', loanKit);
   // Assert if the actual is debt is equal to the wanted debt or not
   t.deepEqual(loanCurrentDebt, debtProposal.want.Debt);
 });
@@ -1337,16 +1338,19 @@ test('close-loan', async t => {
   const [
     aliceCloseOfferResult,
     aliceClosePayout,
-    state
+    state,
+    poolTotalDebt,
   ] = await Promise.all([
     E(aliceCloseSeat).getOfferResult(),
     E(aliceCloseSeat).getPayout('Collateral'),
-    E(E(aliceLoan).getNotifier()).getUpdateSince()
+    E(E(aliceLoan).getNotifier()).getUpdateSince(),
+    E(panPoolMan).getTotalDebt()
   ]);
 
   t.is(aliceCloseOfferResult, 'your loan is closed, thank you for your business');
   t.is(state.value.loanState, LoanPhase.CLOSED);
   t.deepEqual(aliceClosePayout, aliceCollateralPayment);
+  t.deepEqual(poolTotalDebt, AmountMath.makeEmpty(panBrand));
 });
 
 /**
@@ -1451,34 +1455,48 @@ test('redeem-underlying', async t => {
   const loanKit = await E(borrowerUserSeat).getOfferResult();
   const loan = loanKit.loan;
 
-  const loanCurrentDebt = await E(loan).getCurrentDebt();
+  const [loanCurrentDebt, borrowingRateBeforeInterest, initialExchangeRate] = await Promise.all([
+    E(loan).getCurrentDebt(),
+    E(panPoolMan).getCurrentBorrowingRate(),
+    E(panPoolMan).getExchangeRate()
+  ])
 
   t.deepEqual(loanCurrentDebt, AmountMath.make(panBrand, 4n * 10n ** 6n));
   // Borrowing rate should be 258 basis points
-  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(258n, panBrand, BASIS_POINTS));
+  t.deepEqual(borrowingRateBeforeInterest, makeRatio(258n, panBrand, BASIS_POINTS));
+  t.deepEqual(initialExchangeRate.numerator, AmountMath.make(panBrand, 2000000n));
 
   // interest time
   await timer.tick();
   await waitForPromisesToSettle();
 
-  const debtAfterInterest = await E(loan).getCurrentDebt();
+  const [debtAfterInterest, currentBorrowingRate, currentExchangeRate] = await Promise.all([
+    E(loan).getCurrentDebt(),
+    E(panPoolMan).getCurrentBorrowingRate(),
+    E(panPoolMan).getExchangeRate()
+  ])
 
   t.deepEqual(debtAfterInterest, AmountMath.make(panBrand, 4n * 10n ** 6n + 1960n));
-  t.deepEqual(await E(panPoolMan).getCurrentBorrowingRate(), makeRatio(259n, panBrand, BASIS_POINTS));
-  t.deepEqual((await E(panPoolMan).getExchangeRate()).numerator, AmountMath.make(panBrand, 2000004n));
+  t.deepEqual(currentBorrowingRate , makeRatio(259n, panBrand, BASIS_POINTS));
+  t.deepEqual(currentExchangeRate.numerator, AmountMath.make(panBrand, 2000004n));
+
+  const askedUnderlyingAmount = AmountMath.make(panBrand, 10n ** 8n); // We want to redeem 1 unit of PAN
+  const correspondingProtocolAmount = floorDivideBy(askedUnderlyingAmount, initialExchangeRate);
+  const slippageRatio = makeRatio(2n, panBrand);
+  const underlyingMinusSlippage = floorMultiplyBy(askedUnderlyingAmount, oneMinus(slippageRatio));
 
   // Slice the protocol tokens received after supplying liquidity to PAN pool
   const [redeemPayment, panDepositedMoneyMinusRedeem] =
     await E(agPanIssuer).split(panPoolDepositMoney.payment,
-      AmountMath.make(agPanBrand, 1n * 10n ** 8n * 50n));
+      correspondingProtocolAmount);
 
   const redeemPaymentAmount = await E(agPanIssuer).getAmountOf(redeemPayment);
 
   const redeemProposal = {
     give: { Protocol: redeemPaymentAmount},
-    want: { Underlying: AmountMath.makeEmpty(panBrand) } // We don't know how much we'll receive after withdrawel
+    want: { Underlying: underlyingMinusSlippage }
   };
-
+  trace('redeemProposal', redeemProposal);
   trace('redeemPayment', redeemPaymentAmount);
   const redeemPaymentRecord = {
     Protocol: redeemPayment
@@ -1494,13 +1512,14 @@ test('redeem-underlying', async t => {
 
   const [
     redeemPayout,
+    protocolPayout,
     redeemOfferResult,
     redeemCurrentAllocation,
   ] = await Promise.all([
     E(redeemUserSeat).getPayout("Underlying"),
+    E(redeemUserSeat).getPayout("Protocol"),
     E(redeemUserSeat).getOfferResult(),
     E(redeemUserSeat).getCurrentAllocation(),
-
   ])
 
   trace('redeemData', {
@@ -1510,10 +1529,12 @@ test('redeem-underlying', async t => {
 
   const [
     redeemAmount,
+    protocolAmount,
     borrowingRate,
     exchangeRate
   ] = await Promise.all([
     E(panIssuer).getAmountOf(redeemPayout),
+    E(agPanIssuer).getAmountOf(protocolPayout),
     E(panPoolMan).getCurrentBorrowingRate(),
     E(panPoolMan).getExchangeRate()
   ]);
@@ -1521,6 +1542,7 @@ test('redeem-underlying', async t => {
   t.deepEqual(redeemAmount , AmountMath.make(panBrand, 100000200n));
   t.deepEqual(borrowingRate , makeRatio(259n, panBrand, BASIS_POINTS));
   t.deepEqual(exchangeRate.numerator, AmountMath.make(panBrand, 2000004n));
+  t.deepEqual(protocolAmount, AmountMath.makeEmpty(agPanBrand));
 });
 
 test('amm-play-around', async t => {
@@ -1707,7 +1729,7 @@ test('collateral-price-drop-liquidate', async t => {
 
   const aliceLoanKit = await E(aliceSeat).getOfferResult();
   const aliceLoan = aliceLoanKit.loan;
-  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
+  const aliceLoanNotifier = aliceLoanKit.publicNotifiers.loanNotifier;
 
   panUsdPriceAuthority.setPrice(makeRatio(200n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
@@ -1834,7 +1856,7 @@ test('debt-price-up-liquidate', async t => {
 
   const aliceLoanKit = await E(aliceSeat).getOfferResult();
   const aliceLoan = aliceLoanKit.loan;
-  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
+  const aliceLoanNotifier = aliceLoanKit.publicNotifiers.loanNotifier;
 
   const notificationBefore = await E(aliceLoanNotifier).getUpdateSince();
   t.is(notificationBefore.value.loanState, LoanPhase.ACTIVE);
@@ -1957,7 +1979,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
 
   const aliceLoanKit = await E(aliceSeat).getOfferResult();
   const aliceLoan = aliceLoanKit.loan;
-  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
+  const aliceLoanNotifier = aliceLoanKit.publicNotifiers.loanNotifier;
 
   const notificationBefore = await E(aliceLoanNotifier).getUpdateSince();
   t.is(notificationBefore.value.loanState, LoanPhase.ACTIVE);
@@ -2079,7 +2101,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     35n * 10n ** 6n); // Debt value is 63 USD
 
   const aliceLoan = aliceLoanKit.loan;
-  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
+  const aliceLoanNotifier = aliceLoanKit.publicNotifiers.loanNotifier;
 
   // Get a loan for Maggie
   const {
@@ -2095,7 +2117,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     4n * 10n ** 6n); // Debt value is 7 USD
 
   const maggieLoan = maggieLoanKit.loan;
-  const maggieLoanNotifier = maggieLoanKit.loanNotifier;
+  const maggieLoanNotifier = maggieLoanKit.publicNotifiers.loanNotifier;
 
   // Get a loan for Bob
   const {
@@ -2111,7 +2133,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     18n * 10n ** 6n); // Debt value is 32 USD
 
   const bobLoan = bobLoanKit.loan;
-  const bobLoanNotifier = bobLoanKit.loanNotifier;
+  const bobLoanNotifier = bobLoanKit.publicNotifiers.loanNotifier;
 
   const [aliceNotificationBefore, maggieNotificationBefore, bobNotificationBefore] = await Promise.all([
     E(aliceLoanNotifier).getUpdateSince(),
@@ -2257,7 +2279,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
     4019n * 10n ** 4n); // Debt value is 71 USD
 
   const aliceLoan = aliceLoanKit.loan;
-  const aliceLoanNotifier = aliceLoanKit.loanNotifier;
+  const aliceLoanNotifier = aliceLoanKit.publicNotifiers.loanNotifier;
 
   const aliceNotificationBefore = await E(aliceLoanNotifier).getUpdateSince();
   t.is(aliceNotificationBefore.value.loanState, LoanPhase.ACTIVE);

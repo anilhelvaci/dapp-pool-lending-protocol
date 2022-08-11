@@ -52,31 +52,31 @@ function Top() {
           drawerWidth={navigationDrawerWidth}
         ></AppHeader>
         <div className={classes.body}>
-          <ResponsiveNavigation
-            drawerWidth={navigationDrawerWidth}
-            isOpen={false}
-            setIsOpen={setIsOpen}
-          >
-            <NavDrawer />
-          </ResponsiveNavigation>
+          {/*<ResponsiveNavigation*/}
+          {/*  drawerWidth={navigationDrawerWidth}*/}
+          {/*  isOpen={false}*/}
+          {/*  setIsOpen={setIsOpen}*/}
+          {/*>*/}
+          {/*  <NavDrawer />*/}
+          {/*</ResponsiveNavigation>*/}
 
           <main className={classes.content}>
             <Switch>
               <Route path='/lending-pool'>
                 <LendingPool />
               </Route>
-              <Route path='/vaults'>
-                <Treasury />
-              </Route>
-              <Route path='/manageVault'>
-                <VaultManagement />
-              </Route>
-              <Route path='/run-stake'>
-                <RunStake />
-              </Route>
-              <Route path='/'>
-                <NewVault />
-              </Route>
+              {/*<Route path='/vaults'>*/}
+              {/*  <Treasury />*/}
+              {/*</Route>*/}
+              {/*<Route path='/manageVault'>*/}
+              {/*  <VaultManagement />*/}
+              {/*</Route>*/}
+              {/*<Route path='/run-stake'>*/}
+              {/*  <RunStake />*/}
+              {/*</Route>*/}
+              {/*<Route path='/'>*/}
+              {/*  <NewVault />*/}
+              {/*</Route>*/}
             </Switch>
           </main>
         </div>
