@@ -7,7 +7,12 @@ import {
 } from '@agoric/ui-components';
 
 import { AssetKind, AmountMath } from '@agoric/ertp';
-import { ceilMultiplyBy, makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import {
+  ceilMultiplyBy,
+  floorDivideBy,
+  floorMultiplyBy, makeRatio,
+  makeRatioFromAmounts,
+} from '@agoric/zoe/src/contractSupport/ratio.js';
 import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { Nat } from '@endo/nat';
 
@@ -78,6 +83,32 @@ export const makeDisplayFunctions = brandToInfo => {
     ));
   };
 
+  const computeDebtToAllowedLimitRatio = ({
+                                            debtAmount,
+                                            collateralAmount,
+                                            collateralExchangeRate,
+                                            liquidationMargin,
+                                            prices,
+                                          }) => {
+
+    const debtToCompareQuote = prices[debtAmount.brand];
+    const collateralUnderlyingToCompareQuote = prices[collateralExchangeRate.numerator.brand];
+
+    const debtAmountInCompare = computeAmountInCompare(debtToCompareQuote, debtAmount);
+    const collateralUnderlyingAmount = floorMultiplyBy(collateralAmount, collateralExchangeRate);
+    const collateralAmountInCompare = computeAmountInCompare(collateralUnderlyingToCompareQuote, collateralUnderlyingAmount);
+    const allowedLimit = floorDivideBy(collateralAmountInCompare, liquidationMargin);
+    return AmountMath.isEmpty(allowedLimit) ? makeRatio(0n, collateralUnderlyingAmount.brand) : makeRatioFromAmounts(debtAmountInCompare, allowedLimit);
+  };
+
+  const displayPrice = (baseBrand, compareBrand, prices) => {
+    if (baseBrand && prices[baseBrand]) {
+      const quote = prices[baseBrand];
+      return `1 ${displayBrandPetname(baseBrand)} = ${displayAmount(getAmountOut(quote))} ${displayBrandPetname(compareBrand)}`
+    }
+    return '-'
+  }
+
   return {
     displayPercent,
     displayBrandPetname,
@@ -85,5 +116,7 @@ export const makeDisplayFunctions = brandToInfo => {
     displayAmount,
     getDecimalPlaces,
     computeAmountInCompare,
+    displayPrice,
+    computeDebtToAllowedLimitRatio,
   };
 };

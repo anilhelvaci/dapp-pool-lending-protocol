@@ -108,7 +108,8 @@ const Borrow = ({ market, handleClose }) => {
     displayAmount,
     displayRatio,
     getDecimalPlaces,
-    computeAmountInCompare
+    computeAmountInCompare,
+    displayPrice,
   } = makeDisplayFunctions(brandToInfo);
 
   const underlyingPetname = displayBrandPetname(market.underlyingBrand);
@@ -217,14 +218,6 @@ const Borrow = ({ market, handleClose }) => {
     handleClose();
   };
 
-  const displayPrice = (baseBrand, compareBrand) => {
-    if (baseBrand && prices[baseBrand]) {
-      const quote = prices[baseBrand];
-      return `1 ${displayBrandPetname(baseBrand)} = ${displayAmount(getAmountOut(quote))} ${displayBrandPetname(compareBrand)}`
-    }
-    return '-'
-  }
-
   return (
     <div className={classes.root}>
       <Grid container spacing={3}>
@@ -325,12 +318,12 @@ const Borrow = ({ market, handleClose }) => {
         <Grid item xs={1}/>
         <Grid item xs={6}>
           <TextField id='outlined-basic' label={`${underlyingPetname} / ${comparePetname}`} variant='outlined' fullWidth
-                     value={displayPrice(market.underlyingBrand, market.thirdCurrencyBrand)} />
+                     value={displayPrice(market.underlyingBrand, market.thirdCurrencyBrand, prices)} />
         </Grid>
 
         <Grid item xs={6}>
           <TextField id='outlined-basic' label={`Collateral / ${comparePetname}`} variant='outlined' fullWidth
-                     value={displayPrice(collateralUnderlyingBrand, market.thirdCurrencyBrand)} />
+                     value={displayPrice(collateralUnderlyingBrand, market.thirdCurrencyBrand, prices)} />
         </Grid>
         <Grid item xs={12}>
           <Divider variant="fullWidth" />

@@ -24,7 +24,7 @@ const styles = (theme) => ({
   }
 });
 
-export const useStyles = makeStyles(() => ({
+export const useStyles = makeStyles((theme) => ({
   container: {
     '& .MuiDialog-container': {
       '& .MuiDialog-paperWidthSm': {
@@ -32,6 +32,9 @@ export const useStyles = makeStyles(() => ({
         width: '60%',
       }
     }
+  },
+  marginTop: {
+    marginTop: theme.spacing(2),
   }
 }));
 

@@ -29,4 +29,10 @@ export const OperationType = {
   BORROW: 'borrow',
   REDEEM: 'redeem',
   ADJUST: 'adjust',
-}
+};
+
+export const AdjustActions = {
+  GIVE: 'give',
+  WANT: 'want',
+  NO_ACTION: 'no-action',
+};

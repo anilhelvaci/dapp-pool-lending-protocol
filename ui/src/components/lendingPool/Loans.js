@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { Table, TableBody, TableContainer, TableHead, TableRow } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import { StyledTableCell } from './StyledTableComponents.js';
 import LoanItem from './LoanItem.js';
 import Typography from '@material-ui/core/Typography';
+import AdjustDialog from './AdjustDialog.js';
+import LoanManagementDialog from './LoanManagementDialog.js';
 
 const Loans = ({}) => {
   const {
@@ -14,6 +16,9 @@ const Loans = ({}) => {
     }
   } = useApplicationContext();
 
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedLoanMetadata, setSelectedLoanMetadata] = useState({});
+
   if(brandToInfo.length === 0 ) return null;
 
   if(!loans ) return (
@@ -21,6 +26,11 @@ const Loans = ({}) => {
       There is no loan yet.
     </Typography>
   );
+
+  const handleOpen = metadata => {
+    setSelectedLoanMetadata(metadata);
+    setIsOpen(true);
+  };
 
   return (
     <div>
@@ -38,10 +48,12 @@ const Loans = ({}) => {
           <TableBody>{Object.values(loans).map(loan =>
             <LoanItem
               loan={loan}
+              handleOpen={handleOpen}
             />,
           )}</TableBody>
         </Table>
       </TableContainer>
+      <LoanManagementDialog open={isOpen} handleClose={() => setIsOpen(false)} loanMetadata={selectedLoanMetadata}/>
     </div>
   );
 };

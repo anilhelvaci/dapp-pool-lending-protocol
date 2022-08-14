@@ -5,8 +5,7 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import { makeNatAmountInput } from '@agoric/ui-components';
 import { TextField } from '@material-ui/core';
-import Supply from './Supply';
-import Borrow from './Borrow.js';
+import AdjustForm from './AdjustForm.js';
 import { a11yProps, TabPanel } from '../TabPanelHelper.js';
 
 const useStyles = makeStyles((theme) => ({
@@ -16,30 +15,30 @@ const useStyles = makeStyles((theme) => ({
   },
   container: {
     display: "flex",
+    paddingTop: theme.spacing(1),
   },
   item: {
-    flexGrow: 1,
-    margin: theme.spacing(1)
+    // flexGrow: 1,
+    marginTop: theme.spacing(1)
   }
 }));
 
 const NatAmountInput = makeNatAmountInput({ React, TextField });
 
-const PoolTabsLayout = ({ market, handleClose }) => {
+const LoanManagementTabLayout = ({ loanMetadata, handleClose }) => {
   const classes = useStyles();
   const [value, setValue] = React.useState(0);
-  const [test, setTest] = useState(BigInt(1))
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-  if (!market) return null;
-
-  const underlyingBrand = market.underlyingBrand;
-  const protocolBrand = market.protocolBrand;
-
-  const [underlyingInput, setUndelyingInput] = useState(null);
+  const {
+    loan,
+    debtMarket,
+    collateralUnderlyingMarket,
+    debtToCollateralRatioLimit,
+  } = loanMetadata;
 
   return (
     <div className={classes.root}>
@@ -49,22 +48,23 @@ const PoolTabsLayout = ({ market, handleClose }) => {
           onChange={handleChange}
           aria-label="simple tabs example"
           centered>
-          <Tab label="Supply" {...a11yProps(0)} />
-          <Tab label="Borrow" {...a11yProps(1)} />
+          <Tab label="Close" {...a11yProps(0)} />
+          <Tab label="Adjust" {...a11yProps(1)} />
         </Tabs>
       </AppBar>
       <TabPanel value={value} index={0}>
         <div className={classes.container}>
-          <Supply market={market} handleClose={handleClose}/>
+          Close Loan
         </div>
       </TabPanel>
       <TabPanel value={value} index={1}>
         <div className={classes.container}>
-          <Borrow market={market} handleClose={handleClose}/>
+          <AdjustForm loan={loan} debtMarket={debtMarket} collateralUnderlyingMarket={collateralUnderlyingMarket}
+                      debtToCollateralRatioLimit={debtToCollateralRatioLimit} handleClose={handleClose} />
         </div>
       </TabPanel>
     </div>
   );
 };
 
-export default PoolTabsLayout;
+export default LoanManagementTabLayout;

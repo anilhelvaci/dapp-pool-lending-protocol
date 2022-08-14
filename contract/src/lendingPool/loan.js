@@ -539,7 +539,7 @@ export const makeInnerLoan = (
    */
   const adjustBalancesHook = async (clientSeat, offerArgs) => {
     assert(typeof offerArgs == 'object');
-    assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'));
+    assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'), 'OfferArgs should contain a collateralUnderlyingBrand object');
     const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
 
     const oldUpdater = state.outerUpdater;

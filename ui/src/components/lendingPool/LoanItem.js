@@ -13,7 +13,7 @@ import {
 import { AmountMath } from '@agoric/ertp';
 import { makeAsyncIterableFromNotifier } from '@agoric/notifier';
 
-const LoanItem = ({ loan }) => {
+const LoanItem = ({ loan, handleOpen }) => {
 
   const {
     state: {
@@ -31,6 +31,7 @@ const LoanItem = ({ loan }) => {
     displayRatio,
     displayBrandPetname,
     computeAmountInCompare,
+    computeDebtToAllowedLimitRatio,
   } = makeDisplayFunctions(brandToInfo);
 
   const {
@@ -57,22 +58,35 @@ const LoanItem = ({ loan }) => {
   const underlyingMarket = markets[debtBrand];
   const collateralUnderlyingMarket = markets[collateralUnderlyingBrand];
   const debtToCompareQuote = prices[debtBrand];
-  const collatealToCompareQuote = prices[collateralUnderlyingBrand];
+  const collateralToCompareQuote = prices[collateralUnderlyingBrand];
 
   const compareCurrencyPetname = displayBrandPetname(underlyingMarket.thirdCurrencyBrand);
   const debtPetname = displayBrandPetname(debtBrand);
   const collateralPetname = displayBrandPetname(collateralBrand);
 
+  const collateralAmountInCompare = computeAmountInCompare(collateralToCompareQuote,
+    floorMultiplyBy(locked, collateralUnderlyingMarket.exchangeRate));
   const debtAmountInCompare = computeAmountInCompare(debtToCompareQuote, debtSnapshot.debt);
-  const collateralUnderlyingAmount = floorMultiplyBy(locked, collateralUnderlyingMarket.exchangeRate);
-  const collateralAmountInCompare = computeAmountInCompare(collatealToCompareQuote, collateralUnderlyingAmount);
-  const allowedLimit = floorDivideBy(collateralAmountInCompare, underlyingMarket.liquidationMargin);
-  const debtToCollateralRatio = AmountMath.isEmpty(allowedLimit) ? makeRatio(0n, collateralUnderlyingBrand) : makeRatioFromAmounts(debtAmountInCompare, allowedLimit);
+
+  const debtToCollateralRatioLimit = computeDebtToAllowedLimitRatio({
+    debtAmount: debtSnapshot.debt,
+    collateralAmount: locked,
+    collateralExchangeRate: collateralUnderlyingMarket.exchangeRate,
+    liquidationMargin: underlyingMarket.liquidationMargin,
+    prices,
+  });
 
   const currentDebt = calculateCurrentDebt(debtSnapshot.debt, debtSnapshot.interest, underlyingMarket.compoundedInterest);
 
+  const loanMetadata = {
+    loan,
+    debtMarket: underlyingMarket,
+    collateralUnderlyingMarket,
+    debtToCollateralRatioLimit
+  };
+
   return (
-    <StyledTableRow key={debtPetname} hover={true}>
+    <StyledTableRow key={debtPetname} hover={true} onClick={() => handleOpen(loanMetadata)}>
       {/* Debt Asset */}
       <TableCell>{debtPetname}</TableCell>
       {/*Collateral Locked*/}
@@ -81,7 +95,7 @@ const LoanItem = ({ loan }) => {
           {displayAmount(collateralAmountInCompare)} {compareCurrencyPetname}
         </Typography>
         <Typography variant={'caption'}>
-          {displayAmount(locked, 6 )} {collateralPetname}
+          {displayAmount(locked)} {collateralPetname}
         </Typography>
       </TableCell>
       {/*Borrow Balance*/}
@@ -90,13 +104,13 @@ const LoanItem = ({ loan }) => {
           {displayAmount(debtAmountInCompare)} {compareCurrencyPetname}
         </Typography>
         <Typography variant={'caption'}>
-          {displayAmount(debtSnapshot.debt, 6 )} {debtPetname}
+          {displayAmount(debtSnapshot.debt)} {debtPetname}
         </Typography>
       </TableCell>
       {/*State*/}
       <TableCell align={'right'}>{loanState}</TableCell>
       {/* % Of Limit */}
-      <TableCell align={'right'}>%{displayPercent(debtToCollateralRatio)}</TableCell>
+      <TableCell align={'right'}>%{displayPercent(debtToCollateralRatioLimit)}</TableCell>
     </StyledTableRow>
   )
 };

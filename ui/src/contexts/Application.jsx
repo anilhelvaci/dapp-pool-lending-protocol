@@ -64,16 +64,14 @@ function watchVault(id, dispatch, offerStatus) {
     dispatch(
       updateLoan({
         id,
-        loan: { loanState: LoanStatus.PENDING },
+        loan: { id, loanState: LoanStatus.PENDING },
       }),
     );
   } else {
     dispatch(
       updateLoan({
         id,
-        loan: {
-          loanState: LoanStatus.LOADING,
-        },
+        loan: { id, loanState: LoanStatus.LOADING },
       }),
     );
   }
