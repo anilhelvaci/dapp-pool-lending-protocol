@@ -7,6 +7,7 @@ import { makeNatAmountInput } from '@agoric/ui-components';
 import { TextField } from '@material-ui/core';
 import AdjustForm from './AdjustForm.js';
 import { a11yProps, TabPanel } from '../TabPanelHelper.js';
+import CloseForm from './CloseForm.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -54,7 +55,8 @@ const LoanManagementTabLayout = ({ loanMetadata, handleClose }) => {
       </AppBar>
       <TabPanel value={value} index={0}>
         <div className={classes.container}>
-          Close Loan
+          <CloseForm handleClose={handleClose} debtMarket={debtMarket}
+                     collateralUnderlyingMarket={collateralUnderlyingMarket} loan={loan} />
         </div>
       </TabPanel>
       <TabPanel value={value} index={1}>

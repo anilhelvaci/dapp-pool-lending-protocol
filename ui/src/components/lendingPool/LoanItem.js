@@ -66,7 +66,8 @@ const LoanItem = ({ loan, handleOpen }) => {
 
   const collateralAmountInCompare = computeAmountInCompare(collateralToCompareQuote,
     floorMultiplyBy(locked, collateralUnderlyingMarket.exchangeRate));
-  const debtAmountInCompare = computeAmountInCompare(debtToCompareQuote, debtSnapshot.debt);
+  const currentDebt = calculateCurrentDebt(debtSnapshot.debt, debtSnapshot.interest, underlyingMarket.compoundedInterest);
+  const debtAmountInCompare = computeAmountInCompare(debtToCompareQuote, currentDebt);
 
   const debtToCollateralRatioLimit = computeDebtToAllowedLimitRatio({
     debtAmount: debtSnapshot.debt,
@@ -75,8 +76,6 @@ const LoanItem = ({ loan, handleOpen }) => {
     liquidationMargin: underlyingMarket.liquidationMargin,
     prices,
   });
-
-  const currentDebt = calculateCurrentDebt(debtSnapshot.debt, debtSnapshot.interest, underlyingMarket.compoundedInterest);
 
   const loanMetadata = {
     loan,
@@ -104,7 +103,7 @@ const LoanItem = ({ loan, handleOpen }) => {
           {displayAmount(debtAmountInCompare)} {compareCurrencyPetname}
         </Typography>
         <Typography variant={'caption'}>
-          {displayAmount(debtSnapshot.debt)} {debtPetname}
+          {displayAmount(currentDebt)} {debtPetname}
         </Typography>
       </TableCell>
       {/*State*/}

@@ -139,7 +139,6 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
   const handleActionChange = (value, setAction, setVisibility) => {
     setAction(value);
     upadteVisibility(value, setVisibility);
-    // updateLimit();
   };
 
   const upadteVisibility = (value, setVisibility) => {
@@ -159,7 +158,6 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
     const collateralUnderlyingAmount = computeUnderlyingFromCollateral(collateralAmount);
     setCollateralAmount(collateralAmount);
     setCollateralUnderlyingAmount(collateralUnderlyingAmount);
-    // updateLimit();
   };
 
   const handleCollateralUnderlyingChange = value => {
@@ -167,12 +165,10 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
     const collateralAmount = computeCollateralFromUnderlying(collateralUnderlyingAmount);
     setCollateralUnderlyingAmount(collateralUnderlyingAmount);
     setCollateralAmount(collateralAmount);
-    // updateLimit();
   };
 
   const handleDebtChange = value => {
     setDebtAmount(debt(value));
-    // updateLimit();
   };
 
   const computeCollateralAfterTransaction = () => {
@@ -344,60 +340,6 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
             </Button>
           </div>
         </Grid>
-        {/*<Grid item xs={6}>*/}
-        {/*  <NatAmountInputRedeemUnderlying*/}
-        {/*    value={underlyingAmount.value}*/}
-        {/*    onChange={handleOnUnderlyingChange}*/}
-        {/*    placesToShow={5}*/}
-        {/*    decimalPlaces={getDecimalPlaces(market.underlyingBrand)}*/}
-        {/*    label='Underlying Amount'*/}
-        {/*  />*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={2} />*/}
-        {/*<Grid item xs={4}>*/}
-        {/*  <PurseSelector*/}
-        {/*    purse={underlyingPurse}*/}
-        {/*    purses={underlyingPurses}*/}
-        {/*    setPurse={setUnderlyingPurse}*/}
-        {/*    label='To - Underlying Purse'*/}
-        {/*  />*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={12}>*/}
-        {/*  <Divider variant="fullWidth" />*/}
-        {/*  <Typography variant="h6" noWrap className={classes.paddingTopOne}>*/}
-        {/*    Parameters*/}
-        {/*  </Typography>*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={6}>*/}
-        {/*  <TextField*/}
-        {/*    id="outlined-basic"*/}
-        {/*    label="Exchange Rate"*/}
-        {/*    variant="outlined"*/}
-        {/*    fullWidth*/}
-        {/*    value={`1 ${displayBrandPetname(market.underlyingBrand)} = ${displayRatio(invertRatio(market.exchangeRate))} ${displayBrandPetname(market.protocolBrand)}`}*/}
-        {/*    InputProps={{*/}
-        {/*      readOnly: true,*/}
-        {/*    }} />*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={3} />*/}
-        {/*<Grid item xs={3}>*/}
-        {/*  <TextField id="outlined-basic" label="Slippage" variant="outlined" onChange={handleOnSlippageChange}*/}
-        {/*             value={`${displayPercent(slippageRatio)}%`} />*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={12}>*/}
-        {/*  <Divider variant="fullWidth" />*/}
-        {/*</Grid>*/}
-        {/*<Grid item xs={12}>*/}
-        {/*  <div style={{ display: "flex", justifyContent: "flex-end" }}>*/}
-        {/*    <Button onClick={handleClose} color="primary" variant={"outlined"}>*/}
-        {/*      Cancel*/}
-        {/*    </Button>*/}
-        {/*    <Button onClick={() => handleRedeemUnderlying(redeemConfig)} color="primary" variant={"contained"}*/}
-        {/*            className={classes.marginLeftOne}>*/}
-        {/*      Redeem*/}
-        {/*    </Button>*/}
-        {/*  </div>*/}
-        {/*</Grid>*/}
       </Grid>
     </div>
   );

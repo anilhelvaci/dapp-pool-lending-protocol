@@ -88,6 +88,7 @@ function watchVault(id, dispatch, offerStatus) {
     }
     const { value: lastState } = await E(loan).getUpdateSince();
     dispatch(updateLoan({ id, loan: { ...lastState } }));
+    console.log("==== watched loan", lastState);
     // window.localStorage.setItem(id, JSON.stringify(lastState));
   }
 
@@ -135,15 +136,6 @@ function watchOffers(dispatch, INSTANCE_BOARD_ID) {
                 loan: { loanState: LoanStatus.DECLINED },
               }),
             );
-          } else if (window.localStorage.getItem(id)) {
-            const loanLastState = window.localStorage.getItem(id);
-            dispatch(
-              updateLoan({
-                id,
-                loan: { ...loanLastState },
-              }),
-            );
-            watchedLoans.add(id);
           } else if (!watchedLoans.has(id)) {
             watchedLoans.add(id);
             watchVault(id, dispatch, status);

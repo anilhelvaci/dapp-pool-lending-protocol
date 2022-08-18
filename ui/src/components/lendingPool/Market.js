@@ -8,10 +8,11 @@ import {
 } from '@agoric/zoe/src/contractSupport';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@endo/nat';
+import { makeDisplayFunctions } from '../helpers.js';
 
 let count = 1;
 
-const Market = ({ market, displayFunctions, handleClickOpen, priceQuote }) => {
+const Market = ({ market, brandToInfo, handleClickOpen, priceQuote }) => {
   console.log('Count', count);
   count++;
   const {
@@ -19,7 +20,7 @@ const Market = ({ market, displayFunctions, handleClickOpen, priceQuote }) => {
     displayBrandPetname,
     displayAmount,
     getDecimalPlaces,
-  } = displayFunctions;
+  } = makeDisplayFunctions(brandToInfo);
 
   const underlyingAssetPetnameDisplay = displayBrandPetname(market.underlyingBrand);
   const compareAssetPetnameDisplay = displayBrandPetname(market.thirdCurrencyBrand);
