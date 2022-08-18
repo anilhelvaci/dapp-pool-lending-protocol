@@ -13,14 +13,10 @@ import { filterPursesByBrand, getTotalBalanceAmount, makeDisplayFunctions, sortP
 import { AmountMath } from '@agoric/ertp';
 import { assert } from '@agoric/assert';
 import { floorDivideBy, floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
-import makeRedeemOffer from './offers/makeRedeemOffer.js';
 import AdjustActionChooser from './AdjustActionChooser.js';
-import ArrowRightAltSharpIcon from '@material-ui/icons/ArrowRightAltSharp';
-import ArrowForwardRoundedIcon from '@material-ui/icons/ArrowForwardRounded';
-import TrendingFlatRoundedIcon from '@material-ui/icons/TrendingFlatRounded';
 import { AdjustActions } from '../../constants.js';
 import makeAdjustOffer from './offers/makeAdjustOffer.js';
+import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -75,6 +71,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
       prices,
     },
     walletP,
+    dispatch,
   } = useApplicationContext();
 
   const [collateralAction, setCollateralAction] = useState(AdjustActions.NO_ACTION);
@@ -223,6 +220,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
 
     makeAdjustOffer(adjustConfig).catch(err => console.log('Error makeAdjustOffer', err));
     handleClose();
+    dispatch(setSnackbarState({open: true, message: 'Please approve adjust offer from your wallet'}))
   };
 
   return (

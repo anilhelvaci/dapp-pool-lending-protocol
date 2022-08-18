@@ -5,13 +5,9 @@ import { useApplicationContext } from '../../contexts/Application.jsx';
 import { makeDisplayFunctions } from '../helpers.js';
 import { calculateCurrentDebt } from '@agoric/run-protocol/src/interest-math.js';
 import {
-  floorDivideBy,
-  floorMultiplyBy, makeRatio,
-  makeRatioFromAmounts,
-  quantize,
+  floorMultiplyBy,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
-import { AmountMath } from '@agoric/ertp';
-import { makeAsyncIterableFromNotifier } from '@agoric/notifier';
+import AppProgressBar from './AppProgressBar.js';
 
 const LoanItem = ({ loan, handleOpen }) => {
 
@@ -23,33 +19,26 @@ const LoanItem = ({ loan, handleOpen }) => {
     }
   } = useApplicationContext();
 
-  if (brandToInfo.length === 0 || !markets || !prices) return null;
+  if (brandToInfo.length === 0 || !markets || !prices) return (
+    <AppProgressBar/>
+  );
 
   const {
     displayAmount,
     displayPercent,
-    displayRatio,
     displayBrandPetname,
     computeAmountInCompare,
     computeDebtToAllowedLimitRatio,
   } = makeDisplayFunctions(brandToInfo);
 
   const {
-    principalDebt,
     locked,
     debtSnapshot,
     loanState,
     collateralUnderlyingBrand,
   } = loan;
 
-  if (!debtSnapshot || !locked) return (
-    <div>
-      <Typography>
-        We cannot help you when there is no debtSnaphot or locked collateral
-      </Typography>
-    </div>
-  );
-
+  console.log('[LOAN_ITEM] LoanState', loanState);
   if (loanState !== 'active') return null;
 
   const debtBrand = debtSnapshot.debt.brand;

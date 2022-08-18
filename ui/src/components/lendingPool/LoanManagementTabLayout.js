@@ -3,8 +3,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-import { makeNatAmountInput } from '@agoric/ui-components';
-import { TextField } from '@material-ui/core';
 import AdjustForm from './AdjustForm.js';
 import { a11yProps, TabPanel } from '../TabPanelHelper.js';
 import CloseForm from './CloseForm.js';
@@ -23,8 +21,6 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(1)
   }
 }));
-
-const NatAmountInput = makeNatAmountInput({ React, TextField });
 
 const LoanManagementTabLayout = ({ loanMetadata, handleClose }) => {
   const classes = useStyles();

@@ -14,6 +14,7 @@ import { AmountMath } from '@agoric/ertp';
 import { floorDivideBy, floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
 import makeRedeemOffer from './offers/makeRedeemOffer.js';
+import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -57,10 +58,9 @@ const RedeemForm = ({ market, handleClose }) => {
         publicFacet: lendingPoolPublicFacet
       }
     },
-    walletP
+    walletP,
+    dispatch,
   } = useApplicationContext();
-
-
 
   const handleOnProtocolChange = protocolValue => {
     const protocolAmount = AmountMath.make(market.protocolBrand, protocolValue);
@@ -86,6 +86,7 @@ const RedeemForm = ({ market, handleClose }) => {
   const handleRedeemUnderlying = redeemConfig => {
     makeRedeemOffer(redeemConfig);
     handleClose();
+    dispatch(setSnackbarState({open: true, message: 'Please approve redeem offer from your wallet'}))
   };
 
   if (brandToInfo.length === 0 || !market || !purses || !walletP || !lendingPoolPublicFacet) return null;

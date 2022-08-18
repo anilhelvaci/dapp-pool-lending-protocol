@@ -14,6 +14,10 @@ import Treasury from '../components/Treasury';
 import VaultManagement from '../components/vault/VaultManagement/VaultManagement';
 import RunStake from '../components/runStake/RunStake';
 import LendingPool from '../components/lendingPool/LendingPool';
+import Snackbar from '@material-ui/core/Snackbar';
+import Alert from '@material-ui/lab/Alert';
+import { useApplicationContext } from '../contexts/Application.jsx';
+import { setSnackbarState } from '../store.js';
 
 const navigationDrawerWidth = 240;
 
@@ -36,6 +40,9 @@ const useStyles = makeStyles(theme => ({
       padding: 0,
     },
   },
+  snackbar: {
+    backgroundColor: theme.palette.secondary.main,
+  }
 }));
 
 function Top() {
@@ -43,6 +50,21 @@ function Top() {
   const handleDrawerToggle = () => setIsOpen(!isOpen);
 
   const classes = useStyles();
+
+  const {
+    state: {
+      snackbarState: {
+        open,
+        message,
+        stick
+      }
+    },
+    dispatch,
+  } = useApplicationContext();
+
+  const handleClose = () => {
+    dispatch(setSnackbarState({ open: false, message: '' }))
+  };
 
   return (
     <Router>
@@ -79,6 +101,14 @@ function Top() {
               {/*</Route>*/}
             </Switch>
           </main>
+          <Snackbar open={open} autoHideDuration={stick ? null : 6000} onClose={handleClose} anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }} >
+            <Alert onClose={handleClose} severity="info" variant={'filled'} className={classes.snackbar}>
+              {message}
+            </Alert>
+          </Snackbar>
         </div>
       </div>
     </Router>

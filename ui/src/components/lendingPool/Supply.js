@@ -14,6 +14,7 @@ import { makeRatio } from "@agoric/zoe/src/contractSupport/ratio";
 import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat";
 import Button from "@material-ui/core/Button";
 import makeDepositOffer from "./offers/makeDepositOffer";
+import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -55,7 +56,8 @@ const Supply = ({ market, handleClose }) => {
         publicFacet: lendingPoolPublicFacet
       }
     },
-    walletP
+    walletP,
+    dispatch,
   } = useApplicationContext();
 
   if (brandToInfo.length === 0 || !market || !purses || !walletP || !lendingPoolPublicFacet) return null;
@@ -146,6 +148,7 @@ const Supply = ({ market, handleClose }) => {
   const handleSupplyAsset = () => {
     makeDepositOffer(supplyConfig);
     handleClose();
+    dispatch(setSnackbarState({open: true, message: 'Please approve supply offer from your wallet'}));
   };
 
   return (

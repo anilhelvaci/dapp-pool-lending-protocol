@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from '@material-ui/core/Paper';
-import { Radio, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@material-ui/core';
+import {
+  Table,
+  TableBody,
+  TableContainer,
+  TableHead,
+  TableRow,
+
+} from '@material-ui/core';
 import Profile from './Profile';
 import PoolDialog from './Dialog';
 import { makeDisplayFunctions, getTotalBalanceAmount } from '../helpers';
@@ -15,6 +22,8 @@ import { a11yProps, TabPanel } from '../TabPanelHelper.js';
 import Deposits from './Deposits.js';
 import Loans from './Loans.js';
 import { AGORIC_LOGO_URL } from '../../constants.js';
+import AppProgressBar from './AppProgressBar.js';
+import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -29,6 +38,10 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: theme.spacing(2),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(1),
+  },
+  paddingTopAndBottomByTwo: {
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
   },
   body: {
     // display: 'flex',
@@ -101,6 +114,10 @@ const useStyles = makeStyles((theme) => ({
     transform: 'scale(0.9)',
     width: 200,
   },
+  approve: {
+    width: 'fit-content',
+    margin: 'auto',
+  }
 }));
 
 function LendingPool() {
@@ -128,6 +145,9 @@ function LendingPool() {
       markets,
       prices,
       loans,
+      snackbarState: {
+        open: snackbarOpen,
+      }
     },
     dispatch,
     walletP,
@@ -140,6 +160,14 @@ function LendingPool() {
     walletP);
 
   let displayFunctions;
+
+  if (!approved && !snackbarOpen) {
+    dispatch(setSnackbarState({
+      open: true,
+      message: 'To continue, please approve the LendingPool Dapp in your wallet.',
+      stick: true,
+    }));
+  }
 
   const getActualUI = markets => {
     return (
@@ -178,18 +206,14 @@ function LendingPool() {
       return getActualUI(markets);
     } else {
       return (
-        <div className={classes.body}>
-          <Typography>
-            Loading...
-          </Typography>
-        </div>
+        <AppProgressBar />
       );
     }
   };
 
   const getProfile = () => {
     if (!lendingPool || !purses || !approved || brandToInfo.length === 0 || !markets || !prices || !dispatch || !walletP || !loans) return (
-      <Typography>Profile Loading...</Typography>
+      <AppProgressBar/>
     );
     return <Profile markets={markets} brandToInfo={brandToInfo} loans={loans} prices={prices} purses={purses}/>
   };

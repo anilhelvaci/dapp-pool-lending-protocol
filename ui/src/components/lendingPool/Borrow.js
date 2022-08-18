@@ -12,10 +12,9 @@ import { floorDivideBy, floorMultiplyBy, invertRatio } from "@agoric/zoe/src/con
 import Typography from "@material-ui/core/Typography";
 import Button from "@material-ui/core/Button";
 import BrandSelector from './BrandSelector.js';
-import { getAmountOut } from '@agoric/zoe/src/contractSupport/index.js';
 import { Nat } from '@endo/nat';
 import makeBorrowOffer from './offers/makeBorrowOffer.js';
-import { createLoan } from '../../store.js';
+import { createLoan, setSnackbarState } from '../../store.js';
 import { LoanStatus, VaultStatus } from '../../constants.js';
 
 const useStyles = makeStyles((theme) => ({
@@ -73,7 +72,7 @@ const Borrow = ({ market, handleClose }) => {
       markets,
       lendingPool: {
         publicFacet: lendingPoolPublicFacet
-      }
+      },
     },
     walletP,
     dispatch
@@ -216,6 +215,7 @@ const Borrow = ({ market, handleClose }) => {
       },
     }));
     handleClose();
+    dispatch(setSnackbarState({open: true, message: 'Please approve borrow offer from your wallet'}))
   };
 
   return (

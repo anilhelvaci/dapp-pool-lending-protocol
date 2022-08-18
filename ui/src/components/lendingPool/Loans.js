@@ -4,9 +4,10 @@ import { Table, TableBody, TableContainer, TableHead, TableRow } from '@material
 import Paper from '@material-ui/core/Paper';
 import { StyledTableCell } from './StyledTableComponents.js';
 import LoanItem from './LoanItem.js';
-import Typography from '@material-ui/core/Typography';
-import AdjustDialog from './AdjustDialog.js';
 import LoanManagementDialog from './LoanManagementDialog.js';
+import AppProgressBar from './AppProgressBar.js';
+import { LoanStatus } from '../../constants.js';
+import NoLoansToShow from './NoLoansToShow.js';
 
 const Loans = ({}) => {
   const {
@@ -19,12 +20,19 @@ const Loans = ({}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLoanMetadata, setSelectedLoanMetadata] = useState({});
 
-  if(brandToInfo.length === 0 ) return null;
+  if(brandToInfo.length === 0 || !loans ) return (
+    <AppProgressBar/>
+  );
 
-  if(!loans ) return (
-    <Typography>
-      There is no loan yet.
-    </Typography>
+  const hasActiveLoans = () => {
+    for (const { loanState } of Object.values(loans)) {
+      if (loanState === LoanStatus.ACTIVE) return true;
+    }
+    return false;
+  };
+
+  if(!hasActiveLoans()) return (
+    <NoLoansToShow/>
   );
 
   const handleOpen = metadata => {

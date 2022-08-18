@@ -27,6 +27,7 @@ export const initial = {
   loan: /** @type { Loan | null } */ (null),
   loanAsset: /** @type { AssetState | null } */ (null),
   loans: (null),
+  snackbarState: { open: false, message: '', stick: null },
 };
 
 /**
@@ -92,6 +93,7 @@ export const {
     setLoanAsset,
     createLoan,
     updateLoan,
+    setSnackbarState,
   },
   // @ts-ignore tsc can't tell that autodux is callable
 } = autodux({

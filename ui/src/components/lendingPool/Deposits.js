@@ -3,9 +3,9 @@ import { useApplicationContext } from '../../contexts/Application';
 import { Table, TableBody, TableContainer, TableHead, TableRow, Typography } from '@material-ui/core';
 import Paper from '@material-ui/core/Paper';
 import { StyledTableCell } from './StyledTableComponents.js';
-import Market from './Market.js';
 import DepositedItem from './DepositedItem.js';
 import RedeemDialog from './RedeemDialog.js';
+import AppProgressBar from './AppProgressBar.js';
 
 const Deposits = ({}) => {
   const {
@@ -21,11 +21,7 @@ const Deposits = ({}) => {
   const [selectedMarket, setSelectedMarket] = useState(null);
 
   if (brandToInfo.length === 0 || !purses || !prices || !markets) return (
-    <div>
-      <Typography>
-        Something's missing...
-      </Typography>
-    </div>
+    <AppProgressBar/>
   );
 
   const handleOnOpen = market => {

@@ -11,6 +11,7 @@ import { filterPursesByBrand, makeDisplayFunctions, sortPurses } from '../helper
 import { floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import makeCloseOffer from './offers/makeCloseOffer.js';
 import { calculateCurrentDebt } from '@agoric/run-protocol/src/interest-math.js';
+import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
   paddingTopOne: {
@@ -30,6 +31,7 @@ const CloseForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket, 
       brandToInfo,
     },
     walletP,
+    dispatch,
   } = useApplicationContext();
 
   if (brandToInfo.length === 0 || !purses || !walletP) return null;
@@ -71,6 +73,7 @@ const CloseForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket, 
 
     makeCloseOffer(closeConfig).catch(err => console.log('Error when sending close loan transaction with the config', closeConfig, 'with the error', err));
     handleClose();
+    dispatch(setSnackbarState({open: true, message: 'Please approve close loan offer from your wallet'}))
   };
 
   return (
