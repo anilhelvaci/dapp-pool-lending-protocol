@@ -81,8 +81,8 @@ export default async function addPanToPool(homeP) {
     E(wallet).getPurse(protocolPursePetname)
   ]);
 
-  console.log('Depositing protocol...')
-  await E(protocolPurse).deposit(protocolPayment);
+  // console.log('Depositing protocol...')
+  // await E(protocolPurse).deposit(protocolPayment);
 
   console.log('Done...');
 }

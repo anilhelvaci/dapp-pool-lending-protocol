@@ -248,7 +248,7 @@ export const makePoolManager = (
     // TODO https://github.com/Agoric/agoric-sdk/issues/4599
   const applyDebtDelta = (oldDebtOnLoan, newDebtOnLoan) => {
       const delta = newDebtOnLoan.value - oldDebtOnLoan.value;
-      trace(`updating total debt ${totalDebt} by ${delta}`);
+      trace(`updating total debt ${totalDebt.value} by ${delta}`);
       if (delta === 0n) {
         // nothing to do
         return;

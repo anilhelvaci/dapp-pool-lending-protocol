@@ -327,3 +327,50 @@ export const getLiquidityFromFaucet = async (zoe, invitation, unit, brand, keywo
 
   return await E(faucetSeat).getPayout(keyword);
 };
+
+/**
+ *
+ * @param t
+ * @param {PoolManager} poolManager
+ */
+export const makeMarketStateChecker = async (t, poolManager) => {
+
+  const poolAssetStateNotifier = await E(poolManager).getNotifier();
+
+  const checkMarketStateInSync = async () => {
+    const [{ value: /** @type AssetState */ latestPoolNotification },
+      underlyingLiquidity,
+      protocolLiquidity,
+      borrowingRate,
+      totalDebt,
+      exchangeRate] = await Promise.all([
+      E(poolAssetStateNotifier).getUpdateSince(),
+      E(poolManager).getUnderlyingLiquidity(),
+      E(poolManager).getProtocolLiquidity(),
+      E(poolManager).getCurrentBorrowingRate(),
+      E(poolManager).getTotalDebt(),
+      E(poolManager).getExchangeRate(),
+    ]);
+
+    trace('STATE_SYNC_CHECK', {
+      borrowingRate,
+      stateLatestInterestRate : latestPoolNotification.latestInterestRate,
+      totalDebt,
+      stateTotalDebt: latestPoolNotification.totalDebt,
+      exchangeRate,
+      stateExchangeRate: latestPoolNotification.exchangeRate
+    });
+
+    t.deepEqual(underlyingLiquidity, latestPoolNotification.underlyingLiquidity);
+    t.deepEqual(protocolLiquidity, latestPoolNotification.protocolLiquidity);
+    t.deepEqual(borrowingRate, latestPoolNotification.latestInterestRate);
+    t.deepEqual(totalDebt, latestPoolNotification.totalDebt);
+    t.deepEqual(exchangeRate, latestPoolNotification.exchangeRate);
+
+  };
+
+  return harden({
+    checkMarketStateInSync
+  });
+
+}

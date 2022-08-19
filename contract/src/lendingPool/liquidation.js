@@ -89,8 +89,9 @@ const liquidate = async (
   trace(` offeredTo`, { collateralToSell, debt });
 
   await deposited;
-  transferLiquidatedFund(loanZcfSeat);
   debtPaid(debt);
+  transferLiquidatedFund(loanZcfSeat);
+
   // Update loan state
   loan.liquidated(AmountMath.makeEmpty(debt.brand));
   return loan;
