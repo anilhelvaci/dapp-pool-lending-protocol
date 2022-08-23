@@ -337,7 +337,7 @@ export const setupAmmAndElectorate = async (
   const governorCreatorFacet = consume.ammGovernorCreatorFacet;
   const governorInstance = await instance.consume.ammGovernor;
   const governorPublicFacet = await E(zoe).getPublicFacet(governorInstance);
-  const governedInstance = E(governorPublicFacet).getGovernedContract();
+  const governedInstance = await E(governorPublicFacet).getGovernedContract();
 
   /** @type { GovernedPublicFacet<XYKAMMPublicFacet> } */
     // @ts-expect-error cast from unknown
@@ -358,7 +358,7 @@ export const setupAmmAndElectorate = async (
     },
     want: { Liquidity: AmountMath.makeEmpty(vanLiquidityBrand) },
   });
-  const vanPoolAddLiqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+  const vanPoolAddLiqInvitation = E(ammPublicFacet).makeAddLiquidityInvitation();
 
   const vanPoolAddLiquiditySeat = await E(zoe).offer(
     vanPoolAddLiqInvitation,
@@ -376,7 +376,7 @@ export const setupAmmAndElectorate = async (
     },
     want: { Liquidity: AmountMath.makeEmpty(panLiquidityBrand) },
   });
-  const panPoolAddLiqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+  const panPoolAddLiqInvitation = E(ammPublicFacet).makeAddLiquidityInvitation();
 
   const panPoolAddLiquiditySeat = await E(zoe).offer(
     panPoolAddLiqInvitation,

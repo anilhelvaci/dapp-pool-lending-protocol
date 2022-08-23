@@ -1,5 +1,5 @@
-import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat';
-import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults";
+import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
+import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults.js";
 import { AmountMath } from '@agoric/ertp';
 import { E } from '@endo/far';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport';

@@ -1,6 +1,6 @@
 import { E } from '@endo/far';
-import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat';
-import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults';
+import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
+import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
 
 
 const redeemPan = async (homeP) => {

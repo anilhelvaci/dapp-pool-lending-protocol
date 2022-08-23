@@ -1,7 +1,7 @@
-import addPanToWallet from "./addPanToWallet";
-import addPanToPool from "./addPanToPool";
-import addVanToWallet from "./addVanToWallet";
-import addVanToPool from "./addVanToPool";
+import addPanToWallet from "./addPanToWallet.js";
+import addPanToPool from "./addPanToPool.js";
+import addVanToWallet from "./addVanToWallet.js";
+import addVanToPool from "./addVanToPool.js";
 
 export default async function deploy(homeP) {
   await Promise.all([
