@@ -190,7 +190,7 @@ function LendingPool() {
                 market={market}
                 handleClickOpen={handleClickOpen}
                 brandToInfo={brandToInfo}
-                priceQuote={prices[market.brand]} />)}</TableBody>
+                priceQuote={prices[market.underlyingBrand]} />)}</TableBody>
           </Table>
         </TableContainer>
       </div>

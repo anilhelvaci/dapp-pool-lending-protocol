@@ -546,9 +546,10 @@ test('borrow', async t => {
   const panPoolMan = await addPool(zoe, panRates, lendingPoolCreatorFacet, panIssuer, 'PAN', panUsdPriceAuthority);
 
   // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    await makeMarketStateChecker(t, vanPoolMan),
-    await makeMarketStateChecker(t, panPoolMan),
+  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }, poolNotifier] = await Promise.all([
+    makeMarketStateChecker(t, vanPoolMan),
+    makeMarketStateChecker(t, panPoolMan),
+    E(lendingPoolPublicFacet).getPoolNotifier(),
   ]);
 
   // Put money inside the pools
@@ -556,10 +557,13 @@ test('borrow', async t => {
   await depositMoney(zoe, panPoolMan, panMint, 10n);
 
   // Check market state after deposit
-  await Promise.all([
-    await checkVanPoolStateInSync(),
-    await checkPanPoolStateInSync(),
+  const [{value: latestPoolState}] = await Promise.all([
+    E(poolNotifier).getUpdateSince(),
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
   ]);
+
+  trace('POOLS', latestPoolState);
 
   // Check if the pool has enough liquidty
   await t.notThrowsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n - 1n)));

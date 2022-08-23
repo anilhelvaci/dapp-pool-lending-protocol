@@ -94,6 +94,8 @@ export const {
     createLoan,
     updateLoan,
     setSnackbarState,
+    hasMarket,
+    initMarkets,
   },
   // @ts-ignore tsc can't tell that autodux is callable
 } = autodux({
@@ -106,6 +108,9 @@ export const {
     },
     initLoans: state => {
       return { ...state, loans: {} };
+    },
+    initMarkets: state => {
+      return {...state, markets: {}};
     },
     /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
     createVault: (state, { id, vault }) => {
@@ -162,6 +167,7 @@ export const {
         markets: { ...markets, [id]: { ...oldMarketData, ...market } },
       };
     },
+    hasMarket: ({ markets }, brand) => markets && markets[brand],
     updatePrice: ({ prices, ...state }, { id, quote }) => {
       return {
         ...state,
