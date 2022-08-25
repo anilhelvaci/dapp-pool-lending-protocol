@@ -5,14 +5,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 import AppHeader from '../components/AppHeader';
-import ResponsiveNavigation from '../components/ResponsiveNavigation';
 
-import NavDrawer from '../components/NavDrawer';
-
-import NewVault from '../components/vault/NewVault';
-import Treasury from '../components/Treasury';
-import VaultManagement from '../components/vault/VaultManagement/VaultManagement';
-import RunStake from '../components/runStake/RunStake';
 import LendingPool from '../components/lendingPool/LendingPool';
 import Snackbar from '@material-ui/core/Snackbar';
 import Alert from '@material-ui/lab/Alert';
