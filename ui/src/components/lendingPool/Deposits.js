@@ -6,6 +6,9 @@ import { StyledTableCell } from './StyledTableComponents.js';
 import DepositedItem from './DepositedItem.js';
 import RedeemDialog from './RedeemDialog.js';
 import AppProgressBar from './AppProgressBar.js';
+import { AmountMath } from '@agoric/ertp';
+import { getTotalBalanceAmount } from '../helpers.js';
+import NothingToShow from './NothingToShow.js';
 
 const Deposits = ({}) => {
   const {
@@ -24,6 +27,13 @@ const Deposits = ({}) => {
     <AppProgressBar/>
   );
 
+  const marketsDeposited = Object.values(markets).filter(market => !AmountMath.isEmpty(getTotalBalanceAmount(purses, market.protocolBrand)));
+  // const marketsDeposited = [];
+
+  if (marketsDeposited.length === 0) return (
+    <NothingToShow message={'You have no deposits yet'}/>
+  )
+
   const handleOnOpen = market => {
     setSelectedMarket(market);
     setIsOpen(true);
@@ -40,7 +50,7 @@ const Deposits = ({}) => {
               <StyledTableCell align={'right'}>Redeem Balance</StyledTableCell>
             </TableRow>
           </TableHead>
-          <TableBody>{Object.values(markets).map(market =>
+          <TableBody>{marketsDeposited.map(market =>
             <DepositedItem
               market={market}
               priceQuote={prices[market.underlyingBrand]}

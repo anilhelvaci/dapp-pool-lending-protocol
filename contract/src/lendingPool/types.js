@@ -90,6 +90,7 @@
  * @property {() => Amount} getProtocolLiquidity
  * @property {(underlyingBrand: Brand) => Amount } getUnderlyingLiquidity
  * @property {() => Brand} getUnderlyingBrand
+ * @property {() => Issuer} getUnderlyingIssuer
  * @property {(proposedDebtAmount: Amount) => void} enoughLiquidityForProposedDebt
  * @property {() => Brand} getThirdCurrencyBrand
  * @property {(brand: Brand, protocolAmount: Amount) => Amount} protocolToUnderlying

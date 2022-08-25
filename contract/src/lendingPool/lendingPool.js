@@ -17,6 +17,7 @@ import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
 import { makePoolParamManager, makeElectorateParamManager } from './params.js';
 import { assert } from '@agoric/assert';
+import { makeNotifier, makeNotifierKit } from '@agoric/notifier';
 
 const { details: X } = assert;
 
@@ -95,6 +96,33 @@ export const start = async (zcf, privateArgs) => {
   const poolTypes = makeScalarMap('brand');
   const poolParamManagers = makeScalarMap('brand');
 
+  const { notifier: poolNotifier, updater: poolUpdater } = makeNotifierKit();
+
+  /**
+   *
+   */
+  const updatePoolState = () => {
+    poolUpdater.updateState([...poolTypes.values()].map(pm => {
+      return {
+        // brand,
+        latestInterestRate: pm.getCurrentBorrowingRate(),
+        // compoundedInterest: pm.getCompoundedInterest(),
+        liquidationMargin: pm.getLiquidationMargin(),
+        underlyingIssuer: pm.getUnderlyingIssuer(),
+        underlyingBrand: pm.getUnderlyingBrand(),
+        protocolIssuer: pm.getProtocolIssuer(),
+        protocolBrand: pm.getProtocolBrand(),
+        thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
+        underlyingToThirdWrappedPriceAuthorityP: pm.getPriceAuthorityForBrand(pm.getUnderlyingBrand()),
+        exchangeRate: pm.getExchangeRate(),
+        totalDebt: pm.getTotalDebt(),
+        underlyingLiquidity: pm.getUnderlyingLiquidity(),
+        protocolLiquidity: pm.getProtocolLiquidity(),
+        notifier: pm.getNotifier()
+      }
+    }));
+  };
+
   /**
    *
    * @param underlyingIssuer
@@ -103,7 +131,7 @@ export const start = async (zcf, privateArgs) => {
    * @param priceAuthority
    * @returns ERef<PoolManager>
    */
-  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => { // TODO priceAuth as an argument
+  const addPoolType = async (underlyingIssuer, underlyingKeyword, rates, priceAuthority) => {
     const [_, protocolMint] = await Promise.all([
       zcf.saveIssuer(underlyingIssuer, underlyingKeyword),
       zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, { decimalPlaces: 6 })
@@ -152,7 +180,7 @@ export const start = async (zcf, privateArgs) => {
       ammPublicFacet
     );
     poolTypes.init(underlyingBrand, pm);
-
+    updatePoolState();
     return pm;
   };
 
@@ -301,7 +329,8 @@ export const start = async (zcf, privateArgs) => {
       amountKeywordRecord[keyword] = AmountMath.make(brand, value);
       return amountKeywordRecord;
     },
-    getMarkets
+    getMarkets,
+    getPoolNotifier: () => poolNotifier,
   });
 
   const getParamMgrRetriever = () =>

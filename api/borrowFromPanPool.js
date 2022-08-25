@@ -1,5 +1,5 @@
-import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat';
-import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults";
+import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
+import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults.js";
 import { AmountMath } from '@agoric/ertp';
 import { E } from '@endo/far';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport';
@@ -14,8 +14,8 @@ export default async function borrowFromPanPool(homeP) {
   const panDecimalValue = process.env.DECIMAL_VALUE ? parseAsNat(process.env.DECIMAL_VALUE) : 6n;
   const collateralUnderlyingValue = process.env.COLLATERAL_VALUE ? parseAsNat(process.env.COLLATERAL_VALUE) : 1n;
 
-  const collateralPursePetname = 'AgVAN Purse';
-  const underlyingPursePetname = 'PAN Purse';
+  const collateralPursePetname = ['LendingPool','AgVAN'];
+  const underlyingPursePetname = ['LendingPool','PAN'];
 
 
   const { PAN_ISSUER_BOARD_ID, VAN_ISSUER_BOARD_ID, AGVAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;

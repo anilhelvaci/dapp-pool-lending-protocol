@@ -122,8 +122,8 @@ const Borrow = ({ market, handleClose }) => {
   sortPurses(protocolPurses);
 
   const getCollateralBrands = () => {
-    const filtered = Object.values(markets).filter(iteratingMarket => iteratingMarket.brand !== market.underlyingBrand);
-    return filtered.map(filteredMarket => filteredMarket.brand);
+    const filtered = Object.values(markets).filter(iteratingMarket => iteratingMarket.underlyingBrand !== market.underlyingBrand);
+    return filtered.map(filteredMarket => filteredMarket.underlyingBrand);
   }
 
   const [debtPurse, setDebtPurse] = useState(

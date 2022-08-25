@@ -1,9 +1,10 @@
 // import priceConfig from './priceConfig';
 import { E } from '@endo/far';
-import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults';
+import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
 import { makeRatio } from '@agoric/zoe/src/contractSupport';
 
 const setPrice = async homeP => {
+
   const home = await homeP;
   const scratch = home.scratch;
   const board = home.board;

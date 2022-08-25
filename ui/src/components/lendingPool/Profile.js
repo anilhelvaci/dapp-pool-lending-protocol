@@ -81,6 +81,7 @@ const Profile = ({ markets, brandToInfo, loans, prices, purses }) => {
       const { debtSnapshot } = loan;
       if (!debtSnapshot) continue;
       const debtMarket = markets[debtSnapshot.debt.brand];
+      if (!debtMarket || !(debtMarket && debtMarket.compoundedInterest)) continue;
       const currentDebt = calculateCurrentDebt(debtSnapshot.debt, debtSnapshot.interest, debtMarket.compoundedInterest);
       const quote = prices[debtSnapshot.debt.brand];
       if (!quote) continue;

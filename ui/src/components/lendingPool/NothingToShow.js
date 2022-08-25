@@ -15,15 +15,15 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const NoLoansToShow = () => {
+const NothingToShow = ({message}) => {
   const classes = useStyles();
 
   return (
     <Paper className={classes.container}>
       <NotInterestedIcon className={classes.icon}/>
-      <Typography>You have no active loans</Typography>
+      <Typography>{message}</Typography>
     </Paper>
   )
 };
 
-export default NoLoansToShow;
+export default NothingToShow;

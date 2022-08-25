@@ -92,7 +92,7 @@ const LoanItem = ({ loan, handleOpen }) => {
           {displayAmount(debtAmountInCompare)} {compareCurrencyPetname}
         </Typography>
         <Typography variant={'caption'}>
-          {displayAmount(currentDebt)} {debtPetname}
+          {displayAmount(currentDebt, 4)} {debtPetname}
         </Typography>
       </TableCell>
       {/*State*/}

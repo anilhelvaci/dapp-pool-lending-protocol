@@ -1,6 +1,6 @@
 import { E } from '@endo/far';
-import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat';
-import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults';
+import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
+import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
 
 
 const redeemPan = async (homeP) => {
@@ -12,8 +12,8 @@ const redeemPan = async (homeP) => {
   const wallet = home.wallet;
   let liqAmountValue;
 
-  const protocolPursePetname = 'AgPAN Purse';
-  const underleyinPursePetname = 'PAN Purse';
+  const protocolPursePetname = ['LendingPool','AgPAN'];
+  const underleyinPursePetname = ['LendingPool', 'PAN'];
 
   const { PAN_ASSET_CREATOR_FACET_ID, PAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;
 

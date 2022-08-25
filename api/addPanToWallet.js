@@ -1,7 +1,7 @@
 import { E } from '@endo/far';
 import { AmountMath } from "@agoric/ertp";
-import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults";
-import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat";
+import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults.js";
+import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat.js";
 
 export default async function addVanToWallet(homeP) {
   const home = await homeP;
@@ -11,7 +11,7 @@ export default async function addVanToWallet(homeP) {
   const scratch = home.scratch;
 
   let liqAmountValue;
-  const pursePetname = 'PAN Purse'
+  const pursePetname = ['LendingPool', 'PAN']
 
   if (process.env.LIQUIDITY_AMOUNT) {
     liqAmountValue = parseAsNat(process.env.LIQUIDITY_AMOUNT);

@@ -372,9 +372,10 @@ test('deposit', async t => {
   const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
   // It's possible to get the brand from the issuer object we let the user
   // get the brand directly becasue it means one less await.
-  const [protocolBrand, protocolIssuer, { checkMarketStateInSync }] = await Promise.all([
+  const [protocolBrand, protocolIssuer, underlyingIssuer, { checkMarketStateInSync }] = await Promise.all([
     E(vanPoolMan).getProtocolBrand(),
     E(vanPoolMan).getProtocolIssuer(),
+    E(vanPoolMan).getUnderlyingIssuer(),
     await makeMarketStateChecker(t, vanPoolMan),
   ])
   trace('Protocol Metadata', {
@@ -415,6 +416,7 @@ test('deposit', async t => {
 
   t.deepEqual(await E(vanPoolMan).getProtocolLiquidity(), AmountMath.make(protocolBrand, 5555555550n)); // We know that initial exchange rate is 0,02
   t.deepEqual(await E(vanPoolMan).getUnderlyingLiquidity(), AmountMath.make(vanBrand, 111111111n));
+  t.deepEqual(vanIssuer, underlyingIssuer);
   t.is(message, 'Finished');
   await checkMarketStateInSync();
 });
@@ -546,9 +548,10 @@ test('borrow', async t => {
   const panPoolMan = await addPool(zoe, panRates, lendingPoolCreatorFacet, panIssuer, 'PAN', panUsdPriceAuthority);
 
   // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    await makeMarketStateChecker(t, vanPoolMan),
-    await makeMarketStateChecker(t, panPoolMan),
+  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }, poolNotifier] = await Promise.all([
+    makeMarketStateChecker(t, vanPoolMan),
+    makeMarketStateChecker(t, panPoolMan),
+    E(lendingPoolPublicFacet).getPoolNotifier(),
   ]);
 
   // Put money inside the pools
@@ -556,10 +559,13 @@ test('borrow', async t => {
   await depositMoney(zoe, panPoolMan, panMint, 10n);
 
   // Check market state after deposit
-  await Promise.all([
-    await checkVanPoolStateInSync(),
-    await checkPanPoolStateInSync(),
+  const [{value: latestPoolState}] = await Promise.all([
+    E(poolNotifier).getUpdateSince(),
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
   ]);
+
+  trace('POOLS', latestPoolState);
 
   // Check if the pool has enough liquidty
   await t.notThrowsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n - 1n)));

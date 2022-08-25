@@ -11,7 +11,7 @@ import {
 } from '@material-ui/core';
 import Profile from './Profile';
 import PoolDialog from './Dialog';
-import { makeDisplayFunctions, getTotalBalanceAmount } from '../helpers';
+import { makeDisplayFunctions, getTotalBalanceAmount, isObjectEmpty } from '../helpers';
 import { useApplicationContext } from '../../contexts/Application';
 import { E } from '@endo/far';
 import { StyledTableCell, StyledTableRow } from './StyledTableComponents';
@@ -24,6 +24,7 @@ import Loans from './Loans.js';
 import { AGORIC_LOGO_URL } from '../../constants.js';
 import AppProgressBar from './AppProgressBar.js';
 import { setSnackbarState } from '../../store.js';
+import NothingToShow from './NothingToShow.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -117,6 +118,9 @@ const useStyles = makeStyles((theme) => ({
   approve: {
     width: 'fit-content',
     margin: 'auto',
+  },
+  noMarket: {
+    marginTop: theme.spacing(1),
   }
 }));
 
@@ -170,6 +174,11 @@ function LendingPool() {
   }
 
   const getActualUI = markets => {
+    if (isObjectEmpty(markets)) return (
+      <div className={classes.noMarket}>
+        <NothingToShow message={'There is no market yet'}/>
+      </div>
+    );
     return (
       <div className={classes.supply}>
         <TableContainer component={Paper}>
@@ -190,7 +199,7 @@ function LendingPool() {
                 market={market}
                 handleClickOpen={handleClickOpen}
                 brandToInfo={brandToInfo}
-                priceQuote={prices[market.brand]} />)}</TableBody>
+                priceQuote={prices[market.underlyingBrand]} />)}</TableBody>
           </Table>
         </TableContainer>
       </div>
@@ -214,6 +223,9 @@ function LendingPool() {
   const getProfile = () => {
     if (!lendingPool || !purses || !approved || brandToInfo.length === 0 || !markets || !prices || !dispatch || !walletP || !loans) return (
       <AppProgressBar/>
+    );
+    else if (isObjectEmpty(markets)) return (
+      <NothingToShow message={'No profile data'}/>
     );
     return <Profile markets={markets} brandToInfo={brandToInfo} loans={loans} prices={prices} purses={purses}/>
   };
