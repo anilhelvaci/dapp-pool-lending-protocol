@@ -112,6 +112,7 @@ export const makePoolManager = (
     getProtocolLiquidity: () => totalProtocolSupply,
     getUnderlyingLiquidity: () => underlyingAssetSeat.getAmountAllocated('Underlying', underlyingBrand),
     getUnderlyingBrand: () => underlyingBrand,
+    getUnderlyingIssuer: () => zcf.getIssuerForBrand(underlyingBrand),
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
     protocolToUnderlying: (brand, protocolAmount) => {

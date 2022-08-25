@@ -165,72 +165,11 @@ const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
     E(lendingPoolPublicFacetP).getPoolNotifier(),
   ]);
 
-  // const displayInfos = await Promise.all(
-  //   markets.map(async market => {
-  //     const [underlyingDisplayInfo, underlyingAllegedName, protocolDisplayInfo,
-  //       protocolAllegedName, thirdCurrencyDisplayInfo, thirdCurrencyAllegedName] =
-  //       await Promise.all([
-  //         E(market.underlyingBrand).getDisplayInfo(),
-  //         E(market.underlyingBrand).getAllegedName(),
-  //         E(market.protocolBrand).getDisplayInfo(),
-  //         E(market.protocolBrand).getAllegedName(),
-  //         E(market.thirdCurrencyBrand).getDisplayInfo(),
-  //         E(market.thirdCurrencyBrand).getAllegedName(),
-  //       ]);
-  //     return {
-  //       underlying: { displayInfo: underlyingDisplayInfo, petName: underlyingAllegedName },
-  //       protocol: { displayInfo: protocolDisplayInfo, petName: protocolAllegedName },
-  //       thirdCurrency: { displayInfo: thirdCurrencyDisplayInfo, petName: thirdCurrencyAllegedName },
-  //     };
-  //   }),
-  // );
-  //
-  // const brandToInfoDeepP = markets.map((market, i) => {
-  //
-  //   const underlyingBrandDisplayInfo = displayInfos[i] &&
-  //     displayInfos[i].underlying;
-  //
-  //   const protocolBrandDisplayInfo = displayInfos[i] &&
-  //     displayInfos[i].protocol;
-  //
-  //   const thirdCurrencyBrandDisplayInfo = displayInfos[i] &&
-  //     displayInfos[i].thirdCurrency;
-  //
-  //   return Array.from([
-  //     toBrandToInfoItem(market.underlyingBrand, underlyingBrandDisplayInfo),
-  //     toBrandToInfoItem(market.protocolBrand, protocolBrandDisplayInfo),
-  //     toBrandToInfoItem(market.thirdCurrencyBrand, thirdCurrencyBrandDisplayInfo),
-  //   ]);
-  //
-  // });
-  //
-  // const brandInfoFlattenedP = brandToInfoDeepP.flat();
-  // const brandToInfoFinal = await Promise.all(brandInfoFlattenedP);
-  //
-  // // markets.forEach(market => {
-  // //   dispatch(createMarket({ id: market.underlyingBrand, market }));
-  // //   watchMarket(market.underlyingBrand, market.notifier, dispatch);
-  // //   watchPrices(market.underlyingBrand, market.underlyingToThirdWrappedPriceAuthority.notifier, dispatch);
-  // // });
-  //
-  // for await (const market of markets) {
-  //   const underlyingToThirdWrappedPriceAuthority =  await market.underlyingToThirdWrappedPriceAuthorityP;
-  //   dispatch(createMarket({ id: market.underlyingBrand, market }));
-  //   watchMarket(market.underlyingBrand, market.notifier, dispatch)
-  //     .catch(err => console.log('Error when wathing market', err));
-  //   watchPrices(market.underlyingBrand, underlyingToThirdWrappedPriceAuthority.notifier, dispatch)
-  //     .catch(err => console.log('Error when wathing prices', err));
-  // }
-
   dispatch(
     setLendingPool({ publicFacet: lendingPoolPublicFacet, instance }),
   );
 
   dispatch(initMarkets());
-
-  // dispatch(
-  //   mergeBrandToInfo(brandToInfoFinal),
-  // );
 
   watchPools(poolNotifier, dispatch).catch(err => console.log('Error when watching the pool:', err));
 };
@@ -261,22 +200,51 @@ const watchPrices = async (brandIn, priceNotifier, dispatch) => {
 };
 
 const watchPools = async (poolNotifier, dispatch) => {
+  let count = 1;
   for await (const markets of iterateNotifier(poolNotifier)) {
     for (const market of markets) {
-      if(!market) continue;
+      console.log('[COUNT]', count);
+      count++;
+      if(!market) continue; // Control hasMarket
 
       const [underlyingToThirdWrappedPriceAuthority, marketDisplayInfo] =  await Promise.all([
         market.underlyingToThirdWrappedPriceAuthorityP,
         buildDisplayInfoForMarket(market),
-      ])
+      ]);
       buildBrandToInfo(marketDisplayInfo, dispatch, market);
-      dispatch(createMarket({ id: market.underlyingBrand, market }));
+      createPurseForPoolTokens(market, marketDisplayInfo)
+        .catch(err => console.log('[ERROR] Error when creating purses:', err));
       watchMarket(market.underlyingBrand, market.notifier, dispatch)
-        .catch(err => console.log('Error when wathing market', err));
+        .catch(err => console.log('[ERROR] Error when wathing market', err));
       watchPrices(market.underlyingBrand, underlyingToThirdWrappedPriceAuthority.notifier, dispatch)
-        .catch(err => console.log('Error when wathing prices', err));
+        .catch(err => console.log('[ERROR] Error when wathing prices', err));
+      dispatch(createMarket({ id: market.underlyingBrand, market }));
     }
   }
+};
+
+const createPurseForPoolTokens = async (market, displayInfo) => {
+  const { underlyingIssuerBoardId, protocolIssuerBoardId } = await getBoardIDsForMarket(market);
+  await Promise.all([
+    E(walletP).suggestIssuer(displayInfo.underlying.petName, underlyingIssuerBoardId),
+    E(walletP).suggestIssuer(displayInfo.protocol.petName, protocolIssuerBoardId),
+  ]);
+};
+
+const getBoardIDsForMarket = async market => {
+  const [underlyingIssuerBoardId, protocolIssuerBoardId] = await Promise.all([
+    getBoardIDForIssuer(market.underlyingIssuer),
+    getBoardIDForIssuer(market.protocolIssuer),
+  ]);
+
+  return harden({
+    underlyingIssuerBoardId,
+    protocolIssuerBoardId
+  });
+}
+
+const getBoardIDForIssuer = issuer => {
+  return E(E(walletP).getBoard()).getId(issuer);
 };
 
 const buildDisplayInfoForMarket = async market => {

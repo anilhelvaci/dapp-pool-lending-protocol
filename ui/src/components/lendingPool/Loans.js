@@ -7,32 +7,41 @@ import LoanItem from './LoanItem.js';
 import LoanManagementDialog from './LoanManagementDialog.js';
 import AppProgressBar from './AppProgressBar.js';
 import { LoanStatus } from '../../constants.js';
-import NoLoansToShow from './NoLoansToShow.js';
+import NothingToShow from './NothingToShow.js';
+import { isObjectEmpty } from '../helpers.js';
 
 const Loans = ({}) => {
   const {
     state: {
       brandToInfo,
-      loans
+      loans,
+      markets,
+      prices,
     }
   } = useApplicationContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLoanMetadata, setSelectedLoanMetadata] = useState({});
 
-  if(brandToInfo.length === 0 || !loans ) return (
+  if(brandToInfo.length === 0 || !loans || isObjectEmpty(markets) || !prices) return (
     <AppProgressBar/>
   );
 
-  const hasActiveLoans = () => {
-    for (const { loanState } of Object.values(loans)) {
-      if (loanState === LoanStatus.ACTIVE) return true;
+  const hasLoansToShow = () => {
+    for (const { loanState, debtSnapshot, collateralUnderlyingBrand } of Object.values(loans)) {
+      if (loanState === LoanStatus.ACTIVE && loanMarketLoaded(debtSnapshot, collateralUnderlyingBrand)) return true;
     }
     return false;
   };
 
-  if(!hasActiveLoans()) return (
-    <NoLoansToShow/>
+  const loanMarketLoaded = (debtSnapshot, collateralUnderlyingBrand) => {
+    if (!debtSnapshot || !collateralUnderlyingBrand) return false;
+    const debtMarket = markets[debtSnapshot.debt.brand];
+    return debtMarket && debtMarket.compoundedInterest && prices[debtSnapshot.debt.brand] && prices[collateralUnderlyingBrand];
+  }
+
+  if(!hasLoansToShow()) return (
+    <NothingToShow message={'You have no active loans'}/>
   );
 
   const handleOpen = metadata => {

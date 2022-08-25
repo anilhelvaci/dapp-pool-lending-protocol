@@ -179,30 +179,15 @@ export const startFaucets = async (zoe, installation) => {
     manualTimerFaucet: installation.manualTimerFaucet
   });
 
-  // start priceAuthorityFaucet
-  const {
-    creatorFacet: priceAuthorityFaucetCreatorFacet,
-    publicFacet: priceAuthorityFaucetPublicFacet,
-    instance: priceAuthorityFaucetInstance,
-  } = await E(zoe).startInstance(
+  const priceAuthorityFaucetP = E(zoe).startInstance(
     installations.priceAuthorityFaucet,
   );
 
-  // start manualTimerFaucet
-  const {
-    creatorFacet: manualTimerFaucetCreatorFacet,
-    publicFacet: manualTimerFaucetPublicFacet,
-    instance: manualTimerFaucetInstance,
-  } = await E(zoe).startInstance(
+  const manualTimerFaucetP = E(zoe).startInstance(
     installations.manualTimerFaucet,
   );
 
-  // start vanFaucet
-  const {
-    creatorFacet: vanFaucetCreatorFacet,
-    publicFacet: vanFaucetPublicFacet,
-    instance: vanFaucetInstance,
-  } = await E(zoe).startInstance(
+  const vanFaucetP = E(zoe).startInstance(
     installations.lendingPoolFaucet,
     undefined,
     {
@@ -213,12 +198,7 @@ export const startFaucets = async (zoe, installation) => {
     },
   );
 
-  // start panFaucet
-  const {
-    creatorFacet: panFaucetCreatorFacet,
-    publicFacet: panFaucetPublicFacet,
-    instance: panFaucetInstance,
-  } = await E(zoe).startInstance(
+  const panFaucetP = E(zoe).startInstance(
     installations.lendingPoolFaucet,
     undefined,
     {
@@ -229,12 +209,7 @@ export const startFaucets = async (zoe, installation) => {
     },
   );
 
-  // start usdFaucet
-  const {
-    creatorFacet: usdFaucetCreatorFacet,
-    publicFacet: usdFaucetPublicFacet,
-    instance: usdFaucetInstance,
-  } = await E(zoe).startInstance(
+  const usdFaucetP = E(zoe).startInstance(
     installations.lendingPoolFaucet,
     undefined,
     {
@@ -245,31 +220,33 @@ export const startFaucets = async (zoe, installation) => {
     },
   );
 
+  const [priceAuthorityFaucet,
+    manualTimerFaucet,
+    vanFaucet,
+    panFaucet,
+    usdFaucet] = await Promise.all([
+    priceAuthorityFaucetP,
+    manualTimerFaucetP,
+    vanFaucetP,
+    panFaucetP,
+    usdFaucetP,
+  ]);
+
   return {
     vanAsset: {
-      creatorFacet: vanFaucetCreatorFacet,
-      publicFacet: vanFaucetPublicFacet,
-      instance: vanFaucetInstance,
+      ...vanFaucet
     },
     panAsset: {
-      creatorFacet: panFaucetCreatorFacet,
-      publicFacet: panFaucetPublicFacet,
-      instance: panFaucetInstance,
+      ...panFaucet
     },
     usdAsset: {
-      creatorFacet: usdFaucetCreatorFacet,
-      publicFacet: usdFaucetPublicFacet,
-      instance: usdFaucetInstance,
+      ...usdFaucet
     },
     priceAuthorityFaucet: {
-      creatorFacet: priceAuthorityFaucetCreatorFacet,
-      publicFacet: priceAuthorityFaucetPublicFacet,
-      instance: priceAuthorityFaucetInstance,
+      ...priceAuthorityFaucet
     },
     manualTimerFaucet: {
-      creatorFacet: manualTimerFaucetCreatorFacet,
-      publicFacet: manualTimerFaucetPublicFacet,
-      instance: manualTimerFaucetInstance
+      ...manualTimerFaucet
     },
     installations,
   };

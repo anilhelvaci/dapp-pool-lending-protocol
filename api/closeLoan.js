@@ -29,13 +29,13 @@ const closeLoan = async homeP => {
     proposalTemplate: {
       give: {
         Debt: {
-          pursePetname: 'VAN Purse',
+          pursePetname: ['LendingPool', 'VAN'],
           value: envConfig.debtValue,
         }
       },
       want: {
         Collateral: {
-          pursePetname: 'AgPAN Purse',
+          pursePetname: ['LendingPool','AgPAN'],
           value: envConfig.collateralValue,
         }
       },

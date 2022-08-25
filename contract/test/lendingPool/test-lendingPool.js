@@ -372,9 +372,10 @@ test('deposit', async t => {
   const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
   // It's possible to get the brand from the issuer object we let the user
   // get the brand directly becasue it means one less await.
-  const [protocolBrand, protocolIssuer, { checkMarketStateInSync }] = await Promise.all([
+  const [protocolBrand, protocolIssuer, underlyingIssuer, { checkMarketStateInSync }] = await Promise.all([
     E(vanPoolMan).getProtocolBrand(),
     E(vanPoolMan).getProtocolIssuer(),
+    E(vanPoolMan).getUnderlyingIssuer(),
     await makeMarketStateChecker(t, vanPoolMan),
   ])
   trace('Protocol Metadata', {
@@ -415,6 +416,7 @@ test('deposit', async t => {
 
   t.deepEqual(await E(vanPoolMan).getProtocolLiquidity(), AmountMath.make(protocolBrand, 5555555550n)); // We know that initial exchange rate is 0,02
   t.deepEqual(await E(vanPoolMan).getUnderlyingLiquidity(), AmountMath.make(vanBrand, 111111111n));
+  t.deepEqual(vanIssuer, underlyingIssuer);
   t.is(message, 'Finished');
   await checkMarketStateInSync();
 });

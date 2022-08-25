@@ -11,7 +11,7 @@ export default async function addVanToWallet(homeP) {
   const scratch = home.scratch;
 
   let liqAmountValue;
-  const pursePetname = 'PAN Purse'
+  const pursePetname = ['LendingPool', 'PAN']
 
   if (process.env.LIQUIDITY_AMOUNT) {
     liqAmountValue = parseAsNat(process.env.LIQUIDITY_AMOUNT);

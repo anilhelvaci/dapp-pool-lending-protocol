@@ -11,7 +11,7 @@ export default async function addPanToPool(homeP) {
   const wallet = home.wallet;
   let liqAmountValue;
 
-  const protocolPursePetname = 'AgPAN Purse';
+  const protocolPursePetname = ['LendingPool', 'AgPAN'];
 
   if (process.env.POOL_LIQ_AMOUNT) {
     liqAmountValue = parseAsNat(process.env.POOL_LIQ_AMOUNT);

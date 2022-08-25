@@ -16,6 +16,12 @@ import {
 import { getAmountOut } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { Nat } from '@endo/nat';
 
+export const isObjectEmpty = obj => {
+  return obj
+    && Object.keys(obj).length === 0
+    && Object.getPrototypeOf(obj) === Object.prototype;
+};
+
 export const getPurseAssetKind = purse =>
   (purse && purse.displayInfo && purse.displayInfo.assetKind) || undefined;
 export const getPurseDecimalPlaces = purse =>
