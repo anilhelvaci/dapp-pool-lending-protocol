@@ -3,7 +3,7 @@ import { AmountMath } from "@agoric/ertp";
 import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults.js";
 import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat.js";
 
-export default async function addPanToPool(homeP) {
+export default async function addVanToPool(homeP) {
   const home = await homeP;
   const scratch = home.scratch;
   const zoe = home.zoe;
@@ -19,45 +19,55 @@ export default async function addPanToPool(homeP) {
     liqAmountValue = 10n;
   }
 
-  const { VAN_ASSET_CREATOR_FACET_ID, VAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;
+  const { VAN_ASSET_INSTANCE_BOARD_ID, VAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;
 
-  const [panAssetCreatorFacet, panIssuer, panBrand, panDisplayInfo, lendingPoolPublicFaucet] = await Promise.all([
-    E(scratch).get(VAN_ASSET_CREATOR_FACET_ID),
-    E(board).getValue(VAN_ISSUER_BOARD_ID),
-    E(E(board).getValue(VAN_ISSUER_BOARD_ID)).getBrand(),
-    E(E(E(board).getValue(VAN_ISSUER_BOARD_ID)).getBrand()).getDisplayInfo(),
-    E(zoe).getPublicFacet(E(board).getValue(LENDING_POOL_INSTANCE_BOARD_ID))
+  const vanInstanceP = E(board).getValue(VAN_ASSET_INSTANCE_BOARD_ID);
+  const vanIssuerP = E(board).getValue(VAN_ISSUER_BOARD_ID);
+  const vanBrandP = E(vanIssuerP).getBrand();
+  const lendingPoolInstanceP = E(board).getValue(LENDING_POOL_INSTANCE_BOARD_ID);
+
+  const [vanAssetPublicFacet, vanIssuer, vanBrand, vanDisplayInfo, lendingPoolPublicFaucet] = await Promise.all([
+    E(zoe).getPublicFacet(vanInstanceP),
+    vanIssuerP,
+    vanBrandP,
+    E(vanBrandP).getDisplayInfo(),
+    E(zoe).getPublicFacet(lendingPoolInstanceP)
   ]);
 
-  const panAmount = AmountMath.make(panBrand, liqAmountValue * 10n ** BigInt(panDisplayInfo.decimalPlaces));
+  const vanAmount = AmountMath.make(vanBrand, liqAmountValue * 10n ** BigInt(vanDisplayInfo.decimalPlaces));
 
   // Get the liquidity first
   const proposal = {
     give: {},
     want: {
-      VAN: panAmount
+      VAN: vanAmount
     }
   };
 
   console.log('Getting VAN from the faucet...');
-  const [panFaucetSeat, panPoolMan] = await Promise.all([
+  const [vanFaucetSeat, vanPoolMan] = await Promise.all([
     E(zoe).offer(
-      E(panAssetCreatorFacet).makeFaucetInvitation(),
+      await E(vanAssetPublicFacet).makeFaucetInvitation(),
       harden(proposal),
       harden({})
     ),
-    E(lendingPoolPublicFaucet).getPool(panBrand)
+    E(lendingPoolPublicFaucet).getPool(vanBrand)
   ]);
 
   console.log('Getting the payout...');
-  const [panLiquidity, protocolAmountOut] = await Promise.all([
-    E(panFaucetSeat).getPayout("VAN"),
-    E(panPoolMan).getProtocolAmountOut(panAmount)
+  const [vanLiquidity, protocolAmountOut, payouts, offerResult] = await Promise.all([
+    E(vanFaucetSeat).getPayout("VAN"),
+    E(vanPoolMan).getProtocolAmountOut(vanAmount),
+    E(vanFaucetSeat).getPayouts(),
+    E(vanFaucetSeat).getOfferResult(),
   ]);
+
+  console.log('Payouts', payouts);
+  console.log('OfferResult', offerResult);
 
   const depositProposal = {
     give: {
-      Underlying: panAmount
+      Underlying: vanAmount
     },
     want: {
       Protocol: protocolAmountOut
@@ -65,21 +75,26 @@ export default async function addPanToPool(homeP) {
   };
 
   const paymentKeywordRecord = {
-    Underlying: panLiquidity
+    Underlying: vanLiquidity
   };
+
+  console.log("VAN", await E(vanIssuer).getAmountOf(vanLiquidity));
+  console.log("Proposal", depositProposal);
 
   console.log('Depositing liquidity...');
   const depositOfferSeat = await E(zoe).offer(
-    E(panPoolMan).makeDepositInvitation(),
+    E(vanPoolMan).makeDepositInvitation(),
     harden(depositProposal),
     harden(paymentKeywordRecord)
   );
 
-  console.log('Getting protocol payment...');
-  const [protocolPayment, protocolPurse] = await Promise.all([
-    E(depositOfferSeat).getPayout('Protocol'),
-    E(wallet).getPurse(protocolPursePetname)
-  ]);
+
+
+  // console.log('Getting protocol payment...');
+  // const [protocolPayment, protocolPurse] = await Promise.all([
+  //   E(depositOfferSeat).getPayout('Protocol'),
+  //   E(wallet).getPurse(protocolPursePetname)
+  // ]);
 
   // console.log('Depositing protocol...')
   // await E(protocolPurse).deposit(protocolPayment);

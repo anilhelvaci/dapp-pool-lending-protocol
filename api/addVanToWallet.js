@@ -20,16 +20,20 @@ export default async function addVanToWallet(homeP) {
   }
 
   const {
-    VAN_ASSET_CREATOR_FACET_ID,
+    VAN_ASSET_INSTANCE_BOARD_ID,
     VAN_ISSUER_BOARD_ID,
   } = lendingPoolDefaults;
 
+  const vanInstanceP = E(board).getValue(VAN_ASSET_INSTANCE_BOARD_ID);
+  const vanIssuerP = E(board).getValue(VAN_ISSUER_BOARD_ID);
+  const vanBrandP = E(vanIssuerP).getBrand();
+
   console.log("Getting necessary stuff...");
-  const [vanAssetCreatorFacet, vanIssuer, vanBrand, vanDisplayInfo] = await Promise.all([
-    E(scratch).get(VAN_ASSET_CREATOR_FACET_ID),
-    E(board).getValue(VAN_ISSUER_BOARD_ID),
-    E(E(board).getValue(VAN_ISSUER_BOARD_ID)).getBrand(),
-    E(E(E(board).getValue(VAN_ISSUER_BOARD_ID)).getBrand()).getDisplayInfo()
+  const [vanAssetPublicFacet, vanIssuer, vanBrand, vanDisplayInfo] = await Promise.all([
+    E(zoe).getPublicFacet(vanInstanceP),
+    vanIssuerP,
+    vanBrandP,
+    E(vanBrandP).getDisplayInfo()
   ]);
 
   const proposal = {
@@ -42,7 +46,7 @@ export default async function addVanToWallet(homeP) {
   console.log("Getting VAN from the faucet...");
   const [faucetSeat, vanPurse] = await Promise.all([
     E(zoe).offer(
-      E(vanAssetCreatorFacet).makeFaucetInvitation(),
+      E(vanAssetPublicFacet).makeFaucetInvitation(),
       harden(proposal),
       harden({})
     ),

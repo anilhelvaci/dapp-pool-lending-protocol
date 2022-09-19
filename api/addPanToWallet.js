@@ -20,13 +20,15 @@ export default async function addVanToWallet(homeP) {
   }
 
   const {
-    PAN_ASSET_CREATOR_FACET_ID,
+    PAN_ASSET_INSTANCE_BOARD_ID,
     PAN_ISSUER_BOARD_ID,
   } = lendingPoolDefaults;
 
+  const panAssetInstanceP = E(board).getValue(PAN_ASSET_INSTANCE_BOARD_ID);
+
   console.log("Getting necessary stuff...");
-  const [panAssetCreatorFacet, panIssuer, panBrand, panDisplayInfo] = await Promise.all([
-    E(scratch).get(PAN_ASSET_CREATOR_FACET_ID),
+  const [panAssetPublicFacet, panIssuer, panBrand, panDisplayInfo] = await Promise.all([
+    E(zoe).getPublicFacet(panAssetInstanceP),
     E(board).getValue(PAN_ISSUER_BOARD_ID),
     E(E(board).getValue(PAN_ISSUER_BOARD_ID)).getBrand(),
     E(E(E(board).getValue(PAN_ISSUER_BOARD_ID)).getBrand()).getDisplayInfo()
@@ -42,7 +44,7 @@ export default async function addVanToWallet(homeP) {
   console.log("Getting PAN from the faucet...");
   const [faucetSeat, panPurse] = await Promise.all([
     E(zoe).offer(
-      E(panAssetCreatorFacet).makeFaucetInvitation(),
+      E(panAssetPublicFacet).makeFaucetInvitation(),
       harden(proposal),
       harden({})
     ),

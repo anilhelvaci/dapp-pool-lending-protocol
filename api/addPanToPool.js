@@ -19,14 +19,18 @@ export default async function addPanToPool(homeP) {
     liqAmountValue = 10n;
   }
 
-  const { PAN_ASSET_CREATOR_FACET_ID, PAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;
+  const { PAN_ASSET_INSTANCE_BOARD_ID, PAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID } = lendingPoolDefaults;
 
-  const [panAssetCreatorFacet, panIssuer, panBrand, panDisplayInfo, lendingPoolPublicFaucet] = await Promise.all([
-    E(scratch).get(PAN_ASSET_CREATOR_FACET_ID),
-    E(board).getValue(PAN_ISSUER_BOARD_ID),
-    E(E(board).getValue(PAN_ISSUER_BOARD_ID)).getBrand(),
-    E(E(E(board).getValue(PAN_ISSUER_BOARD_ID)).getBrand()).getDisplayInfo(),
-    E(zoe).getPublicFacet(E(board).getValue(LENDING_POOL_INSTANCE_BOARD_ID))
+  const panInstanceP = E(board).getValue(PAN_ASSET_INSTANCE_BOARD_ID);
+  const lendingPoolInstanceP = E(board).getValue(LENDING_POOL_INSTANCE_BOARD_ID);
+  const panIssuerP = E(board).getValue(PAN_ISSUER_BOARD_ID);
+
+  const [panAssetPublicFacet, panIssuer, panBrand, panDisplayInfo, lendingPoolPublicFaucet] = await Promise.all([
+    E(zoe).getPublicFacet(panInstanceP),
+    panIssuerP,
+    E(panIssuerP).getBrand(),
+    E(E(panIssuerP).getBrand()).getDisplayInfo(),
+    E(zoe).getPublicFacet(lendingPoolInstanceP)
   ]);
 
   const panAmount = AmountMath.make(panBrand, liqAmountValue * 10n ** BigInt(panDisplayInfo.decimalPlaces));
@@ -42,7 +46,7 @@ export default async function addPanToPool(homeP) {
   console.log('Getting PAN from the faucet...');
   const [panFaucetSeat, panPoolMan] = await Promise.all([
     E(zoe).offer(
-      E(panAssetCreatorFacet).makeFaucetInvitation(),
+      E(panAssetPublicFacet).makeFaucetInvitation(),
       harden(proposal),
       harden({})
     ),

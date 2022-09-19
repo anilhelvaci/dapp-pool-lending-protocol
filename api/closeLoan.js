@@ -8,7 +8,7 @@ const closeLoan = async homeP => {
   const scopedWb = await E(wallet).getBridge();
 
   const {
-    AGPAN_ISSUER_BOARD_ID, VAN_ISSUER_BOARD_ID, LENDING_POOL_INSTANCE_BOARD_ID, LENDING_POOL_INSTALL_BOARD_ID
+    LENDING_POOL_INSTANCE_BOARD_ID, LENDING_POOL_INSTALL_BOARD_ID
   } = lendingPoolDefaults
 
   const envConfig = {

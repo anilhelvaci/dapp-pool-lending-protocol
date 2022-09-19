@@ -202,10 +202,10 @@ export default async function deployContract(
 
   console.log('Getting liquidity from faucets...');
   const [vanLiquidity, panLiquidity, usdLiquidity, usdPanLiquidity] = await Promise.all([
-    getLiquidityFromFaucet(zoe, E(vanAsset.creatorFacet).makeFaucetInvitation(), 100n, vanBrand, 'VAN'),
-    getLiquidityFromFaucet(zoe, E(panAsset.creatorFacet).makeFaucetInvitation(), 100n, panBrand, 'PAN'),
-    getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 110n * 100n, usdBrand, 'USD'), // make VAN/USD AMM price consistant with priceAuthority
-    getLiquidityFromFaucet(zoe, E(usdAsset.creatorFacet).makeFaucetInvitation(), 200n * 100n, usdBrand, 'USD'), // make PAN/USD AMM price consistant with priceAuthority
+    getLiquidityFromFaucet(zoe, E(vanAsset.publicFacet).makeFaucetInvitation(), 100n, vanBrand, 'VAN'),
+    getLiquidityFromFaucet(zoe, E(panAsset.publicFacet).makeFaucetInvitation(), 100n, panBrand, 'PAN'),
+    getLiquidityFromFaucet(zoe, E(usdAsset.publicFacet).makeFaucetInvitation(), 110n * 100n, usdBrand, 'USD'), // make VAN/USD AMM price consistant with priceAuthority
+    getLiquidityFromFaucet(zoe, E(usdAsset.publicFacet).makeFaucetInvitation(), 200n * 100n, usdBrand, 'USD'), // make PAN/USD AMM price consistant with priceAuthority
   ]);
 
   console.log('Getting liquidity amounts...');

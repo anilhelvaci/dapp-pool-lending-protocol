@@ -25,24 +25,25 @@ const addNewPool = async (homeP, { bundleSource }) => {
   const {
     LENDING_POOL_CREATOR_FACET_ID,
     AMM_INSTANCE_BOARD_ID,
-    USD_ASSET_CREATOR_FACET_ID,
+    USD_ASSET_INSTANCE_BOARD_ID,
     USD_ISSUER_BOARD_ID,
     PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID,
     TIMER_ID,
   } = lendingPoolDefaults;
 
-  const usdCreatorFacetP = E(scratch).get(USD_ASSET_CREATOR_FACET_ID);
-  const usdLiquidityInvitationP = E(usdCreatorFacetP).makeFaucetInvitation();
+  const usdInstanceP = E(board).getValue(USD_ASSET_INSTANCE_BOARD_ID);
+  const usdPublicFacetP = E(zoe).getPublicFacet(usdInstanceP);
+  const usdLiquidityInvitationP = E(usdPublicFacetP).makeFaucetInvitation();
   const usdIssuerP = E(board).getValue(USD_ISSUER_BOARD_ID);
   const usdBrandP = E(usdIssuerP).getBrand();
   const bundle = await makeBundle(bundleSource, lendingPoolFaucetContractRoot);
   const assetFaucetInstallation = await E(zoe).install(bundle);
-  const ammInstance = await E(board).getValue(AMM_INSTANCE_BOARD_ID);
+  const ammInstanceP = E(board).getValue(AMM_INSTANCE_BOARD_ID);
 
   console.log('Getting lendingPoolCreatorFacet, ammPublicFacet and starting assetFaucet...');
   const [lendingPoolCreatorFacet, ammPublicFacet, assetFacets] = await Promise.all([
     E(scratch).get(LENDING_POOL_CREATOR_FACET_ID),
-    E(zoe).getPublicFacet(ammInstance),
+    E(zoe).getPublicFacet(ammInstanceP),
     E(zoe).startInstance(
       assetFaucetInstallation,
       undefined,
@@ -50,7 +51,7 @@ const addNewPool = async (homeP, { bundleSource }) => {
     )
   ]);
 
-  const assetFaucetInvitationP = E(assetFacets.creatorFacet).makeFaucetInvitation();
+  const assetFaucetInvitationP = E(assetFacets.publicFacet).makeFaucetInvitation();
   const assetIssuerP = E(assetFacets.publicFacet).getIssuer();
   const assetBrandP = E(assetIssuerP).getBrand();
 
@@ -116,8 +117,8 @@ const addNewPool = async (homeP, { bundleSource }) => {
 
   console.log(`Getting liquidity to add ${assetConfig.keyword}/USD pool...`);
   const [assetProtocolLiquidity, usdProtocolLiquidity] = await Promise.all([
-    getLiquidityFromFaucet(zoe, E(assetFacets.creatorFacet).makeFaucetInvitation(), newPoolConfig.ammConfig.assetLiquidity, assetBrand, assetConfig.keyword),
-    getLiquidityFromFaucet(zoe, E(usdCreatorFacetP).makeFaucetInvitation(), newPoolConfig.ammConfig.compareLiquidity, usdBrand, 'USD'),
+    getLiquidityFromFaucet(zoe, E(assetFacets.publicFacet).makeFaucetInvitation(), newPoolConfig.ammConfig.assetLiquidity, assetBrand, assetConfig.keyword),
+    getLiquidityFromFaucet(zoe, E(usdPublicFacetP).makeFaucetInvitation(), newPoolConfig.ammConfig.compareLiquidity, usdBrand, 'USD'),
   ]);
 
   const [assetProtocolLiquidityAmount, usdProtocolLiquidityAmount, assetProtocolBrand] = await Promise.all([
