@@ -3,26 +3,19 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { E } from '@endo/captp';
 import { makeAsyncIterableFromNotifier as iterateNotifier } from '@agoric/notifier';
 
-import { dappConfig, lendingPoolDappConfig, refreshConfigFromWallet } from '../utils/config';
+import lendingPoolDappConfig from '../generated/lendingPoolDefaults';
 
 import {
   defaultState,
   initial,
-  initVaults,
   initLoans,
   mergeBrandToInfo,
-  mergeRUNStakeHistory,
   reducer,
-  setCollaterals,
   setLendingPool,
-  setLoadTreasuryError,
   setLoan,
   setLoanAsset,
   setMarkets,
   setPurses,
-  setRUNStake,
-  setTreasury,
-  updateVault,
   createMarket,
   addPrice,
   updateMarket,
@@ -31,9 +24,8 @@ import {
   hasMarket,
   initMarkets,
 } from '../store';
-import { storeAllBrandsFromTerms, updateBrandPetnames } from './storeBrandInfo';
 import LendingPoolWalletConnection from '../components/lendingPool/LendingPoolWalletConnection';
-import { LoanStatus, OperationType, VaultStatus } from '../constants';
+import { LoanStatus, OperationType } from '../constants';
 
 // eslint-disable-next-line import/no-mutable-exports
 let walletP;
@@ -110,7 +102,7 @@ function watchLoan(id, dispatch, offerStatus) {
       ({ loanNotifier } = notifiers);
     } catch (err) {
       console.error('Could not get notifiers', id, err);
-      dispatch(updateLoan({ id, loan: { loanState: VaultStatus.ERROR, err } }));
+      dispatch(updateLoan({ id, loan: { loanState: LoanStatus.ERROR, err } }));
       return;
     }
 

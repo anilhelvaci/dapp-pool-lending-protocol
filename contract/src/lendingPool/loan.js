@@ -684,6 +684,7 @@ export const makeInnerLoan = (
   /** @type Loan */
   const innerLoan = Far('innerLoan', {
     getLoanSeat: () => state.loanSeat,
+    getPhase: () => state.phase,
     initLoanKit: (seat, poolSeat, exchangeRate, loanKey) => initLoanKit(seat, poolSeat, innerLoan, exchangeRate, loanKey),
     liquidating,
     liquidated,

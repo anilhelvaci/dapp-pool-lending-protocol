@@ -15,6 +15,7 @@ import { floorDivideBy, floorMultiplyBy } from '@agoric/zoe/src/contractSupport/
 import { parseAsNat } from '@agoric/ui-components/dist/display/natValue/parseAsNat.js';
 import makeRedeemOffer from './offers/makeRedeemOffer.js';
 import { setSnackbarState } from '../../store.js';
+import { DividerColorPrimary } from './CustomUIComponents.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -171,7 +172,7 @@ const RedeemForm = ({ market, handleClose }) => {
           />
         </Grid>
         <Grid item xs={12}>
-          <Divider variant="fullWidth" />
+          <DividerColorPrimary variant="fullWidth" />
           <Typography variant="h6" noWrap className={classes.paddingTopOne}>
             Parameters
           </Typography>
@@ -193,7 +194,7 @@ const RedeemForm = ({ market, handleClose }) => {
                      value={`${displayPercent(slippageRatio)}%`} />
         </Grid>
         <Grid item xs={12}>
-          <Divider variant="fullWidth" />
+          <DividerColorPrimary variant="fullWidth" />
         </Grid>
         <Grid item xs={12}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>

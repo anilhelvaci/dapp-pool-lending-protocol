@@ -26,7 +26,7 @@ const RedeemDialog = ({ open, handleClose, market }) => {
     <div>
       <Dialog className={classes.container} onClose={handleClose} aria-labelledby='customized-dialog-title' open={open}>
         <DialogTitle id='customized-dialog-title' onClose={handleClose}>
-          {displayBrandPetname(market.underlyingBrand)}
+          Redeem Your {displayBrandPetname(market.underlyingBrand)}
         </DialogTitle>
         <DialogContent dividers>
           <RedeemForm market={market} handleClose={handleClose}/>

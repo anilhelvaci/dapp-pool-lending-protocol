@@ -2108,7 +2108,7 @@ test('collateral-price-drop-liquidate', async t => {
     await checkPanPoolStateInSync(),
   ]);
 
-  panUsdPriceAuthority.setPrice(makeRatio(200n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
+  // panUsdPriceAuthority.setPrice(makeRatio(200n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
   // This means that we're now underwater, so liquidation should be triggerred
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
@@ -2122,6 +2122,183 @@ test('collateral-price-drop-liquidate', async t => {
   t.is(notification.value.loanState, LoanPhase.LIQUIDATED);
 
   const debtWithPenalty = floorMultiplyBy(aliceDebtProposal.want.Debt, panRates.penaltyRate);
+  const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
+  const panPoolCurrentLiquidity = await E(panPoolMan).getUnderlyingLiquidity();
+  // PAN Pool underyling liquidity should be greater than the initail liquidity
+  // because we've sold the collateral + penalty rate in the AMM.
+  // We've went for an assertion like this because it's hard for us to know the
+  // exact price we'll receive form the AMM but we know that current liquidty of
+  // the PAN Pool should be greater than the one before liquidation and smaller
+  // than than exact debtWithPenalty + panPoolInitialLiquidity
+  t.truthy(AmountMath.isGTE(panPoolCurrentLiquidity, panPoolInitialLiquidity)
+    && AmountMath.isGTE(
+      AmountMath.add(debtWithPenalty, panPoolInitialLiquidity),
+      panPoolCurrentLiquidity));
+  // Check market state after liquidation
+  await Promise.all([
+    await checkVanPoolStateInSync(),
+    await checkPanPoolStateInSync(),
+  ]);
+});
+
+test('close-the-first-loan-liquidate-second', async t => {
+  const {
+    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    compareCurrencyKit: { brand: usdBrand, mint: usdMint },
+    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+    vanRates,
+    panRates,
+  } = t.context;
+  console.log('panRates', panRates)
+
+  t.context.loanTiming = {
+    chargingPeriod: secondsPerDay * 2n,
+    recordingPeriod: secondsPerDay * 2n,
+    priceCheckPeriod: secondsPerDay,
+  };
+
+  const { zoe, lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet }, timer } = await setupServices(
+    t,
+    [500n, 15n],
+    AmountMath.make(vanBrand, 900n),
+    buildManualTimer(console.log, 0n, secondsPerDay),
+    secondsPerDay,
+    1n * 100n * 10n ** 6n ,
+    1n * 100n * 10n ** 6n,
+    90n * 10n ** 8n * 100n,
+    100n * 10n ** 8n * 100n
+  );
+
+  const vanUsdPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    initialPrice: makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand),
+    timer
+  });
+
+  const panUsdPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: panBrand,
+    actualBrandOut: usdBrand,
+    initialPrice: makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand),
+    timer,
+  });
+
+  // Add the pools
+  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
+  const panPoolMan = await addPool(zoe, panRates, lendingPoolCreatorFacet, panIssuer, 'PAN', panUsdPriceAuthority);
+
+  // Get market state checkers
+  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
+    await makeMarketStateChecker(t, vanPoolMan),
+    await makeMarketStateChecker(t, panPoolMan),
+  ]);
+
+  // Put money inside the pools
+  let vanPoolDepositedMoney = await depositMoney(zoe, vanPoolMan, vanMint, 6n);
+  let panPoolDepositedMoney = await depositMoney(zoe, panPoolMan, panMint, 10n);
+
+  // Check market state after deposit
+  await Promise.all([
+    await checkVanPoolStateInSync(),
+    await checkPanPoolStateInSync(),
+  ]);
+
+  // Check the protocol tokens received
+  const [agVanIssuer, agVanBrand, agPanIssuer, agPanBrand] = await Promise.all([
+      E(vanPoolMan).getProtocolIssuer(),
+      E(vanPoolMan).getProtocolBrand(),
+      E(panPoolMan).getProtocolIssuer(),
+      E(panPoolMan).getProtocolBrand(),
+    ],
+  );
+
+  t.deepEqual(vanPoolDepositedMoney.amount, AmountMath.make(agVanBrand, 3n * 10n ** 10n));
+  t.deepEqual(panPoolDepositedMoney.amount, AmountMath.make(agPanBrand, 5n * 10n ** 10n));
+
+  await t.notThrowsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n - 1n)));
+  await t.throwsAsync(E(panPoolMan).enoughLiquidityForProposedDebt(AmountMath.make(panBrand, 10n * 10n ** 8n + 1n)));
+
+  const {
+    loanKit: { loan: aliceLoan, publicNotifiers: { loanNotifier: aliceLoanNotifier } },
+    moneyLeftInPool: vanPoolMoneyLeftAfterAliceLoan,
+  } = await borrow(zoe, lendingPoolPublicFacet, vanPoolDepositedMoney.payment, vanPoolMan, 10n ** 8n, panBrand, 35n * 10n ** 6n);
+  console.log('vanPoolMoneyLeftAfterAliceLoan', vanPoolMoneyLeftAfterAliceLoan)
+  const { value: aliceLoanNotificationAfterBorrow } = await E(aliceLoanNotifier).getUpdateSince();
+  t.deepEqual(aliceLoanNotificationAfterBorrow.loanState, LoanPhase.ACTIVE);
+
+  // Check market state after borrow
+  await Promise.all([
+    await checkVanPoolStateInSync(),
+    await checkPanPoolStateInSync(),
+  ]);
+
+  // Close the loan
+  const aliceCloseProposal = {
+    give: { Debt: AmountMath.make(panBrand, 35n * 10n ** 8n / 100n) }, // Pay the whole debt
+    want: { Collateral: AmountMath.makeEmpty(agVanBrand) },
+  };
+
+  const aliceClosePayment = {
+    // Mint the payment
+    Debt: panMint.mintPayment(AmountMath.make(panBrand, 35n * 10n ** 8n / 100n)),
+  };
+
+  const aliceCloseSeat = await E(zoe).offer(
+    E(aliceLoan).makeCloseInvitation(),
+    aliceCloseProposal,
+    aliceClosePayment,
+  );
+
+  await waitForPromisesToSettle();
+
+  const [
+    aliceCloseOfferResult,
+    aliceClosePayout,
+    { value: { loanState } },
+    poolTotalDebt,
+  ] = await Promise.all([
+    E(aliceCloseSeat).getOfferResult(),
+    E(aliceCloseSeat).getPayout('Collateral'),
+    E(aliceLoanNotifier).getUpdateSince(),
+    E(panPoolMan).getTotalDebt()
+  ]);
+
+  t.is(aliceCloseOfferResult, 'your loan is closed, thank you for your business');
+  t.is(loanState, LoanPhase.CLOSED);
+  t.deepEqual(poolTotalDebt, AmountMath.makeEmpty(panBrand));
+  // Check market state after close
+  await Promise.all([
+    await checkVanPoolStateInSync(),
+    await checkPanPoolStateInSync(),
+  ]);
+
+  const {
+    loanKit: { loan: bobLoan, publicNotifiers: { loanNotifier: bobLoanNotifier } },
+    moneyLeftInPool: vanPoolMoneyLeftAfterBobLoan,
+  } = await borrow(zoe, lendingPoolPublicFacet, vanPoolMoneyLeftAfterAliceLoan, vanPoolMan, 10n ** 8n, panBrand, 36n * 10n ** 6n);
+
+  const { value: bobLoanNotificationAfterBorrow } = await E(bobLoanNotifier).getUpdateSince();
+  t.deepEqual(bobLoanNotificationAfterBorrow.loanState, LoanPhase.ACTIVE);
+
+  // Check market state after borrow
+  await Promise.all([
+    await checkVanPoolStateInSync(),
+    await checkPanPoolStateInSync(),
+  ]);
+
+  // // panUsdPriceAuthority.setPrice(makeRatio(200n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
+  // Collateral price goes down, new max amount of debt is 66 USD worth PAN
+  // This means that we're now underwater, so liquidation should be triggerred
+  vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
+
+  await waitForPromisesToSettle();
+
+  // Get the latest state
+  const notification = await E(bobLoanNotifier).getUpdateSince();
+  // Check if the loan is liquidated
+  t.is(notification.value.loanState, LoanPhase.LIQUIDATED);
+
+  const debtWithPenalty = floorMultiplyBy(AmountMath.make(panBrand, 35n * 10n ** 6n), panRates.penaltyRate);
   const panPoolInitialLiquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
   const panPoolCurrentLiquidity = await E(panPoolMan).getUnderlyingLiquidity();
   // PAN Pool underyling liquidity should be greater than the initail liquidity

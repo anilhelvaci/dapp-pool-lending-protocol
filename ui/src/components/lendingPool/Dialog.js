@@ -58,14 +58,6 @@ export const DialogContent = withStyles((theme) => ({
   },
 }))(MuiDialogContent);
 
-const DialogActions = withStyles((theme) => ({
-  root: {
-    margin: 0,
-    padding: theme.spacing(1),
-    width: '100%',
-  },
-}))(MuiDialogActions);
-
 const PoolDialog = ({ open, handleClose, name, market, displayFunctions }) => {
   console.log('name', name);
   const classes = useStyles();
@@ -74,9 +66,7 @@ const PoolDialog = ({ open, handleClose, name, market, displayFunctions }) => {
   }
 
   const {
-    displayPercent,
     displayBrandPetname,
-    displayAmount
   } = displayFunctions;
 
   return (

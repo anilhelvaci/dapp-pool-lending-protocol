@@ -120,10 +120,10 @@ export const makeLiquidationObserver = (
       }
     },
     fail: reason => {
-
+      console.log(`ColPriceObserver failed with the reason ${reason}`);
     },
     finish: done => {
-
+      console.log(`ColPriceObserver finished with ${done}`);
     },
   };
 
@@ -135,15 +135,17 @@ export const makeLiquidationObserver = (
       }
     },
     fail: reason => {
-
+      console.log(`DebtPriceObserver failed with the reason ${reason}`);
     },
     finish: done => {
-
+      console.log(`DebtPriceObserver finished with ${done}`);
     },
   };
 
-  observeNotifier(wrappedCollateralPriceAuthority.notifier, colPriceObserver);
-  observeNotifier(wrappedDebtPriceAuthority.notifier, debtPriceObserver);
+  observeNotifier(wrappedCollateralPriceAuthority.notifier, colPriceObserver)
+    .catch(err => console.log(`Error observing colPriceObserver: ${err}`));
+  observeNotifier(wrappedDebtPriceAuthority.notifier, debtPriceObserver)
+    .catch(err => console.log(`Error observing debtPriceObserver: ${err}`));
 
   /**
    * Called from the debtsPerCollateral when there's a new loan with a closer

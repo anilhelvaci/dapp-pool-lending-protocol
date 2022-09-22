@@ -15,7 +15,7 @@ import BrandSelector from './BrandSelector.js';
 import { Nat } from '@endo/nat';
 import makeBorrowOffer from './offers/makeBorrowOffer.js';
 import { createLoan, setSnackbarState } from '../../store.js';
-import { LoanStatus, VaultStatus } from '../../constants.js';
+import { LoanStatus } from '../../constants.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -231,6 +231,7 @@ const Borrow = ({ market, handleClose }) => {
             value={collateralUnderlyingValue}
             onChange={onCollateralUnderlyingChange}
             placesToShow={3}
+            disabled={collateralInputDisabled}
             decimalPlaces={collateralUnderlyingBrand ? getDecimalPlaces(collateralUnderlyingBrand) : 3}
             label="Collateral Underlying Amount" />
         </Grid>

@@ -8,7 +8,7 @@ const setVanPrice = async homeP => {
   const home = await homeP;
   const { scratch, board } = home;
 
-  const NEW_PRICE_VAL = 300n;
+  const NEW_PRICE_VAL = 100n;
 
   const {
     VAN_ISSUER_BOARD_ID,

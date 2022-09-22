@@ -33,7 +33,7 @@ const LendingPoolWalletConnection = ({ setWalletP, dispatch }) => {
         dispatch: ctpDispatch,
         getBootstrap,
       } = makeCapTP(
-        "Card Store",
+        "Lending Pool",
         (obj) => socket.send(JSON.stringify(obj)),
         otherSide,
       );

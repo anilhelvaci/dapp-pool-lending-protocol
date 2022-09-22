@@ -85,20 +85,6 @@
 
 /**
  * @typedef {{
- *   status: import('../constants').VaultStatus,
- *   liquidated?: boolean,
- *   locked?: VaultUIState['locked'],
- *   collateralizationRatio?: Ratio,
- *   debtSnapshot?: VaultUIState['debtSnapshot'],
- *   interestRate?:  VaultUIState['interestRate'],
- *   liquidationRatio?: VaultUIState['liquidationRatio'],
- *   asset?: AssetState,
- *   err?: Error,
- * }} VaultData
- */
-
-/**
- * @typedef {{
  *   instance: Instance,
  *   treasuryAPI: unknown,
  *   runIssuer: Issuer,

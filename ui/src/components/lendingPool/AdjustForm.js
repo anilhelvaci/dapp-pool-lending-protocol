@@ -3,7 +3,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import PurseSelector from './PurseSelector.js';
-import Divider from '@material-ui/core/Divider';
 import { TextField } from '@material-ui/core';
 import { getAmountOut, invertRatio, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import Button from '@material-ui/core/Button';
@@ -17,6 +16,7 @@ import AdjustActionChooser from './AdjustActionChooser.js';
 import { AdjustActions } from '../../constants.js';
 import makeAdjustOffer from './offers/makeAdjustOffer.js';
 import { setSnackbarState } from '../../store.js';
+import { DividerColorPrimary } from './CustomUIComponents';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,10 +42,6 @@ const useStyles = makeStyles((theme) => ({
   limitStatus: {
     marginBottom: theme.spacing(1),
   },
-  divider: {
-    backgroundColor: theme.palette.primary.main,
-    opacity: 0.5,
-  },
   arrowIcon: {
     '& .MuiSvgIcon-root': {
       preserveAspectRatio: 'none',
@@ -54,7 +50,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const NatAmountInputRedeemUnderlying = makeNatAmountInput({ React, TextField });
 const NatAmountInputProtocol = makeNatAmountInput({ React, TextField });
 
 const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket, debtToCollateralRatioLimit }) => {
@@ -235,7 +230,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
               value={collateralAction}
               handleChange={(ev) => handleActionChange(ev.target.value, setCollateralAction, setCollateralDisabled)} />
           </div>
-          <Divider className={classes.divider} />
+          <DividerColorPrimary />
         </Grid>
         <Grid item xs={4}>
           <NatAmountInputProtocol
@@ -273,7 +268,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
             </Typography>
             <AdjustActionChooser value={debtAction} handleChange={(ev) => handleActionChange(ev.target.value, setDebtAction, setDebtDisabled)}/>
           </div>
-          <Divider className={classes.divider} />
+          <DividerColorPrimary />
         </Grid>
         <Grid item xs={4}>
           <NatAmountInputProtocol
@@ -299,7 +294,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
           <Typography variant='h6' noWrap className={classes.limitStatus}>
             Limit Status
           </Typography>
-          <Divider />
+          <DividerColorPrimary/>
         </Grid>
         <Grid item xs={4}>
           <TextField id='outlined-basic' fullWidth label='From - %Of Limit' variant='outlined' value={`${displayPercent(debtToCollateralRatioLimit)}%`} />
@@ -313,7 +308,7 @@ const AdjustForm = ({ loan, handleClose, debtMarket, collateralUnderlyingMarket,
           <Typography variant='h6' noWrap className={classes.limitStatus}>
             Parameters
           </Typography>
-          <Divider />
+          <DividerColorPrimary />
         </Grid>
         <Grid item xs={4}>
           <TextField id='outlined-basic' fullWidth label='Exchange Rate' variant='outlined'

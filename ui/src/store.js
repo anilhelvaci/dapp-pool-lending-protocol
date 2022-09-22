@@ -3,27 +3,15 @@
 // The code in this file requires an understanding of Autodux.
 // See: https://github.com/ericelliott/autodux
 import autodux from 'autodux';
-import { VaultStatus } from './constants';
 
 export const initial = {
   approved: true,
   connected: false,
-  account: null,
   purses: /** @type {PursesJSONState[] | null} */ (null),
   brandToInfo: /** @type {Array<[Brand, BrandInfo]>} */ ([]),
-  RUNStakeHistory: /** @type {Record<string, HistoryItem>} */ ({}),
-  // Vault state
-  treasury: /** @type { VaultState | null } */ (null),
   lendingPool: (null),
   markets: (null),
   prices: (null), // {brandIn: quote}
-  vaultCollateral: /** @type { CollateralInfo | null } */ (null),
-  vaultConfiguration: null,
-  vaults: /** @type {Record<string, VaultData> | null} */ (null),
-  collaterals: /** @type { Collaterals | null } */ (null),
-  vaultToManageId: /** @type {string | null} */ (null),
-  loadTreasuryError: /** @type {string | null} */ null,
-  RUNStake: /** @type { RUNStakeState | null } */ (null),
   loan: /** @type { Loan | null } */ (null),
   loanAsset: /** @type { AssetState | null } */ (null),
   loans: (null),
@@ -68,27 +56,13 @@ export const {
     setConnected,
     setPurses,
     mergeBrandToInfo,
-    addToBrandToInfo,
-    setCollaterals,
-    resetState,
-    setTreasury,
     setLendingPool,
     setMarkets,
-    setVaultCollateral,
-    setVaultConfiguration,
-    createVault,
     createMarket,
     addPrice,
-    initVaults,
     initLoans,
-    setVaultToManageId,
-    updateVault,
     updateMarket,
     updatePrice,
-    resetVault,
-    setLoadTreasuryError,
-    mergeRUNStakeHistory,
-    setRUNStake,
     setLoan,
     setLoanAsset,
     createLoan,
@@ -102,25 +76,11 @@ export const {
   slice: 'treasury',
   initial,
   actions: {
-    /** @type {(state: TreasuryState) => TreasuryState} */
-    initVaults: state => {
-      return { ...state, vaults: {} };
-    },
     initLoans: state => {
       return { ...state, loans: {} };
     },
     initMarkets: state => {
       return {...state, markets: {}};
-    },
-    /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
-    createVault: (state, { id, vault }) => {
-      return {
-        ...state,
-        vaults: {
-          ...state.vaults,
-          [id]: vault,
-        },
-      };
     },
     createMarket: (state, { id, market }) => {
       return {
@@ -149,17 +109,6 @@ export const {
         },
       };
     },
-    /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
-    updateVault: ({ vaults, ...state }, { id, vault }) => {
-      const oldVaultData = vaults && vaults[id];
-      const status = vault.liquidated
-        ? VaultStatus.LIQUIDATED
-        : (vault.status ?? oldVaultData?.status);
-      return {
-        ...state,
-        vaults: { ...vaults, [id]: { ...oldVaultData, ...vault, status } },
-      };
-    },
     updateMarket: ({ markets, ...state }, { id, market }) => {
       const oldMarketData = markets && markets[id];
       return {
@@ -182,12 +131,6 @@ export const {
       };
     },
     /** @type {(state: TreasuryState) => TreasuryState} */
-    resetVault: state => ({
-      ...state,
-      vaultCollateral: null,
-      vaultConfiguration: null,
-    }),
-    /** @type {(state: TreasuryState) => TreasuryState} */
     resetState: state => ({
       ...state,
       purses: null,
@@ -205,16 +148,6 @@ export const {
       return {
         ...state,
         brandToInfo,
-      };
-    },
-    /** @type {(state: TreasuryState, newRUNStakeHistory: Record<string, HistoryItem>) => TreasuryState} */
-    mergeRUNStakeHistory: (state, newRUNStakeHistory) => {
-      return {
-        ...state,
-        RUNStakeHistory: {
-          ...state.RUNStakeHistory,
-          ...newRUNStakeHistory,
-        },
       };
     },
   },

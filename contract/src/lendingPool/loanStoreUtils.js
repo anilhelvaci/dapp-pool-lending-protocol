@@ -2,6 +2,7 @@ import { keyEQ, keyLT } from '@agoric/store';
 import { AmountMath } from '@agoric/ertp';
 import { toVaultKey } from '@agoric/run-protocol/src/vaultFactory/storeUtils.js';
 import { makeOrderedVaultStore } from '@agoric/run-protocol/src/vaultFactory/orderedVaultStore.js';
+import { LoanPhase } from './loan.js'
 
 /**
  * This module is somehow similar to the ~/run-protocol/vaultFactory/prioritizedVaults.js.
@@ -107,7 +108,7 @@ export const makeLoanStoreUtils = () => {
    */
   const refreshLoanPriorityByAttributes = (oldDebt, oldCollateral, loanId) => {
     const loan = removeLoanByAttributes(oldDebt, oldCollateral, loanId);
-    addLoan(loanId, loan);
+    return addIfActive(loanId, loan);
   };
 
   /**
@@ -118,8 +119,13 @@ export const makeLoanStoreUtils = () => {
    */
   const refreshLoanPriorityByKey = (key, loanId) => {
     const loan = removeLoan(key);
-    return addLoan(loanId, loan);
+    return addIfActive(loanId, loan);
   }
+
+  const addIfActive = (loanId, loan) => {
+    if (loan.getPhase() !== LoanPhase.ACTIVE) return 'Not exist';
+    return addLoan(loanId, loan);
+  };
 
   return harden({
     addLoan,

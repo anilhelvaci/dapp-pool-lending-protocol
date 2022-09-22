@@ -23,23 +23,15 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const NatAmountInput = makeNatAmountInput({ React, TextField });
-
 const PoolTabsLayout = ({ market, handleClose }) => {
   const classes = useStyles();
   const [value, setValue] = React.useState(0);
-  const [test, setTest] = useState(BigInt(1))
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
   if (!market) return null;
-
-  const underlyingBrand = market.underlyingBrand;
-  const protocolBrand = market.protocolBrand;
-
-  const [underlyingInput, setUndelyingInput] = useState(null);
 
   return (
     <div className={classes.root}>

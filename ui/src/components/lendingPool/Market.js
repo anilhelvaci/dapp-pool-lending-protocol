@@ -4,7 +4,7 @@ import { StyledTableRow } from './StyledTableComponents';
 import {
   getAmountOut,
   ceilMultiplyBy,
-  makeRatioFromAmounts,
+  makeRatioFromAmounts, invertRatio,
 } from '@agoric/zoe/src/contractSupport';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@endo/nat';
@@ -20,6 +20,7 @@ const Market = ({ market, brandToInfo, handleClickOpen, priceQuote }) => {
     displayBrandPetname,
     displayAmount,
     getDecimalPlaces,
+    displayRatio,
   } = makeDisplayFunctions(brandToInfo);
 
   const underlyingAssetPetnameDisplay = displayBrandPetname(market.underlyingBrand);
@@ -49,7 +50,7 @@ const Market = ({ market, brandToInfo, handleClickOpen, priceQuote }) => {
           {displayAmount(underlyingLiqInCompare)} {compareAssetPetnameDisplay}
         </Typography>
         <Typography variant={'caption'}>
-          {displayAmount(market.underlyingLiquidity)} {underlyingAssetPetnameDisplay}
+          {displayAmount(market.underlyingLiquidity, 6)} {underlyingAssetPetnameDisplay}
         </Typography>
       </TableCell>
       {/* Total Protocol Supply */}
@@ -66,7 +67,7 @@ const Market = ({ market, brandToInfo, handleClickOpen, priceQuote }) => {
       {/* APY */}
       <TableCell align='right'>{displayPercent(market.latestInterestRate, 4)}%</TableCell>
       {/* Exchange Rate */}
-      <TableCell align='right'>{displayPercent(market.exchangeRate, 8)}% </TableCell>
+      <TableCell align='right'>{`1 ${displayBrandPetname(market.underlyingBrand)} = ${displayRatio(invertRatio(market.exchangeRate))} ${displayBrandPetname(market.protocolBrand)}`}</TableCell>
       {/* MMR */}
       <TableCell align='right'>{displayPercent(market.liquidationMargin)}% </TableCell>
     </StyledTableRow>

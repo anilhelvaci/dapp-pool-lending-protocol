@@ -170,6 +170,7 @@
  * @typedef {Object} Loan
 
  * @property {() => ZCFSeat} getLoanSeat
+ * @property {() => string} getPhase
  * @property {() => void} liquidating
  * @property {(amount: Amount<'nat'>) => void} liquidated
  * @property {(seat: ZCFSeat, poolSeat: ZCFSeat, exchangeRate: Ratio, loanKey: string) => Promise<LoanKit>} initLoanKit

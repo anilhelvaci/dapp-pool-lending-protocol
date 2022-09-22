@@ -6,7 +6,7 @@ import { makeDisplayFunctions } from '../helpers.js';
 import { Typography } from '@material-ui/core';
 import AdjustForm from './AdjustForm.js';
 
-const AdjustDialog = ({ open, handleClose, loan, underlyingMarket, collateralUnderlyingMarket }) => {
+const AdjustDialog = ({ open, handleClose, loan }) => {
 
   const classes = useStyles();
 
@@ -17,10 +17,6 @@ const AdjustDialog = ({ open, handleClose, loan, underlyingMarket, collateralUnd
   } = useApplicationContext();
 
   if (brandToInfo.length === 0 || !loan) return null;
-
-  const {
-    displayBrandPetname,
-  } = makeDisplayFunctions(brandToInfo);
 
   return (
     <div>
