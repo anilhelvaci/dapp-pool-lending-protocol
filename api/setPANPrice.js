@@ -1,14 +1,14 @@
 // import priceConfig from './priceConfig';
 import { E } from '@endo/far';
 import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
-import { makeRatio } from '@agoric/zoe/src/contractSupport';
+import { makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const setPanPrice = async homeP => {
 
   const home = await homeP;
   const { scratch, board } = home;
 
-  const NEW_PRICE_VAL = 250n;
+  const NEW_PRICE_VAL = 300n;
 
   const {
     USD_ISSUER_BOARD_ID,
