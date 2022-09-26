@@ -10,14 +10,13 @@ import {
   getLiquidityFromFaucet,
   makeBundle, makeRates, depositMoney,
 } from 'contract/test/lendingPool/helpers.js';
+import fs from 'fs';
 
 const lendingPoolFaucetContractRoot = './lendingPoolFaucet.js';
 
-const addNewPool = async (homeP, { bundleSource }) => {
+const addNewPool = async (homeP, { bundleSource, pathResolve }) => {
   const home = await homeP;
-  const scratch = home.scratch;
-  const zoe = home.zoe;
-  const board = home.board;
+  const { scratch, board, zoe } = home;
 
   console.log('Creating a new pool with the config:', newPoolConfig);
   const { assetConfig } = newPoolConfig;
@@ -121,10 +120,12 @@ const addNewPool = async (homeP, { bundleSource }) => {
     getLiquidityFromFaucet(zoe, E(usdPublicFacetP).makeFaucetInvitation(), newPoolConfig.ammConfig.compareLiquidity, usdBrand, 'USD'),
   ]);
 
-  const [assetProtocolLiquidityAmount, usdProtocolLiquidityAmount, assetProtocolBrand] = await Promise.all([
+  const [assetProtocolLiquidityAmount, usdProtocolLiquidityAmount, assetProtocolBrand, ASSET_USD_PRICE_AUTH_ID, ASSET_ISSUER_BOARD_ID] = await Promise.all([
     E(assetIssuerP).getAmountOf(assetProtocolLiquidity),
     E(usdIssuerP).getAmountOf(usdProtocolLiquidity),
     E(assetPoolMan).getProtocolBrand(),
+    E(scratch).set(`${assetConfig.keyword}_usd_price_auth_id`, assetUsdPriceAuthority),
+    E(board).getId(assetIssuer),
   ]);
 
   const depositProposal = harden({
@@ -142,6 +143,23 @@ const addNewPool = async (homeP, { bundleSource }) => {
     depositProposal,
     depositPaymentRecord
   );
+
+  console.log(`-- ASSET_USD_PRICE_AUTH_ID: ${ASSET_USD_PRICE_AUTH_ID} --`);
+  console.log(`-- ASSET_USD_PRICE_AUTH_ID: ${ASSET_ISSUER_BOARD_ID} --`);
+
+  const dappConstants = {
+    ...lendingPoolDefaults,
+    ASSET_USD_PRICE_AUTH_ID,
+    ASSET_ISSUER_BOARD_ID
+  };
+  const defaultsFile = pathResolve(`../ui/src/generated/lendingPoolDefaults.js`);
+  console.log('writing', defaultsFile);
+  const defaultsContents = `\
+// UPDATED FROM ${pathResolve('./addNewPool.js')}
+export default ${JSON.stringify(dappConstants, undefined, 2)};
+`;
+
+  await fs.promises.writeFile(defaultsFile, defaultsContents);
 
   console.log('Done...');
 };
