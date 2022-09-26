@@ -74,6 +74,9 @@ Open 7 terminal windows
    ```
 
 >Wait for the deploy script to finish before you move on!
+
+### Sources
+Here is a google sheet demonstrating the protocol math => [Lending Pool Protocol Math - Cosmoverse](https://docs.google.com/spreadsheets/d/1w5MSjfWutnkDM0jkCHUewgKxAVfbsl2tUouXfrMivkc/edit?usp=sharing)
    
 ### Prepare Alice's Profile
 1. Open a new profile from chrome
