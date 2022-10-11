@@ -1,101 +1,111 @@
 // @ts-check
+// @jessie-check
 
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
-import { offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeTracer } from '../makeTracer.js';
+import { makeRatio, offerTo } from '@agoric/zoe/src/contractSupport/index.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 
 const trace = makeTracer('LIQ');
 
 /**
- * Liquidates a Vault, using the strategy to parameterize the particular
- * contract being used. The strategy provides a KeywordMapping and proposal
- * suitable for `offerTo()`, and an invitation.
+ * Our current liquidation logic is implemented here. To liquidate a loan
+ * we first need to redeem the collateral because it's a LendingPool protocolToken.
+ * After a successful redeem operation, we expect an underlyingToken for the
+ * protocolToken we just redeemed. For instance; imagine a loan with debtBrand of
+ * PAN, collateralBrand of AgVAN. If we redeem the collateral, we should have some
+ * amount of VAN at hand. We do redeem first because we assume there is no market
+ * for AgVAN/PAN in the AMM. We also assume that the AMM has no VAN/PAN pool but it
+ * has VAN/CentralBrand and PAN/CentralBrand. The AMM uses a virtual double pool
+ * to make the VAN/PAN trade happen.
  *
- * Once collateral has been sold using the contract, we burn the amount
- * necessary to cover the debt and return the remainder.
+ * After we have our VANs, we feed it into our current liquidation contract
+ * and the liquidation contract makes the AMM trade happen. Once the AMM trade
+ * is successful, we transfer the funds accordingly.
  *
- * @param {ContractFacet} zcf
- * @param {InnerVault} innerVault
- * @param {(losses: AmountKeywordRecord,
- *             zcfSeat: ZCFSeat
- *            ) => void} burnLosses
- * @param {LiquidationStrategy} strategy
+ * @param {ZCF} zcf
+ * @param {Loan} loan
+ * @param {LiquidatorCreatorFacet}  liquidator
+ * @param {MakeRedeemInvitation} makeRedeemInvitation
  * @param {Brand} collateralBrand
- * @returns {Promise<InnerVault>}
+ * @param {Issuer} collateralUnderlyingIssuer
+ * @param {Ratio} penaltyRate
+ * @param {TransferLiquidatedFund} transferLiquidatedFund
+ * @param {DebtPaid} debtPaid
+ * @returns {Promise<Loan>}
  */
 const liquidate = async (
   zcf,
-  innerVault,
-  burnLosses,
-  strategy,
+  loan,
+  liquidator,
+  makeRedeemInvitation,
   collateralBrand,
+  collateralUnderlyingIssuer,
+  penaltyRate,
+  transferLiquidatedFund,
+  debtPaid
 ) => {
-  innerVault.liquidating();
-  const debt = innerVault.getCurrentDebt();
-  const { brand: runBrand } = debt;
-  const vaultZcfSeat = innerVault.getVaultSeat();
+  trace('liquidate start', loan);
+  loan.liquidating(); // update loan state
 
-  const collateralToSell = vaultZcfSeat.getAmountAllocated(
-    'Collateral',
-    collateralBrand,
+  const debt = loan.getCurrentDebt();
+  const loanZcfSeat = loan.getLoanSeat();
+
+  // Get the collateral, remember it's a protocolToken
+  const collateralToSell = loanZcfSeat.getAmountAllocated('Collateral');
+
+  // Call the redeem hook in the lendingPool contract
+  const { deposited: redeemDeposited, userSeatPromise: redeemSeat } = await offerTo(
+    zcf,
+    makeRedeemInvitation(collateralBrand),
+    harden({ Collateral: 'Protocol', CollateralUnderlying: 'Underlying' }), // CollateralUnderlying is the keyword we use for the underlyingToken corresponding to the protocolToken redeemed
+    harden({
+      give: { Protocol: collateralToSell },
+      want: { Underlying: AmountMath.makeEmpty(collateralBrand) },
+    }),
+    loanZcfSeat,
+    loanZcfSeat,
+    undefined
   );
+  await redeemDeposited;
+  trace(`liq prep`, { collateralToSell, debt, liquidator });
 
+  // Get the underlyingTokens for the redeemed protocolTokens
+  const collateralUnderlyingToSell = loanZcfSeat.getAmountAllocated('CollateralUnderlying', collateralBrand);
+
+  // Call the liquidation contract
   const { deposited, userSeatPromise: liqSeat } = await offerTo(
     zcf,
-    strategy.makeInvitation(debt),
-    strategy.keywordMapping(),
-    strategy.makeProposal(collateralToSell, debt),
-    vaultZcfSeat,
+    E(liquidator).makeLiquidateInvitation(),
+    harden({ CollateralUnderlying: 'In', Debt: 'Out' }),
+    harden({
+      give: { In: collateralUnderlyingToSell },
+      want: { Out: AmountMath.makeEmpty(debt.brand) },
+    }),
+    loanZcfSeat,
+    loanZcfSeat,
+    harden({ debt, penaltyRate }),
   );
-  trace(` offeredTo`, collateralToSell, debt);
+  trace(` offeredTo`, { collateralToSell, debt });
 
-  // await deposited, but we don't need the value.
-  await Promise.all([deposited, E(liqSeat).getOfferResult()]);
+  await deposited;
+  debtPaid(debt);
+  transferLiquidatedFund(loanZcfSeat);
 
-  // Now we need to know how much was sold so we can pay off the debt.
-  // We can use this because only liquidation adds RUN to the vaultSeat.
-  const proceeds = vaultZcfSeat.getAmountAllocated('RUN', runBrand);
-
-  const isUnderwater = !AmountMath.isGTE(proceeds, debt);
-  const runToBurn = isUnderwater ? proceeds : debt;
-  trace({ debt, isUnderwater, runToBurn });
-  burnLosses(harden({ RUN: runToBurn }), vaultZcfSeat);
-  innerVault.liquidated(AmountMath.subtract(debt, runToBurn));
-
-  // remaining funds are left on the vault for the user to close and claim
-  return innerVault;
+  // Update loan state
+  loan.liquidated(AmountMath.makeEmpty(debt.brand));
+  return loan;
 };
 
-/**
- * The default strategy converts of all the collateral to RUN using autoswap,
- * and refunds any excess RUN.
- *
- * @type {(XYKAMMPublicFacet) => LiquidationStrategy}
- */
-const makeDefaultLiquidationStrategy = amm => {
-  const keywordMapping = () =>
-    harden({
-      Collateral: 'In',
-      RUN: 'Out',
-    });
+const liquidationDetailTerms = debtBrand =>
+  harden({
+    MaxImpactBP: 50n,
+    OracleTolerance: makeRatio(30n, debtBrand),
+    AMMMaxSlippage: makeRatio(30n, debtBrand),
+  });
+/** @typedef {ReturnType<typeof liquidationDetailTerms>} LiquidationTerms */
 
-  const makeProposal = (collateral, run) =>
-    harden({
-      give: { In: collateral },
-      want: { Out: AmountMath.makeEmptyFromAmount(run) },
-    });
-
-  trace(`return from makeDefault`);
-
-  return {
-    makeInvitation: () => E(amm).makeSwapInInvitation(),
-    keywordMapping,
-    makeProposal,
-  };
-};
-
-harden(makeDefaultLiquidationStrategy);
 harden(liquidate);
+harden(liquidationDetailTerms);
 
-export { makeDefaultLiquidationStrategy, liquidate };
+export { liquidate, liquidationDetailTerms };

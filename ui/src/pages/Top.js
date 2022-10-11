@@ -5,15 +5,12 @@ import { makeStyles } from '@material-ui/core/styles';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 import AppHeader from '../components/AppHeader';
-import ResponsiveNavigation from '../components/ResponsiveNavigation';
 
-import NavDrawer from '../components/NavDrawer';
-
-import Swap from '../components/Swap';
-import NewVault from '../components/vault/NewVault';
-import Treasury from '../components/Treasury';
-import VaultManagement from '../components/vault/VaultManagement/VaultManagement';
-import GetRun from '../components/getRun/GetRun';
+import LendingPool from '../components/lendingPool/LendingPool';
+import Snackbar from '@material-ui/core/Snackbar';
+import Alert from '@material-ui/lab/Alert';
+import { useApplicationContext } from '../contexts/Application.jsx';
+import { setSnackbarState } from '../store.js';
 
 const navigationDrawerWidth = 240;
 
@@ -25,14 +22,20 @@ const useStyles = makeStyles(theme => ({
   body: {
     display: 'flex',
     flexDirection: 'row',
-    margin: '0',
+    margin: 0,
     float: 'none !important',
   },
   content: {
     flexGrow: 1,
     backgroundColor: theme.palette.background.default,
     padding: theme.spacing(1),
+    [theme.breakpoints.down('sm')]: {
+      padding: 0,
+    },
   },
+  snackbar: {
+    backgroundColor: theme.palette.secondary.main,
+  }
 }));
 
 function Top() {
@@ -40,6 +43,21 @@ function Top() {
   const handleDrawerToggle = () => setIsOpen(!isOpen);
 
   const classes = useStyles();
+
+  const {
+    state: {
+      snackbarState: {
+        open,
+        message,
+        stick
+      }
+    },
+    dispatch,
+  } = useApplicationContext();
+
+  const handleClose = () => {
+    dispatch(setSnackbarState({ open: false, message: '' }))
+  };
 
   return (
     <Router>
@@ -49,36 +67,21 @@ function Top() {
           drawerWidth={navigationDrawerWidth}
         ></AppHeader>
         <div className={classes.body}>
-          <ResponsiveNavigation
-            drawerWidth={navigationDrawerWidth}
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-          >
-            <NavDrawer />
-          </ResponsiveNavigation>
-
           <main className={classes.content}>
             <Switch>
-              {/* <Route path="/pegasus">Pegasus</Route> */}
-              <Route path="/vaults">
-                <Treasury />
-              </Route>
-              {/* <Route path="/rewards">Rewards</Route> */}
-              {/* <Route path="/gov">Governance</Route> */}
-              <Route path="/swap">
-                <Swap />
-              </Route>
-              <Route path="/manageVault">
-                <VaultManagement />
-              </Route>
-              <Route path="/getRUN">
-                <GetRun />
-              </Route>
-              <Route path="/">
-                <NewVault />
+              <Route path='/'>
+                <LendingPool />
               </Route>
             </Switch>
           </main>
+          <Snackbar open={open} autoHideDuration={stick ? null : 6000} onClose={handleClose} anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }} >
+            <Alert onClose={handleClose} severity="info" variant={'filled'} className={classes.snackbar}>
+              {message}
+            </Alert>
+          </Snackbar>
         </div>
       </div>
     </Router>

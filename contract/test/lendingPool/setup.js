@@ -1,6 +1,5 @@
 // @ts-check
 
-import bundleSource from '@endo/bundle-source';
 import { E, Far } from '@endo/far';
 import { makeLoopback } from '@endo/captp';
 
@@ -19,7 +18,6 @@ import { makeAmmTerms } from '@agoric/run-protocol/src/vpool-xyk-amm/params.js';
 import { AmountMath } from '@agoric/ertp';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeGovernedTerms } from '../../src/lendingPool/params.js';
-import { liquidationDetailTerms } from '@agoric/run-protocol/src/vaultFactory/liquidation.js';
 
 const { details: X } = assert;
 
@@ -29,6 +27,12 @@ const SECONDS_PER_HOUR = 60n * 60n;
 const SECONDS_PER_DAY = 24n * SECONDS_PER_HOUR;
 
 const BASIS_POINTS = 10_000n;
+
+/**
+ * @file This file contains methods for setting up the Agoric environment
+ * for LendingPool protocol. We inherited the logic in econ-behaviors and
+ * support.js in the VaultFactory.
+ */
 
 export const getPath = async (sourceRoot) => {
   const url = await importMetaResolve(sourceRoot, import.meta.url);
@@ -119,7 +123,14 @@ export const startEconomicCommittee = async (
 };
 harden(startEconomicCommittee);
 
-/** @param { EconomyBootstrapPowers } powers */
+/**
+ * We setup the AMM in way that the CentralBrand is the CompareCurrency brand
+ * of our LendingPool. Native AMM of Agoric uses RUN as its CentralBrand,
+ * if we decide to use RUN as our CompareCurrency we can start interacting with the
+ * native AMM directly.
+ *
+ * @param { EconomyBootstrapPowers } powers
+ * */
 export const setupAmm = async (
   {
     consume: {
@@ -192,7 +203,7 @@ export const startLendingPool = async (
       zoe,
       economicCommitteeCreatorFacet: electorateCreatorFacet,
     },
-    produce, // {  vaultFactoryCreator }
+    produce, // {  loanFactoryCreator }
     brand: {
       consume: { [COMPARE_CURRENCY_ISSUER_NAME]: compareBrandP },
     },
@@ -225,15 +236,15 @@ export const startLendingPool = async (
   const compareBrand = await compareBrandP;
 
   /**
-   * Types for the governed params for the vaultFactory; addVaultType() sets actual values
+   * Types for the governed params for the loanFactory; addLoanType() sets actual values
    *
-   * @type {VaultManagerParamValues}
+   * @type {LoanManagerParamValues}
    */
   const poolManagerParams = {
     // XXX the values aren't used. May be addressed by https://github.com/Agoric/agoric-sdk/issues/4861
     liquidationMargin: makeRatio(0n, compareBrand),
-    interestRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-    loanFee: makeRatio(0n, compareBrand, BASIS_POINTS),
+    // interestRate: makeRatio(0n, compareBrand, BASIS_POINTS),
+    // loanFee: makeRatio(0n, compareBrand, BASIS_POINTS),
     initialExchangeRate: makeRatio(0n, compareBrand, BASIS_POINTS),
     baseRate: makeRatio(0n, compareBrand, BASIS_POINTS),
     multiplierRate: makeRatio(0n, compareBrand, BASIS_POINTS),
@@ -252,7 +263,7 @@ export const startLendingPool = async (
   const priceManager = await priceManagerP;
   const timer = await chainTimerService;
 
-  const vaultFactoryTerms = makeGovernedTerms(
+  const loanFactoryTerms = makeGovernedTerms(
     priceManager, // priceMan here
     loanParams,
     installations.liquidate,
@@ -260,17 +271,16 @@ export const startLendingPool = async (
     invitationAmount,
     poolManagerParams,
     ammPublicFacet,
-    // liquidationTerms: liquidationDetailTerms(centralBrand),
-    undefined,
-    compareBrand
+    compareBrand,
+    undefined
   );
-  // console.log("vaultFactoryTerms", vaultFactoryTerms)
+  // console.log("loanFactoryTerms", loanFactoryTerms)
   const governorTerms = harden({
     timer,
     electorateInstance,
     governedContractInstallation: installations.LendingPool,
     governed: {
-      terms: vaultFactoryTerms,
+      terms: loanFactoryTerms,
       issuerKeywordRecord: {},
       privateArgs: harden({ initialPoserInvitation }),
     },
@@ -303,10 +313,16 @@ export const startLendingPool = async (
 
 harden(startLendingPool)
 
-export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
+export const setupAmmAndElectorate = async (
+  t,
+  vanLiquidity,
+  compLiquidityPoolVan,
+  panLiquidity,
+  compLiquidityPoolPan) => {
   const {
     zoe,
     vanKit: { issuer: vanIssuer },
+    panKit: { issuer: panIssuer },
     electorateTerms = { committeeName: 'The Cabal', committeeSize: 1 },
     timer,
   } = t.context;
@@ -321,30 +337,53 @@ export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
   const governorCreatorFacet = consume.ammGovernorCreatorFacet;
   const governorInstance = await instance.consume.ammGovernor;
   const governorPublicFacet = await E(zoe).getPublicFacet(governorInstance);
-  const governedInstance = E(governorPublicFacet).getGovernedContract();
+  const governedInstance = await E(governorPublicFacet).getGovernedContract();
 
   /** @type { GovernedPublicFacet<XYKAMMPublicFacet> } */
     // @ts-expect-error cast from unknown
   const ammPublicFacet = await E(governorCreatorFacet).getPublicFacet();
 
-  const liquidityIssuer = E(ammPublicFacet).addPool(vanIssuer, 'VAN');
-  const liquidityBrand = await E(liquidityIssuer).getBrand();
+  // Add VAN/USD Pool
+  const vanLiquidityIssuer = E(ammPublicFacet).addPool(vanIssuer, 'VAN');
+  const vanLiquidityBrand = await E(vanLiquidityIssuer).getBrand();
 
-  const liqProposal = harden({
+  // Add PAN/USD Pool
+  const panLiquidityIssuer = E(ammPublicFacet).addPool(panIssuer, 'PAN');
+  const panLiquidityBrand = await E(panLiquidityIssuer).getBrand();
+
+  const vanPoolLiqProposal = harden({
     give: {
       Secondary: vanLiquidity.proposal,
-      Central: compLiquidity.proposal,
+      Central: compLiquidityPoolVan.proposal,
     },
-    want: { Liquidity: AmountMath.makeEmpty(liquidityBrand) },
+    want: { Liquidity: AmountMath.makeEmpty(vanLiquidityBrand) },
   });
-  const liqInvitation = await E(ammPublicFacet).makeAddLiquidityInvitation();
+  const vanPoolAddLiqInvitation = E(ammPublicFacet).makeAddLiquidityInvitation();
 
-  const ammLiquiditySeat = await E(zoe).offer(
-    liqInvitation,
-    liqProposal,
+  const vanPoolAddLiquiditySeat = await E(zoe).offer(
+    vanPoolAddLiqInvitation,
+    vanPoolLiqProposal,
     harden({
       Secondary: vanLiquidity.payment,
-      Central: compLiquidity.payment,
+      Central: compLiquidityPoolVan.payment,
+    }),
+  );
+
+  const panPoolLiqProposal = harden({
+    give: {
+      Secondary: panLiquidity.proposal,
+      Central: compLiquidityPoolPan.proposal,
+    },
+    want: { Liquidity: AmountMath.makeEmpty(panLiquidityBrand) },
+  });
+  const panPoolAddLiqInvitation = E(ammPublicFacet).makeAddLiquidityInvitation();
+
+  const panPoolAddLiquiditySeat = await E(zoe).offer(
+    panPoolAddLiqInvitation,
+    panPoolLiqProposal,
+    harden({
+      Secondary: panLiquidity.payment,
+      Central: compLiquidityPoolPan.payment,
     }),
   );
 
@@ -353,7 +392,8 @@ export const setupAmmAndElectorate = async (t, vanLiquidity, compLiquidity) => {
     ammCreatorFacet: await consume.ammCreatorFacet,
     ammPublicFacet,
     instance: governedInstance,
-    ammLiquidity: E(ammLiquiditySeat).getPayout('Liquidity'),
+    ammVanPoolLiquidity: E(vanPoolAddLiquiditySeat).getPayout('Liquidity'),
+    ammPanPoolLiquidity: E(panPoolAddLiquiditySeat).getPayout('Liquidity'),
   };
 
   return { amm: newAmm, space };

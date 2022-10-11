@@ -2,7 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link name="unprocessed-script" content="lockdown.umd.js" />
+    <script src="lockdown.umd.js"></script>
+    <script>
+      // Allow the React dev environment to extend the console for debugging
+      // features.
+      const consoleTaming = '%NODE_ENV%' === 'production' ? 'safe' : 'unsafe';
+
+      const { pow: mathPow } = Math;
+      Math.pow = (base, exp) =>
+        typeof base === 'bigint' && typeof exp === 'bigint'
+          ? base ** exp
+          : mathPow(base, exp);
+
+      lockdown({
+        __allowUnsafeMonkeyPatching__: 'unsafe',
+        errorTaming: 'unsafe',
+        overrideTaming: 'severe',
+        consoleTaming: consoleTaming,
+      });
+
+      console.log('lockdown done.');
+    </script>
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
@@ -37,10 +57,19 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
     <style>
       html {
         height: 100vh;
-        background-image: linear-gradient(to top, #fff 8%, #8E23351e 70%, #fff 100%);
+        background-image: linear-gradient(
+          to top,
+          #fff 8%,
+          #8e23351e 70%,
+          #fff 100%
+        );
         background-attachment: fixed;
       }
     </style>

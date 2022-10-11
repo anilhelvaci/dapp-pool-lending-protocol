@@ -1,21 +1,21 @@
 import {
-  makeRatio,
   makeRatioFromAmounts,
   multiplyRatios,
   addRatios,
   quantize,
-  ceilDivideBy,
-  ceilMultiplyBy,
   assertIsRatio
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { assert, details as X, q } from '@agoric/assert';
 import { AmountMath } from '@agoric/ertp';
-import { natSafeMath } from '@agoric/zoe/src/contractSupport/safeMath.js';
+import { LARGE_DENOMINATOR, BASIS_POINTS } from './interest.js';
 
-const { multiply, floorDivide, ceilDivide, add, subtract } = natSafeMath;
-
-const BASIS_POINTS = 10000n;
-
+/**
+ *
+ * @param {Amount<'nat'>} totalCashAmount
+ * @param {Amount<'nat'>} totalBorrowAmount
+ * @param {Amount<'nat'>} totalSupplyAmount
+ * @returns {Ratio}
+ */
 export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalSupplyAmount) => {
   assert(totalCashAmount.brand === totalBorrowAmount.brand,
     X`${totalCashAmount.brand} and ${totalBorrowAmount} should be the same`);
@@ -27,25 +27,39 @@ export const calculateExchangeRate = (totalCashAmount, totalBorrowAmount, totalS
       numeratorAmount,
       totalSupplyAmount
     ),
-    BASIS_POINTS
+    BigInt(LARGE_DENOMINATOR)
   )
 };
 
+/**
+ *
+ * @param {Amount<'nat'>} totalCashAmount
+ * @param {Amount<'nat'>} totalBorrowAmount
+ * @returns {Ratio}
+ */
 export const calculateUtilizationRate = (totalCashAmount, totalBorrowAmount) => {
   assert(totalCashAmount.brand === totalBorrowAmount.brand,
     X`${totalCashAmount.brand} and ${totalBorrowAmount} should be the same`);
 
-  const denominatorAmount = AmountMath.add(totalCashAmount, totalBorrowAmount);
+  const denominatorAmount = totalBorrowAmount.value === 0n ? AmountMath.make(totalBorrowAmount.brand, 1n) :
+    AmountMath.add(totalCashAmount, totalBorrowAmount);
 
   return quantize(
     makeRatioFromAmounts(
       totalBorrowAmount,
       denominatorAmount
     ),
-    BASIS_POINTS
+    BigInt(BASIS_POINTS)
   );
 }
 
+/**
+ *
+ * @param {Ratio} multiplierRatio
+ * @param {Ratio} baseRate
+ * @param {Ratio} utilizationRate
+ * @returns {Ratio}
+ */
 export const calculateBorrowingRate = (multiplierRatio, baseRate, utilizationRate) => {
   assertIsRatio(multiplierRatio);
   assertIsRatio(baseRate);
@@ -53,7 +67,7 @@ export const calculateBorrowingRate = (multiplierRatio, baseRate, utilizationRat
 
   return quantize(
     addRatios(baseRate, multiplyRatios(utilizationRate, multiplierRatio)),
-    BASIS_POINTS
+    BigInt(BASIS_POINTS)
   );
 };
 

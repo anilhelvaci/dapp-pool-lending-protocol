@@ -1,28 +1,31 @@
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useContext, useReducer } from 'react';
 
 import { E } from '@endo/captp';
 import { makeAsyncIterableFromNotifier as iterateNotifier } from '@agoric/notifier';
 
-import { dappConfig, refreshConfigFromWallet } from '../utils/config';
+import lendingPoolDappConfig from '../generated/lendingPoolDefaults';
 
 import {
-  initial,
-  reducer,
   defaultState,
-  setPurses,
-  initVaults,
-  updateVault,
-  setCollaterals,
-  setRunLoCTerms,
-  setTreasury,
-  setAutoswap,
+  initial,
+  initLoans,
   mergeBrandToInfo,
-  setUseGetRUN,
-  setLoadTreasuryError,
+  reducer,
+  setLendingPool,
+  setLoan,
+  setLoanAsset,
+  setMarkets,
+  setPurses,
+  createMarket,
+  addPrice,
+  updateMarket,
+  updatePrice,
+  updateLoan,
+  hasMarket,
+  initMarkets,
 } from '../store';
-import { updateBrandPetnames, storeAllBrandsFromTerms } from './storeBrandInfo';
-import WalletConnection from '../components/WalletConnection';
-import { getRunLoCTerms } from '../runLoCStub';
+import LendingPoolWalletConnection from '../components/lendingPool/LendingPoolWalletConnection';
+import { LoanStatus, OperationType } from '../constants';
 
 // eslint-disable-next-line import/no-mutable-exports
 let walletP;
@@ -30,11 +33,8 @@ export { walletP };
 
 export const ApplicationContext = createContext({
   state: initial,
-  // TODO: type for dispatch
   dispatch: /** @type { any } */ (undefined),
-  // TODO: type for walletP
   walletP: /** @type { any } */ (undefined),
-  retrySetup: /** @type { any } */ (undefined),
 });
 
 export function useApplicationContext() {
@@ -42,64 +42,111 @@ export function useApplicationContext() {
 }
 
 /**
+ * This method extract the loanNotifier from publicNotifiers of the offerResult returned.
+ * Then turns that loanNotifer into a aysncIterable to watch the state updates coming from the loan.
+ * Possible state updates:
+ * - LoanStatus: [ACTIVE, CLOSED, LIQUIDATED...]
+ * - Amount of debt
+ * - Amount of collateral locked
+ *
+ * Also adds some additional states that do not exist inside the actual loan object
+ * in order to improve UX by giving users better messages.
+ *
  * @param {string} id
- * @param {TreasuryDispatch} dispatch
+ * @param {any} dispatch
  * @param {string} offerStatus
  */
-function watchVault(id, dispatch, offerStatus) {
+function watchLoan(id, dispatch, offerStatus) {
   console.log('vaultWatched', id);
 
   // There is no UINotifier for offers that haven't been accepted, but
   // we still want to show that the offer exists
   if (offerStatus !== 'accept') {
     dispatch(
-      updateVault({
+      updateLoan({
         id,
-        vault: { status: 'Pending Wallet Acceptance' },
+        loan: { id, loanState: LoanStatus.PENDING },
       }),
     );
   } else {
     dispatch(
-      updateVault({
+      updateLoan({
         id,
-        vault: {
-          status: 'Loading',
-        },
+        loan: { id, loanState: LoanStatus.LOADING },
       }),
     );
   }
 
-  async function vaultUpdater() {
-    const uiNotifier = E(walletP).getUINotifier(id);
-    for await (const value of iterateNotifier(uiNotifier)) {
-      console.log('======== VAULT', id, value);
+  // Listens for invidual loan state updates
+  async function loanUpdater(loan) {
+    for await (const state of iterateNotifier(loan)) {
+      console.log('======== Loan', id, state);
       dispatch(
-        updateVault({ id, vault: { ...value, status: 'Loan Initiated' } }),
+        updateLoan({
+          id,
+          loan: { ...state },
+        }),
       );
     }
-    dispatch(updateVault({ id, vault: { status: 'Closed' } }));
-    window.localStorage.setItem(id, 'Closed');
+    // We get the final state when the noifier finishes
+    const { value: lastState } = await E(loan).getUpdateSince();
+    dispatch(updateLoan({ id, loan: { ...lastState } }));
+    console.log("==== watched loan", lastState);
   }
 
-  vaultUpdater().catch(err => {
-    console.error('Vault watcher exception', id, err);
-    dispatch(updateVault({ id, vault: { status: 'Error in offer', err } }));
-  });
+  // Extracts the loanNotifier from the offerResult
+  async function watch() {
+    let loanNotifier;
+    try {
+      const notifiers = await E(walletP).getPublicNotifiers(id);
+      ({ loanNotifier } = notifiers);
+    } catch (err) {
+      console.error('Could not get notifiers', id, err);
+      dispatch(updateLoan({ id, loan: { loanState: LoanStatus.ERROR, err } }));
+      return;
+    }
+
+    loanUpdater(loanNotifier).catch(err => {
+      console.error('Loan watcher exception', id, err);
+      dispatch(updateLoan({ id, loan: { loanState: LoanStatus.ERROR, err } }));
+    });
+  }
+
+  watch();
 }
 
-/** @type { (d: TreasuryDispatch, id: string) => void } */
-function watchOffers(dispatch, INSTANCE_BOARD_ID) {
-  const watchedVaults = new Set();
-  async function offersUpdater() {
+/**
+ * This is the main method for being notified about offers. We basically
+ * get the offersNotifier from the walletBridge, make it an asyncIterable then
+ * start listening for offers. The notification format is a list of all offers
+ * like [offerOne, offerTwo...]. Thus, on every new offer we iterate all offers
+ * made until that time. This helps us to keep track of the state in a consistant
+ * way since the notifiers are lossy. // see https://docs.agoric.com/guides/js-programming/notifiers.html#distributed-asynchronous-iteration
+ *
+ * The method offersUpdater iterates over that list returned as the notification
+ * and checks for a few things;
+ * - OperationType: There's an 'operation' property injected to the requestContext in the offers that are made from this app,
+ * indicating that whether the operation is 'deposit', 'borrow', 'close', 'adjust', 'redeem' or not. Currently we only care
+ * about 'borrow' operation since we do not show users their full history of operations but need to keep track loans by
+ * the offerResults returned from 'borrow' offers. We might reconsider that later.
+ * - InstanceId: We check this to make sure the offer is made to the correct contract instance.
+ * - ContinuingInvitaion: This is also checked to make sure the offer is not a 'close' or 'adjust' offer.
+ *
+ *
+ * @param {any} dispatch
+ * @param {string} INSTANCE_BOARD_ID
+ */
+const watchOffers= (dispatch, INSTANCE_BOARD_ID) => {
+  const watchedLoans = new Set();
+
+  const offersUpdater = async () => {
     const offerNotifier = E(walletP).getOffersNotifier();
     for await (const offers of iterateNotifier(offerNotifier)) {
-      for (const {
-        id,
-        instanceHandleBoardId,
-        continuingInvitation,
-        status,
-      } of offers) {
+      for (const offer of offers) {
+        console.log('======== NEW_OFFER', offer);
+        const { id, status, operation, continuingInvitation, instanceHandleBoardId } = offer;
         if (
+          operation && operation === OperationType.BORROW &&
           instanceHandleBoardId === INSTANCE_BOARD_ID &&
           continuingInvitation === undefined // AdjustBalances and CloseVault offers use continuingInvitation
         ) {
@@ -107,97 +154,154 @@ function watchOffers(dispatch, INSTANCE_BOARD_ID) {
             // We don't care about declined offers, still update the vault so
             // the UI can hide it if needed.
             dispatch(
-              updateVault({
+              updateLoan({
                 id,
-                vault: { status: 'Declined' },
+                loan: { loanState: LoanStatus.DECLINED },
               }),
             );
-          } else if (window.localStorage.getItem(id) === 'Closed') {
-            // We can cache closed vaults since their notifiers cannot update
-            // anymore.
-            dispatch(
-              updateVault({
-                id,
-                vault: { status: 'Closed' },
-              }),
-            );
-          } else if (!watchedVaults.has(id)) {
-            watchedVaults.add(id);
-            watchVault(id, dispatch, status);
+          } else if (!watchedLoans.has(id)) {
+            watchedLoans.add(id);
+            watchLoan(id, dispatch, status);
           }
         }
       }
-      if (!watchedVaults.size) {
-        dispatch(initVaults());
+      if (!watchedLoans.size) {
+        dispatch(initLoans());
       }
-      console.log('======== OFFERS', offers);
     }
+    console.log('======== OFFERS', offers);
   }
+
   offersUpdater().catch(err => console.error('Offers watcher exception', err));
 }
 
-/**
- * @param {TreasuryDispatch} dispatch
- * @param {Array<[Brand, BrandInfo]>} brandToInfo
- * @param {ERef<ZoeService>} zoe
- * @param {ERef<Board>} board
- * @param {string} instanceID
- *
- * @typedef {{ getId: (value: unknown) => string, getValue: (id: string) => any }} Board */
-const setupTreasury = async (dispatch, brandToInfo, zoe, board, instanceID) => {
+const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
   /** @type { Instance } */
   const instance = await E(board).getValue(instanceID);
+  const lendingPoolPublicFacetP = E(zoe).getPublicFacet(instance);
   /** @type { ERef<VaultFactory> } */
-  const treasuryAPIP = E(zoe).getPublicFacet(instance);
-  const termsP = E(zoe).getTerms(instance);
-  const [treasuryAPI, terms, collaterals, priceAuthority] = await Promise.all([
-    treasuryAPIP,
-    termsP,
-    E(treasuryAPIP).getCollaterals(),
-    E.get(termsP).priceAuthority,
+  const [lendingPoolPublicFacet, markets, poolNotifier] = await Promise.all([
+    lendingPoolPublicFacetP,
+    E(lendingPoolPublicFacetP).getMarkets(),
+    E(lendingPoolPublicFacetP).getPoolNotifier(),
   ]);
-  const {
-    issuers: { RUN: runIssuer },
-    brands: { RUN: runBrand },
-  } = terms;
+
   dispatch(
-    setTreasury({ instance, treasuryAPI, runIssuer, runBrand, priceAuthority }),
+    setLendingPool({ publicFacet: lendingPoolPublicFacet, instance }),
   );
-  await storeAllBrandsFromTerms({
-    dispatch,
-    terms,
-    brandToInfo,
-  });
-  console.log('SET COLLATERALS', collaterals);
-  dispatch(setCollaterals(collaterals));
-  return { terms, collaterals };
+
+  dispatch(initMarkets());
+
+  watchPools(poolNotifier, dispatch).catch(err => console.log('Error when watching the pool:', err));
 };
 
-/**
- * @param {TreasuryDispatch} dispatch
- * @param {Array<[Brand, BrandInfo]>} brandToInfo
- * @param {ERef<ZoeService>} zoe
- * @param {ERef<Board>} board
- * @param {string} instanceID
- */
-const setupAMM = async (dispatch, brandToInfo, zoe, board, instanceID) => {
-  const instance = await E(board).getValue(instanceID);
-  const [ammAPI, terms] = await Promise.all([
-    E(zoe).getPublicFacet(instance),
-    E(zoe).getTerms(instance),
+const toBrandToInfoItem = (brand, brandDisplayInfo) => {
+  const decimalPlaces = brandDisplayInfo.displayInfo.decimalPlaces;
+  return [
+    brand,
+    {
+      assetKind: brandDisplayInfo.assetKind,
+      decimalPlaces,
+      petname: brandDisplayInfo.petName,
+      brand,
+    },
+  ];
+};
+
+const watchMarket = async (brand, assetNotifier, dispatch) => {
+  for await (const value of iterateNotifier(assetNotifier)) {
+    dispatch(updateMarket({ id: brand, market: { ...value } }));
+  }
+};
+
+const watchPrices = async (brandIn, priceNotifier, dispatch) => {
+  for await (const value of iterateNotifier(priceNotifier)) {
+    dispatch(updatePrice({ id: brandIn, quote: { ...value } }));
+  }
+};
+
+const watchPools = async (poolNotifier, dispatch) => {
+  let count = 1;
+  for await (const markets of iterateNotifier(poolNotifier)) {
+    for (const market of markets) {
+      console.log('[COUNT]', count);
+      count++;
+      if(!market) continue; // Control hasMarket
+
+      const [underlyingToThirdWrappedPriceAuthority, marketDisplayInfo] =  await Promise.all([
+        market.underlyingToThirdWrappedPriceAuthorityP,
+        buildDisplayInfoForMarket(market),
+      ]);
+      buildBrandToInfo(marketDisplayInfo, dispatch, market);
+      createPurseForPoolTokens(market, marketDisplayInfo)
+        .catch(err => console.log('[ERROR] Error when creating purses:', err));
+      watchMarket(market.underlyingBrand, market.notifier, dispatch)
+        .catch(err => console.log('[ERROR] Error when wathing market', err));
+      watchPrices(market.underlyingBrand, underlyingToThirdWrappedPriceAuthority.notifier, dispatch)
+        .catch(err => console.log('[ERROR] Error when wathing prices', err));
+      dispatch(createMarket({ id: market.underlyingBrand, market }));
+    }
+  }
+};
+
+const createPurseForPoolTokens = async (market, displayInfo) => {
+  const { underlyingIssuerBoardId, protocolIssuerBoardId } = await getBoardIDsForMarket(market);
+  await Promise.all([
+    E(walletP).suggestIssuer(displayInfo.underlying.petName, underlyingIssuerBoardId),
+    E(walletP).suggestIssuer(displayInfo.protocol.petName, protocolIssuerBoardId),
   ]);
-  // TODO this uses getTerms.brands, but that includes utility tokens, etc.
-  // We need a query/notifier for what are the pools supported
-  const {
-    brands: { Central: centralBrand, ...otherBrands },
-  } = terms;
-  console.log('AMM brands retrieved', otherBrands);
-  dispatch(setAutoswap({ instance, ammAPI, centralBrand, otherBrands }));
-  await storeAllBrandsFromTerms({
-    dispatch,
-    terms,
-    brandToInfo,
+};
+
+const getBoardIDsForMarket = async market => {
+  const [underlyingIssuerBoardId, protocolIssuerBoardId] = await Promise.all([
+    getBoardIDForIssuer(market.underlyingIssuer),
+    getBoardIDForIssuer(market.protocolIssuer),
+  ]);
+
+  return harden({
+    underlyingIssuerBoardId,
+    protocolIssuerBoardId
   });
+}
+
+const getBoardIDForIssuer = issuer => {
+  return E(E(walletP).getBoard()).getId(issuer);
+};
+
+const buildDisplayInfoForMarket = async market => {
+  const [underlyingDisplayInfo, underlyingAllegedName, protocolDisplayInfo,
+    protocolAllegedName, thirdCurrencyDisplayInfo, thirdCurrencyAllegedName] =
+    await Promise.all([
+      E(market.underlyingBrand).getDisplayInfo(),
+      E(market.underlyingBrand).getAllegedName(),
+      E(market.protocolBrand).getDisplayInfo(),
+      E(market.protocolBrand).getAllegedName(),
+      E(market.thirdCurrencyBrand).getDisplayInfo(),
+      E(market.thirdCurrencyBrand).getAllegedName(),
+    ]);
+  return {
+    underlying: { displayInfo: underlyingDisplayInfo, petName: underlyingAllegedName },
+    protocol: { displayInfo: protocolDisplayInfo, petName: protocolAllegedName },
+    thirdCurrency: { displayInfo: thirdCurrencyDisplayInfo, petName: thirdCurrencyAllegedName },
+  };
+};
+
+const buildBrandToInfo = (displayInfo, dispatch, market) => {
+  const underlyingBrandDisplayInfo = displayInfo.underlying;
+
+  const protocolBrandDisplayInfo = displayInfo.protocol;
+
+  const thirdCurrencyBrandDisplayInfo = displayInfo.thirdCurrency;
+
+  const newBrandToInfo = Array.from([
+    toBrandToInfoItem(market.underlyingBrand, underlyingBrandDisplayInfo),
+    toBrandToInfoItem(market.protocolBrand, protocolBrandDisplayInfo),
+    toBrandToInfoItem(market.thirdCurrencyBrand, thirdCurrencyBrandDisplayInfo),
+  ]);
+
+  console.log('NewBranToInfo', newBrandToInfo)
+
+  dispatch(mergeBrandToInfo(newBrandToInfo));
 };
 
 /* eslint-disable complexity, react/prop-types */
@@ -205,35 +309,16 @@ export default function Provider({ children }) {
   const [state, dispatch] = useReducer(reducer, defaultState);
   const { brandToInfo } = state;
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const useGetRUN = urlParams.get('gr') === 'true';
-    dispatch(setUseGetRUN(useGetRUN));
-  }, []);
-
   const retrySetup = async () => {
-    await refreshConfigFromWallet(walletP);
-    const {
-      INSTALLATION_BOARD_ID,
-      INSTANCE_BOARD_ID,
-      RUN_ISSUER_BOARD_ID,
-      AMM_INSTALLATION_BOARD_ID,
-      AMM_INSTANCE_BOARD_ID,
-      AMM_NAME,
-    } = dappConfig;
 
     const zoe = E(walletP).getZoe();
     const board = E(walletP).getBoard();
-    try {
-      await Promise.all([
-        setupTreasury(dispatch, brandToInfo, zoe, board, INSTANCE_BOARD_ID),
-        setupAMM(dispatch, brandToInfo, zoe, board, AMM_INSTANCE_BOARD_ID),
-      ]);
-    } catch (e) {
-      console.log('Couldnt load collaterals');
-      dispatch(setLoadTreasuryError(e));
-      return;
-    }
+
+    const {
+      LENDING_POOL_INSTANCE_BOARD_ID,
+    } = lendingPoolDappConfig;
+
+    await setupLendingPool(dispatch, zoe, board, LENDING_POOL_INSTANCE_BOARD_ID);
 
     // The moral equivalent of walletGetPurses()
     async function watchPurses() {
@@ -242,44 +327,22 @@ export default function Provider({ children }) {
         dispatch(setPurses(purses));
       }
     }
+
     watchPurses().catch(err =>
-      console.error('FIGME: got watchPurses err', err),
+      console.error('ERROR: got watchPurses err', err),
     );
 
-    async function watchBrands() {
-      console.log('BRANDS REQUESTED');
-      const issuersN = E(walletP).getIssuersNotifier();
-      for await (const issuers of iterateNotifier(issuersN)) {
-        updateBrandPetnames({
-          dispatch,
-          brandToInfo,
-          issuersFromNotifier: issuers,
-        });
-        const { brandInfo, terms: runLoCTerms } = await getRunLoCTerms(issuers);
-        dispatch(mergeBrandToInfo([[brandInfo.brand, brandInfo]]));
-        dispatch(setRunLoCTerms(runLoCTerms));
-      }
-    }
-    watchBrands().catch(err => {
-      console.error('got watchBrands err', err);
-    });
     await Promise.all([
-      E(walletP).suggestInstallation('Installation', INSTALLATION_BOARD_ID),
-      E(walletP).suggestInstance('Instance', INSTANCE_BOARD_ID),
-      E(walletP).suggestInstallation(
-        `${AMM_NAME}Installation`,
-        AMM_INSTALLATION_BOARD_ID,
-      ),
-      E(walletP).suggestInstance(`${AMM_NAME}Instance`, AMM_INSTANCE_BOARD_ID),
-      E(walletP).suggestIssuer('RUN', RUN_ISSUER_BOARD_ID),
+      E(walletP).suggestInstance('Instance', LENDING_POOL_INSTANCE_BOARD_ID),
     ]);
 
-    watchOffers(dispatch, INSTANCE_BOARD_ID);
+    watchOffers(dispatch, LENDING_POOL_INSTANCE_BOARD_ID);
   };
 
   const setWalletP = async bridge => {
     walletP = bridge;
 
+    console.log('set walletP');
     await retrySetup();
   };
 
@@ -288,7 +351,8 @@ export default function Provider({ children }) {
       value={{ state, dispatch, walletP, retrySetup }}
     >
       {children}
-      <WalletConnection setWalletP={setWalletP} dispatch={dispatch} />
+      {/*<WalletConnection setWalletP={setWalletP} dispatch={dispatch} />*/}
+      <LendingPoolWalletConnection dispatch={dispatch} setWalletP={setWalletP}></LendingPoolWalletConnection>
     </ApplicationContext.Provider>
   );
 }

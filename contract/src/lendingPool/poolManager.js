@@ -1,14 +1,7 @@
 // @ts-check
-import '@agoric/zoe/exported.js';
-
-import { E } from '@agoric/eventual-send';
-import { Nat } from '@agoric/nat';
+import { E } from '@endo/far';
 import {
   assertProposalShape,
-  makeRatioFromAmounts,
-  getAmountOut,
-  getAmountIn,
-  ceilMultiplyBy,
   ceilDivideBy,
   makeRatio,
 } from '@agoric/zoe/src/contractSupport/index.js';
@@ -18,61 +11,61 @@ import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 
 import { makeScalarMap } from '@agoric/store';
-import { makeInnerVault } from './vault.js';
-import { liquidate } from './liquidation.js';
-import { makeTracer } from '../makeTracer.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import {
   RECORDING_PERIOD_KEY,
   LIQUIDATION_MARGIN_KEY,
   INITIAL_EXCHANGE_RATE_KEY,
-  LOAN_FEE_KEY,
-  INTEREST_RATE_KEY,
   CHARGING_PERIOD_KEY,
-  PRICE_CHECK_PERIOD_KEY,
   MULTIPILIER_RATE_KEY,
-  BASE_RATE_KEY
+  BASE_RATE_KEY, PENALTY_RATE_KEY,
 } from './params.js';
 import { chargeInterest } from '../interest.js';
 import { calculateExchangeRate, calculateUtilizationRate, calculateBorrowingRate } from '../protocolMath.js';
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
-import { makeQuoteManager } from './quoteManager.js';
+import { ceilMultiplyBy, floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { UPDATE_ASSET_STATE_OPERATION } from './constants.js';
 
-const trace = makeTracer('VM');
+const trace = makeTracer('PM');
 
-/**
- * @typedef {{
- *  compoundedInterest: Ratio,
- *  interestRate: Ratio,
- *  latestInterestUpdate: bigint,
- *  totalDebt: Amount<NatValue>,
- * }} AssetState */
 
 /**
- * Each VaultManager manages a single collateral type.
+ * PoolManager is the place where operations related to one type of underlying
+ * asset are gathered. There is one PoolManager for one underlyingAsset type.
+ * One PoolManager can lend its underlyingAsset against multiple type of collaterals.
+ * Important thing about the collaterals is that, they should be protocolTokens
+ * received when a user provides another type of underlyingAsset to another pool.
  *
- * It manages some number of outstanding loans, each called a Vault, for which
- * the collateral is provided in exchange for borrowed RUN.
+ * This is the place where the operations listed below happen;
+ * - Deposit underlyingAsset and receive some collateral
+ * - Borrow an underlyingAsset against some protocolToken used as collateral
+ * - Redeem the underlyingAsset deposited earlier corresponding to the received protocolToken
+ * - Charge interest on all loans
+ * - Keep the variables like totalDebt, underlyingLiquidty, protocolLiquidty updated
+ * - Calculate dynamic interest rates using the variables mentioned above
  *
- * @param {ContractFacet} zcf
+ *
+ * @param {ZCF} zcf
  * @param {ZCFMint} protocolMint
  * @param {Brand} collateralBrand
  * @param {Brand} underlyingBrand
  * @param {Brand} thirdCurrencyBrand
  * @param {string} underlyingKeyword
  * @param {ERef<PriceAuthority>} priceAuthority
- * @param {Notifier} priceAuthNotifier
+ * @param {Promise<Notifier<PriceQuote>>} priceAuthNotifier
  * @param {ERef<PriceManager>} priceManager
  * @param {{
  *  ChargingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  *  RecordingPeriod: ParamRecord<'relativeTime'> & { value: RelativeTime },
  * }} timingParams
- * @param {GetGovernedVaultParams} getLoanParams
- * @param {ReallocateWithFee} reallocateWithFee
+ * @param {() => Object} getLoanParams
  * @param {ERef<TimerService>} timerService
- * @param {LiquidationStrategy} liquidationStrategy
  * @param {Timestamp} startTimeStamp
- * @param {GetExchangeRateForPool} getExchangeRateForPool
- * @returns {VaultManager}
+ * @param {(brand: Brand) => Ratio} getExchangeRateForPool
+ * @param {(underlyingBrand: Brand) => Promise<Invitation>} makeRedeemInvitation
+ * @param {Installation} liquidationInstall
+ * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @returns {ERef<PoolManager>}
  */
 export const makePoolManager = (
   zcf,
@@ -86,11 +79,12 @@ export const makePoolManager = (
   priceManager,
   timingParams,
   getLoanParams,
-  // reallocateWithFee = undefined,
   timerService,
-  // liquidationStrategy,
   startTimeStamp,
-  getExchangeRateForPool
+  getExchangeRateForPool,
+  makeRedeemInvitation,
+  liquidationInstall,
+  ammPublicFacet,
 ) => {
   const { brand: protocolBrand, issuer: protocolIssuer } = protocolMint.getIssuerRecord();
   const { zcfSeat: underlyingAssetSeat } = zcf.makeEmptySeatKit();
@@ -98,13 +92,10 @@ export const makePoolManager = (
   let totalDebt = AmountMath.makeEmpty(underlyingBrand, 'nat');
   let totalProtocolSupply = AmountMath.makeEmpty(protocolBrand, 'nat');
 
-  /** @type {GetVaultParams} */
+  /** @type {ManagerShared} */
   const shared = {
     // loans below this margin may be liquidated
     getLiquidationMargin: () => getLoanParams()[LIQUIDATION_MARGIN_KEY].value,
-    // loans must initially have at least 1.2x collateralization
-    getLoanFee: () => getLoanParams()[LOAN_FEE_KEY].value,
-    getInterestRate: () => getLoanParams()[INTEREST_RATE_KEY].value,
     getCurrentBorrowingRate: () => getCurrentBorrowingRate(),
     getTotalDebt: () => totalDebt,
     getInitialExchangeRate: () => getLoanParams()[INITIAL_EXCHANGE_RATE_KEY].value,
@@ -113,27 +104,22 @@ export const makePoolManager = (
       const exchangeRate = getExchangeRate();
       return ceilDivideBy(depositAmount, exchangeRate);
     },
-    getPriceAuthorityForBrand: brand => E(priceManager).getPriceAuthority(brand),
+    getPriceAuthorityForBrand: brand => E(priceManager).getWrappedPriceAuthority(brand),
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
     getProtocolBrand: () => protocolBrand,
     getProtocolIssuer: () => protocolIssuer,
-    getProtocolLiquidity: () => totalProtocolSupply.value,
-    getUnderlyingLiquidity: () => underlyingAssetSeat.getCurrentAllocation().Underlying.value,
+    getProtocolLiquidity: () => totalProtocolSupply,
+    getUnderlyingLiquidity: () => underlyingAssetSeat.getAmountAllocated('Underlying', underlyingBrand),
+    getUnderlyingBrand: () => underlyingBrand,
+    getUnderlyingIssuer: () => zcf.getIssuerForBrand(underlyingBrand),
     enoughLiquidityForProposedDebt: (proposedDebtAmount) => assertEnoughLiquidtyExists(proposedDebtAmount),
     getThirdCurrencyBrand: () => thirdCurrencyBrand,
-    async getCollateralQuote() {
-      // get a quote for one unit of the collateral
-      const displayInfo = await E(collateralBrand).getDisplayInfo();
-      const decimalPlaces = displayInfo?.decimalPlaces || 0n;
-      return E(priceAuthority).quoteGiven(
-        AmountMath.make(collateralBrand, 10n ** Nat(decimalPlaces)),
-        debtBrand,
-      );
+    protocolToUnderlying: (brand, protocolAmount) => {
+      const exchangeRate = getExchangeRateForPool(brand);
+      return floorMultiplyBy(protocolAmount, exchangeRate);
     },
   };
-
-  let vaultCounter = 0;
 
   /**
    * @type {MapStore<Brand, DebtsPerCollateral>}
@@ -151,6 +137,8 @@ export const makePoolManager = (
   let latestInterestUpdate = startTimeStamp;
 
   /**
+   * Checks if there is enough liquidity for the hand out the proposed debt
+   * and throws an error if the liquidity is not enough.
    * @param {Amount} proposedDebtAmount
    */
   const assertEnoughLiquidtyExists = (proposedDebtAmount) => {
@@ -161,9 +149,14 @@ export const makePoolManager = (
         underlyingBrand),
       X`Requested ${q(proposedDebtAmount)} exceeds the total liquidity ${q(totalLiquidity)}`,
     );
-    console.log("assertEnoughLiquidtyExists: Enough!")
+    console.log('assertEnoughLiquidtyExists: Enough!');
   };
 
+  /**
+   * Calculates the current exchange rate, if the pool has no liquidity just
+   * returns the initial exchange rate.
+   * @returns {Ratio}
+   * */
   const getExchangeRate = () => {
     console.log('[TOTAL_PROTOCOL_SUPPLY_EMPTY]', AmountMath.isEmpty(totalProtocolSupply));
     return AmountMath.isEmpty(totalProtocolSupply) ? shared.getInitialExchangeRate()
@@ -171,32 +164,61 @@ export const makePoolManager = (
   };
 
   /**
+   * Calculates the current borrowing rate.
    * @returns {Ratio}
    */
   const getCurrentBorrowingRate = () => {
     const cashPresent = underlyingAssetSeat.getAmountAllocated('Underlying', underlyingBrand);
     const utilizationRate = calculateUtilizationRate(cashPresent, totalDebt);
-    console.log("[UTILICATION_RATIO]", utilizationRate);
-    console.log("[TOTAL_DEBT]", totalDebt);
+    console.log('[UTILICATION_RATIO]', utilizationRate);
+    console.log('[TOTAL_DEBT]', totalDebt);
     return calculateBorrowingRate(getLoanParams()[MULTIPILIER_RATE_KEY].value, getLoanParams()[BASE_RATE_KEY].value, utilizationRate);
-  }
+  };
+
+  /** @type {AssetState} */
+  const initialAssetState = {
+    compoundedInterest,
+    latestInterestRate: getCurrentBorrowingRate(),
+    latestInterestUpdate,
+    totalDebt,
+    exchangeRate: getExchangeRate(),
+    underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+    protocolLiquidity: shared.getProtocolLiquidity(),
+  };
 
   const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
-    harden({
-      compoundedInterest,
-      interestRate: shared.getInterestRate(),
-      latestInterestUpdate,
-      totalDebt,
-    }),
+    harden(initialAssetState),
   );
 
+  const updateAssetState = (operationType) => {
+    /** @type {AssetState} */
+    const payload = harden({
+      compoundedInterest,
+      latestInterestRate: shared.getCurrentBorrowingRate(),
+      latestInterestUpdate,
+      totalDebt,
+      exchangeRate: getExchangeRate(),
+      underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
+      protocolLiquidity: shared.getProtocolLiquidity(),
+    });
+    assetUpdater.updateState(payload);
+
+    trace(`State updated after ${operationType} operation with the payload:`, payload);
+  };
+
   /**
+   * The main difference of LendingPool's chargeLoan logic
+   * from the VaultFactory's chargeVault logic is that
+   * we don't reschedule a new price check on after every recording
+   * period. Also we use  an overrridden version of the 'chargeInterest' method
+   * of VaultFactory's interest.js module since we don't mint any reward for
+   * charging interest.
    *
    * @param {bigint} updateTime
    * @param {ZCFSeat} poolIncrementSeat
    */
-  const chargeAllVaults = async (updateTime, poolIncrementSeat) => {
-    trace('chargeAllVaults', { updateTime });
+  const chargeAllLoans = async (updateTime, poolIncrementSeat) => {
+    trace('chargeAllLoans', { updateTime });
     const interestRate = shared.getCurrentBorrowingRate();
 
     // Update local state with the results of charging interest
@@ -215,46 +237,37 @@ export const makePoolManager = (
         updateTime,
       ));
 
-    /** @type {AssetState} */
-    const payload = harden({
-      compoundedInterest,
-      interestRate,
-      latestInterestUpdate,
-      totalDebt,
-    });
-    assetUpdater.updateState(payload);
-
-    trace('chargeAllVaults complete', payload);
-
+    updateAssetState(UPDATE_ASSET_STATE_OPERATION.CHARGE_INTEREST);
   };
 
   /**
-   * Update total debt of this manager given the change in debt on a vault
+   * Update total debt of this manager given the change in debt on a loan
    *
-   * @param {Amount<NatValue>} oldDebtOnVault
-   * @param {Amount<NatValue>} newDebtOnVault
+   * @param {Amount<'nat'>} oldDebtOnLoan
+   * @param {Amount<'nat'>} newDebtOnLoan
    */
-  // TODO https://github.com/Agoric/agoric-sdk/issues/4599
-  const applyDebtDelta = (oldDebtOnVault, newDebtOnVault) => {
-    const delta = newDebtOnVault.value - oldDebtOnVault.value;
-    trace(`updating total debt ${totalDebt} by ${delta}`);
-    if (delta === 0n) {
-      // nothing to do
-      return;
-    }
+    // TODO https://github.com/Agoric/agoric-sdk/issues/4599
+  const applyDebtDelta = (oldDebtOnLoan, newDebtOnLoan) => {
+      const delta = newDebtOnLoan.value - oldDebtOnLoan.value;
+      trace(`updating total debt ${totalDebt.value} by ${delta}`);
+      if (delta === 0n) {
+        // nothing to do
+        return;
+      }
 
-    // totalDebt += delta (Amount type ensures natural value)
-    totalDebt = AmountMath.make(underlyingBrand, totalDebt.value + delta);
-  };
+      // totalDebt += delta (Amount type ensures natural value)
+      totalDebt = AmountMath.make(underlyingBrand, totalDebt.value + delta);
+      updateAssetState(UPDATE_ASSET_STATE_OPERATION.APPLY_DEBT_DELTA);
+    };
 
   /**
-   * Make requested transfer for. Requested transfer being either rapying a debt
+   * Make requested transfer for. Requested transfer being either repaying a debt
    * of requesting more debt.
-   * @param seat
-   * @param currentDebt
+   * @param {ZCFSeat} seat
+   * @param {Amount} currentDebt
    */
   const transferDebt = (seat, currentDebt) => {
-
+    /** @type {Proposal}*/
     const proposal = seat.getProposal();
     if (proposal.want.Debt) {
       // decrease the requested amount of underlying asset from the underlyingSeat
@@ -274,11 +287,64 @@ export const makePoolManager = (
     }
   };
 
-  const reallocateBetweenSeats = (vaultSeat, clientSeat) => {
-    console.log("reallocateBetweenSeats")
-    zcf.reallocate(underlyingAssetSeat, vaultSeat, clientSeat);
-  }
+  /**
+   * Transfers the underlyingAsset received from the AMM after liquidation to the
+   * pool.
+   * @param {ZCFSeat} loanSeat
+   */
+  const transferLiquidatedFund = loanSeat => {
+    const loanAllocations = loanSeat.getCurrentAllocation();
+    assert(loanAllocations.Debt && loanAllocations.Debt !== undefined, 'The loan has no liquidated funds');
+    const {
+      Debt: liquidatedAmount,
+    } = loanSeat.getCurrentAllocation();
+    console.log('underlyingAssetSeatBefore', underlyingAssetSeat.getCurrentAllocation());
+    loanSeat.decrementBy(harden({ Debt: liquidatedAmount }));
+    underlyingAssetSeat.incrementBy(harden({ Underlying: liquidatedAmount }));
+    zcf.reallocate(loanSeat, underlyingAssetSeat);
+    console.log('underlyingAssetSeatAfter', underlyingAssetSeat.getCurrentAllocation());
+    updateAssetState(UPDATE_ASSET_STATE_OPERATION.LIQUIDATED);
+  };
 
+  /**
+   * Stage the underlying fund to the underlyingAssetSeat.
+   * @param {Proposal} proposal
+   */
+  const stageUnderlyingAllocation = (proposal) => {
+    if (proposal.give.Debt) {
+      underlyingAssetSeat.incrementBy(harden({ Underlying: proposal.give.Debt }));
+    } else if (proposal.want.Debt) {
+      underlyingAssetSeat.decrementBy(harden({ Underlying: proposal.want.Debt }));
+    }
+  };
+
+  /**
+   * Reallocates the funds between loanSeat, clientSeat and underlyingSeat, checks
+   * if there's a staged allocation in the seat first.
+   * @param {ZCFSeat} loanSeat
+   * @param {ZCFSeat} clientSeat
+   */
+  const reallocateBetweenSeats = (loanSeat, clientSeat) => {
+    // TODO use Array.map() here
+    const seatList = [];
+    addIfHasStagedAllocation(seatList, loanSeat);
+    addIfHasStagedAllocation(seatList, clientSeat);
+    addIfHasStagedAllocation(seatList, underlyingAssetSeat);
+    trace('seatList', seatList);
+    // @ts-ignore
+    zcf.reallocate(...seatList);
+  };
+
+  /**
+   * Adds the seat to the list if there's a staged allocation.
+   * @param {ZCFSeat[]} seatList
+   * @param {ZCFSeat} seat
+   */
+  const addIfHasStagedAllocation = (seatList, seat) => {
+    if (seat.hasStagedAllocation()) seatList.push(seat);
+  };
+
+  // Set up the notifier for interest period
   const periodNotifier = E(timerService).makeNotifier(
     0n,
     timingParams[RECORDING_PERIOD_KEY].value,
@@ -286,12 +352,12 @@ export const makePoolManager = (
   const { zcfSeat: poolIncrementSeat } = zcf.makeEmptySeatKit();
 
   const timeObserver = {
-    updateState: updateTime =>{
+    updateState: updateTime => {
       console.log('[CHARGING_INTEREST]', updateTime);
       if (!AmountMath.isEmpty(totalDebt)) {
-        chargeAllVaults(updateTime, poolIncrementSeat).catch(e =>
-          console.error('🚨 vaultManager failed to charge interest', e),
-        )
+        chargeAllLoans(updateTime, poolIncrementSeat).catch(e =>
+          console.error('🚨 loanManager failed to charge interest', e),
+        );
       }
     },
     fail: reason => {
@@ -309,78 +375,26 @@ export const makePoolManager = (
 
   observeNotifier(periodNotifier, timeObserver);
 
-  const underlyingQuoteManager = makeQuoteManager();
-
-  const priceCheckObserver = {
-    updateState: newQuote => {
-      console.log('[DEBT_QUOTE_UPDATED]', getAmountOut(newQuote), getAmountIn(newQuote));
-      underlyingQuoteManager.updateLatestQuote(newQuote);
-    },
-    fail: reason => {
-      console.log('[FAIL]', reason.stack);
-      zcf.shutdownWithFailure(
-        assert.error(X`Unable to continue without a timer: ${reason}`),
-      );
-    },
-    finish: done => {
-      zcf.shutdownWithFailure(
-        assert.error(X`Unable to continue without a timer: ${done}`),
-      );
-    },
-  }
-
-  observeNotifier(priceAuthNotifier, priceCheckObserver);
-
-  /** @type {Parameters<typeof makeInnerVault>[1]} */
+  /** @type {ManagerFacet} */
   const managerFacet = harden({
     ...shared,
     applyDebtDelta,
-    // reallocateWithFee,
     reallocateBetweenSeats,
+    stageUnderlyingAllocation,
     transferDebt,
     getCollateralBrand: () => collateralBrand,
-    getUnderlyingBrand: () => underlyingBrand,
     getCompoundedInterest: () => compoundedInterest,
-    getLatestUnderlyingQuote: () => underlyingQuoteManager.getLatestQuote(),
-    getExchangeRateForPool
+    getExchangeRateForPool,
+    makeRedeemInvitation,
+    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value, // Penalty rate to be enforced when there's a liquidation
+    transferLiquidatedFund,
+    debtPaid: originalDebt => totalDebt = AmountMath.subtract(totalDebt, originalDebt), // Update debt after payment
   });
 
-  /** @param {ZCFSeat} seat */
-  const makeVaultKit = async seat => {
-    assertProposalShape(seat, {
-      give: { Collateral: null },
-      want: { RUN: null },
-    });
-
-    vaultCounter += 1;
-    const vaultId = String(vaultCounter);
-
-    const innerVault = makeInnerVault(
-      zcf,
-      managerFacet,
-      assetNotifer,
-      vaultId,
-      protocolMint,
-      priceAuthority,
-    );
-
-    // TODO Don't record the vault until it gets opened
-    assert(prioritizedVaults);
-    const addedVaultKey = prioritizedVaults.addVault(vaultId, innerVault);
-
-    try {
-      const vaultKit = await innerVault.initVaultKit(seat);
-      seat.exit();
-      return vaultKit;
-    } catch (err) {
-      // remove it from prioritizedVaults
-      // XXX openLoan shouldn't assume it's already in the prioritizedVaults
-      prioritizedVaults.removeVault(addedVaultKey);
-      throw err;
-    }
-  };
-
-  /** @param {ZCFSeat} seat
+  /**
+   * Creates a loan object and organizes them by their
+   * collateral type(One group for every protocol token).
+   * @param {ZCFSeat} seat
    * @param {Ratio} exchangeRate
    * */
   const makeBorrowKit = async (seat, exchangeRate) => {
@@ -397,31 +411,86 @@ export const makePoolManager = (
     assertEnoughLiquidtyExists(proposedDebtAmount);
 
     const collateralBrand = exchangeRate.numerator.brand;
-    const wrappedCollateralPriceAuthority = await E(priceManager).getPriceAuthority(collateralBrand); // should change the method name
-    console.log("wrappedCollateralPriceAuthority: ", wrappedCollateralPriceAuthority)
+
     if (!debtsPerCollateralStore.has(collateralBrand)) {
-      debtsPerCollateralStore.init(collateralBrand, makeDebtsPerCollateral(
+      /** @type {WrappedPriceAuthority} */
+      const wrappedCollateralPriceAuthority = await E(priceManager).getWrappedPriceAuthority(collateralBrand); // should change the method name
+      debtsPerCollateralStore.init(collateralBrand, await makeDebtsPerCollateral(
         zcf,
         collateralBrand,
         underlyingBrand,
         assetNotifer,
         wrappedCollateralPriceAuthority,
         priceAuthority,
+        priceAuthNotifier,
         managerFacet,
         timerService,
-        timingParams
+        timingParams,
       ));
     }
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
-    console.log("debtsPerCollateral: ", debtsPerCollateral)
-    const vaultKit = await E(debtsPerCollateral).addNewVault(seat, underlyingAssetSeat, exchangeRate);
-    trace('VaultKit', vaultKit);
-    return vaultKit;
+    console.log('debtsPerCollateral: ', debtsPerCollateral);
+    const [loanKit] = await Promise.all([
+      debtsPerCollateral.addNewLoan(seat, underlyingAssetSeat, exchangeRate),
+      debtsPerCollateral.setupLiquidator(liquidationInstall, ammPublicFacet),
+    ]);
+    trace('LoanKit', loanKit);
+
+    updateAssetState(UPDATE_ASSET_STATE_OPERATION.BORROW);
+    return loanKit;
   };
 
+  /**
+   * @type {OfferHandler}
+   *
+   * Offer handler for redeeming assets.
+   *
+   * @param {ZCFSeat} seat
+   * @returns {Promise<string>}
+   */
+  const redeemHook = async seat => {
+    assertProposalShape(seat, {
+      give: { Protocol: null },
+      want: { Underlying: null },
+    });
+
+    const {
+      give: { Protocol: redeemProtocolAmount },
+      want: { Underlying: askedAmount },
+    } = seat.getProposal();
+
+    const underlyingAmountToRedeem = ceilMultiplyBy(redeemProtocolAmount, getExchangeRate());
+    trace('RedeemAmounts', {
+      redeemProtocolAmount,
+      underlyingAmountToRedeem,
+      askedAmount,
+    });
+    assertEnoughLiquidtyExists(underlyingAmountToRedeem);
+    totalProtocolSupply = AmountMath.subtract(totalProtocolSupply, redeemProtocolAmount);
+    seat.decrementBy(
+      protocolAssetSeat.incrementBy(harden({ Protocol: redeemProtocolAmount })),
+    );
+    seat.incrementBy(
+      underlyingAssetSeat.decrementBy(harden({ Underlying: underlyingAmountToRedeem })),
+    );
+    zcf.reallocate(seat, underlyingAssetSeat, protocolAssetSeat);
+    seat.exit();
+    protocolMint.burnLosses({ Protocol: redeemProtocolAmount }, protocolAssetSeat);
+
+    updateAssetState(UPDATE_ASSET_STATE_OPERATION.REDEEM);
+
+    return 'Success, thanks for doing business with us';
+  };
+
+  /**
+   * Returns an invitation for the depositHook offer handler.
+   * @returns {Promise<Invitation>}
+   */
   const makeDepositInvitation = () => {
-    /** @param {ZCFSeat} fundHolderSeat*/
+    /**
+     * @type {OfferHandler}
+     * @param {ZCFSeat} fundHolderSeat*/
     const depositHook = async fundHolderSeat => {
       console.log('[DEPSOSIT]: Icerdeyim');
       assertProposalShape(fundHolderSeat, {
@@ -431,33 +500,36 @@ export const makePoolManager = (
 
       const {
         give: { Underlying: fundAmount },
-        want: { Protocol: protocolAmount },
       } = fundHolderSeat.getProposal();
-      assert(AmountMath.isEqual(protocolAmount, shared.getProtocolAmountOut(fundAmount)), X`The amounts should be equal`);
-      protocolMint.mintGains(harden({ Protocol: protocolAmount }), protocolAssetSeat);
-      totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmount);
+
+      const protocolAmountToMint = shared.getProtocolAmountOut(fundAmount);
+      protocolMint.mintGains(harden({ Protocol: protocolAmountToMint }), protocolAssetSeat);
+      totalProtocolSupply = AmountMath.add(totalProtocolSupply, protocolAmountToMint);
       fundHolderSeat.incrementBy(
-        protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmount })),
+        protocolAssetSeat.decrementBy(harden({ Protocol: protocolAmountToMint })),
       );
 
       underlyingAssetSeat.incrementBy(
         fundHolderSeat.decrementBy(harden({ Underlying: fundAmount })),
-      )
+      );
 
       zcf.reallocate(fundHolderSeat, underlyingAssetSeat, protocolAssetSeat);
       fundHolderSeat.exit();
 
+      updateAssetState(UPDATE_ASSET_STATE_OPERATION.DEPOSIT);
+
       return 'Finished';
-    }
+    };
 
     return zcf.makeInvitation(depositHook, 'depositFund');
-  }
+  };
 
-  /** @type {VaultManager} */
-  return Far('vault manager', {
+  /** @type {ERef<PoolManager>} */
+  return Far('pool manager', {
     ...shared,
-    makeVaultKit,
     makeBorrowKit,
+    redeemHook,
     makeDepositInvitation,
+    getNotifier: () => assetNotifer,
   });
 };

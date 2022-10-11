@@ -1,5 +1,6 @@
+/* eslint-disable import/no-extraneous-dependencies */
+import '@endo/eventual-send/shim';
 import 'json5';
-import './install-ses-lockdown';
 import React from 'react';
 import { render } from 'react-dom';
 

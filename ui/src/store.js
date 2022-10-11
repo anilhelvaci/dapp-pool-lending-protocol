@@ -7,22 +7,15 @@ import autodux from 'autodux';
 export const initial = {
   approved: true,
   connected: false,
-  account: null,
   purses: /** @type {PursesJSONState[] | null} */ (null),
   brandToInfo: /** @type {Array<[Brand, BrandInfo]>} */ ([]),
-
-  // Autoswap state
-  autoswap: /** @type { AutoswapState } */ ({}),
-  // Vault state
-  treasury: /** @type { VaultState | null } */ (null),
-  vaultCollateral: /** @type { CollateralInfo | null } */ (null),
-  vaultConfiguration: null,
-  vaults: /** @type {Record<string, VaultData> | null} */ (null),
-  collaterals: /** @type { Collaterals | null } */ (null),
-  runLoCTerms: /** @type { CollateralInfo | null } */ (null),
-  vaultToManageId: /** @type {string | null} */ (null),
-  useGetRUN: false,
-  loadTreasuryError: /** @type {string | null} */ null,
+  lendingPool: (null),
+  markets: (null),
+  prices: (null), // {brandIn: quote}
+  loan: /** @type { Loan | null } */ (null),
+  loanAsset: /** @type { AssetState | null } */ (null),
+  loans: (null),
+  snackbarState: { open: false, message: '', stick: null },
 };
 
 /**
@@ -40,8 +33,8 @@ export const initial = {
  *    mergeBrandToInfo: (payload: typeof initial.brandToInfo ) => TreasuryReducer,
  *    addToBrandToInfo: (payload: typeof initial.brandToInfo) => TreasuryReducer,
  *    setCollaterals: (payload: typeof initial.collaterals) => TreasuryReducer,
- *    setRunLoCTerms: (payload: typeof initial.runLoCTerms) => TreasuryReducer,
  *    resetState: () => TreasuryReducer,
+ *    mergeRUNStakeHistory: (payload: typeof initial.RUNStakeHistory) => TreasuryReducer,
  *    setTreasury: (payload: typeof initial.treasury) => TreasuryReducer,
  *    setVaultCollateral: (payload: typeof initial.vaultCollateral) => TreasuryReducer,
  *    setVaultConfiguration: (payload: typeof initial.vaultConfiguration) => TreasuryReducer,
@@ -49,12 +42,12 @@ export const initial = {
  *    updateVault: (v: { id: string, vault: VaultData }) => TreasuryReducer,
  *    resetVault: () => TreasuryReducer,
  *    initVaults: () => TreasuryReducer,
- *    setAutoswap: (payload: typeof initial.autoswap) => TreasuryReducer,
- *    setUseGetRUN: (payload: boolean) => TreasuryReducer,
+ *    setLoan: (payload: typeof initial.loan) => TreasuryReducer,
+ *    setLoanAsset: (payload: typeof initial.loanAsset) => TreasuryReducer,
  *    setLoadTreasuryError: (payload: string | null) => TreasuryReducer,
+ *    setRUNStake: (payload: typeof initial.RUNStake) => TreasuryReducer,
  * }} TreasuryActions
  */
-
 export const {
   reducer,
   initial: defaultState,
@@ -63,56 +56,80 @@ export const {
     setConnected,
     setPurses,
     mergeBrandToInfo,
-    addToBrandToInfo,
-    setCollaterals,
-    setRunLoCTerms,
-    resetState,
-    setTreasury,
-    setVaultCollateral,
-    setVaultConfiguration,
-    createVault,
-    initVaults,
-    setVaultToManageId,
-    updateVault,
-    resetVault,
-    setAutoswap,
-    setUseGetRUN,
-    setLoadTreasuryError,
+    setLendingPool,
+    setMarkets,
+    createMarket,
+    addPrice,
+    initLoans,
+    updateMarket,
+    updatePrice,
+    setLoan,
+    setLoanAsset,
+    createLoan,
+    updateLoan,
+    setSnackbarState,
+    hasMarket,
+    initMarkets,
   },
   // @ts-ignore tsc can't tell that autodux is callable
 } = autodux({
   slice: 'treasury',
   initial,
   actions: {
-    /** @type {(state: TreasuryState) => TreasuryState} */
-    initVaults: state => {
-      return { ...state, vaults: {} };
+    initLoans: state => {
+      return { ...state, loans: {} };
     },
-    /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
-    createVault: (state, { id, vault }) => {
+    initMarkets: state => {
+      return {...state, markets: {}};
+    },
+    createMarket: (state, { id, market }) => {
       return {
         ...state,
-        vaults: {
-          ...state.vaults,
-          [id]: vault,
+        markets: {
+          ...state.markets,
+          [id]: market,
         },
       };
     },
-    /** @type {(state: TreasuryState, v: { id: string, vault: VaultData }) => TreasuryState} */
-    updateVault: ({ vaults, ...state }, { id, vault }) => {
-      const oldVaultData = vaults && vaults[id];
-      const status = vault.liquidated ? 'Liquidated' : vault.status;
+    createLoan: (state, { id, loan }) => {
       return {
         ...state,
-        vaults: { ...vaults, [id]: { ...oldVaultData, ...vault, status } },
+        loans: {
+          ...state.loans,
+          [id]: loan,
+        },
       };
     },
-    /** @type {(state: TreasuryState) => TreasuryState} */
-    resetVault: state => ({
-      ...state,
-      vaultCollateral: null,
-      vaultConfiguration: null,
-    }),
+    addPrice: (state, { id, quote }) => {
+      return {
+        ...state,
+        prices: {
+          ...state.prices,
+          [id]: quote,
+        },
+      };
+    },
+    updateMarket: ({ markets, ...state }, { id, market }) => {
+      const oldMarketData = markets && markets[id];
+      return {
+        ...state,
+        markets: { ...markets, [id]: { ...oldMarketData, ...market } },
+      };
+    },
+    hasMarket: ({ markets }, brand) => markets && markets[brand],
+    updatePrice: ({ prices, ...state }, { id, quote }) => {
+      return {
+        ...state,
+        prices: { ...prices, [id]: { ...quote } },
+      };
+    },
+    updateLoan: ({ loans, ...state }, { id, loan }) => {
+      const oldLoanData = loans && loans[id];
+      return {
+        ...state,
+        loans: { ...loans, [id]: { ...oldLoanData, ...loan } },
+      };
+    },
     /** @type {(state: TreasuryState) => TreasuryState} */
     resetState: state => ({
       ...state,

@@ -6,11 +6,12 @@
   "workspaces": [
     "ui",
     "_agstate/agoric-servers",
-    "contract"
+    "contract",
+    "api"
   ],
   "devDependencies": {
     "@endo/init": "^0.5.33",
-    "ses": "^0.15.7",
+    "ses": "0.15.7",
     "@typescript-eslint/parser": "^4.19.0",
     "ava": "^3.12.1",
     "eslint": "^7.23.0",

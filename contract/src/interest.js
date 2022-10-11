@@ -1,126 +1,20 @@
 // @ts-check
 
 import { AmountMath } from '@agoric/ertp';
-import { natSafeMath } from '@agoric/zoe/src/contractSupport/index.js';
-import {
-  makeRatio,
-  multiplyRatios,
-  quantize,
-} from '@agoric/zoe/src/contractSupport/ratio.js';
-import { E } from '@endo/far';
 import { assert, details as X } from '@agoric/assert';
+import { makeInterestCalculator, calculateCompoundedInterest } from '@agoric/run-protocol/src/interest.js';
 
 export const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n;
-const BASIS_POINTS = 10000;
-// single digit APR is less than a basis point per day.
-const LARGE_DENOMINATOR = BASIS_POINTS * BASIS_POINTS;
+export const BASIS_POINTS = 10000n;
+export const LARGE_DENOMINATOR = BASIS_POINTS * BASIS_POINTS;
 
 /**
- * Number chosen from 6 digits for a basis point, doubled for multiplication.
- */
-const COMPOUNDED_INTEREST_DENOMINATOR = 10n ** 20n;
-
-/**
- * @param {Ratio} annualRate
- * @param {RelativeTime} chargingPeriod
- * @param {RelativeTime} recordingPeriod
- * @returns {CalculatorKit}
- */
-export const makeInterestCalculator = (
-  annualRate,
-  chargingPeriod,
-  recordingPeriod,
-) => {
-  // see https://en.wikipedia.org/wiki/Compound_interest#Compounding_basis
-  const numeratorValue = Number(annualRate.numerator.value);
-  const denominatorValue = Number(annualRate.denominator.value);
-
-  const rawAnnualRate = numeratorValue / denominatorValue;
-  const chargingFrequency = Number(chargingPeriod) / Number(SECONDS_PER_YEAR);
-  const periodicRate = (1 + rawAnnualRate) ** chargingFrequency - 1;
-
-  const ratePerChargingPeriod = makeRatio(
-    BigInt(Math.floor(periodicRate * LARGE_DENOMINATOR)),
-    annualRate.numerator.brand,
-    BigInt(LARGE_DENOMINATOR),
-  );
-
-  /**
-   * Calculate new debt for charging periods up to the present.
-   *
-   * @type {Calculate}
-   */
-  const calculate = (debtStatus, currentTime) => {
-    const { newDebt, latestInterestUpdate } = debtStatus;
-    let newRecent = latestInterestUpdate;
-    let growingInterest = debtStatus.interest;
-    let growingDebt = newDebt;
-    while (newRecent + chargingPeriod <= currentTime) {
-      newRecent += chargingPeriod;
-      // The `ceil` implies that a vault with any debt will accrue at least one µRUN.
-      const newInterest = natSafeMath.ceilDivide(
-        growingDebt * ratePerChargingPeriod.numerator.value,
-        ratePerChargingPeriod.denominator.value,
-      );
-      growingInterest += newInterest;
-      growingDebt += newInterest;
-    }
-    return {
-      latestInterestUpdate: newRecent,
-      interest: growingInterest,
-      newDebt: growingDebt,
-    };
-  };
-
-  /**
-   * Calculate new debt for reporting periods up to the present. If some
-   * charging periods have elapsed that don't constitute whole reporting
-   * periods, the time is not updated past them and interest is not accumulated
-   * for them.
-   *
-   * @type {Calculate}
-   */
-  const calculateReportingPeriod = (debtStatus, currentTime) => {
-    const { latestInterestUpdate } = debtStatus;
-    const overshoot = (currentTime - latestInterestUpdate) % recordingPeriod;
-    return calculate(debtStatus, currentTime - overshoot);
-  };
-
-  return harden({
-    calculate,
-    calculateReportingPeriod,
-  });
-};
-
-/**
- * compoundedInterest *= (new debt) / (prior total debt)
- *
- * @param {Ratio} priorCompoundedInterest
- * @param {NatValue} priorDebt
- * @param {NatValue} newDebt
- */
-export const calculateCompoundedInterest = (
-  priorCompoundedInterest,
-  priorDebt,
-  newDebt,
-) => {
-  const brand = priorCompoundedInterest.numerator.brand;
-  const compounded = multiplyRatios(
-    priorCompoundedInterest,
-    makeRatio(newDebt, brand, priorDebt, brand),
-  );
-  return quantize(compounded, COMPOUNDED_INTEREST_DENOMINATOR);
-};
-
-/**
- *
  *
  * @param {Brand} underlyingBrand
  * @param {Amount} debt
  */
 const validatedBrand = async (underlyingBrand, debt) => {
   const { brand: debtBrand } = debt;
-  // const { brand: issuerBrand } = await E(mint).getIssuerRecord();
   assert(
     debtBrand === underlyingBrand,
     X`Debt and issuer brands differ: ${debtBrand} != ${underlyingBrand}`,
@@ -129,13 +23,13 @@ const validatedBrand = async (underlyingBrand, debt) => {
 };
 
 /**
- * Charge interest accrued between `latestInterestUpdate` and `accruedUntil`.
+ * We had to simplify the `chargeInterest` method in `interest.js` module of VaultFactory because
+ * we do not mint any rewards when an interest accrual occurs.
  *
  * @param {{
- *  mint: ZCFMint,
- *  reallocateWithFee: ReallocateWithFee,
- *  poolIncrementSeat: ZCFSeat,
- *  seatAllocationKeyword: Keyword }} powers
+ *  underlyingBrand: Brand,
+ *  poolIncrementSeat: ZCFSeat
+ *   }} powers
  * @param {{
  *  interestRate: Ratio,
  *  chargingPeriod: bigint,
@@ -192,14 +86,6 @@ export const chargeInterest = async (powers, params, prior, accruedUntil) => {
     prior.totalDebt,
     AmountMath.make(brand, interestAccrued),
   );
-
-  // // mint that much of brand for the reward pool
-  // const rewarded = AmountMath.make(brand, interestAccrued);
-  // powers.mint.mintGains(
-  //   harden({ [powers.seatAllocationKeyword]: rewarded }),
-  //   powers.poolIncrementSeat,
-  // );
-  // powers.reallocateWithFee(rewarded, powers.poolIncrementSeat);
 
   return {
     compoundedInterest,

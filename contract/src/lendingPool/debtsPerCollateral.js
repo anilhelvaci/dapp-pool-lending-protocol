@@ -1,138 +1,245 @@
-import { makeQuoteManager } from './quoteManager.js';
-import { PRICE_CHECK_PERIOD_KEY } from './params.js';
-import { observeNotifier } from '@agoric/notifier';
-// import { makeScalarBigMapStore } from '@agoric/swingset-vat/src/storeModule';
+// @ts-check
 import { makeScalarMap} from '@agoric/store';
-import { makeInnerVault } from './vault.js';
+import { makeInnerLoan } from './loan.js';
 import { E } from '@agoric/eventual-send';
 import { Far } from '@endo/marshal';
 import {
-  assertProposalShape,
   makeRatioFromAmounts,
-  getAmountOut,
-  getAmountIn,
-  ceilMultiplyBy,
-  ceilDivideBy,
-  makeRatio,
 } from '@agoric/zoe/src/contractSupport/index.js';
-import { AmountMath } from '@agoric/ertp';
-import { Nat } from '@agoric/nat';
+import { liquidationDetailTerms, liquidate } from './liquidation.js';
+import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { makeLiquidationObserver } from './liquidationObserver.js';
+import { makeLoanStoreUtils } from './loanStoreUtils.js';
 
-export const makeDebtsPerCollateral = (
+const trace = makeTracer("DebtsPerCollateral");
+
+/**
+ * This is the place where we gather loans that have the same collateral type.
+ * For instance, say the underlying asset for this pool is PAN and our protocol
+ * accepts AgVAN ptorocol tokens as one collateral type. All loans that have
+ * the AgVAN as its collateral are gathered here. Public API exposed from this
+ * module is;
+ * - addNewLoan: Adds a new loan that has the same collateral type as all the others
+ *   in this one. Returns a kit that includes some utility objects to manage
+ *   the loan.
+ * - setupLiquidator: Sets a liquidator contract to support different type of
+ *   liquidation behavor for the loans stored in this module.
+ *
+ * One other important job that this module does is to keep a liquidationObserver
+ * object. DebtsPerCollateral schedules a liquidation condition by telling the
+ * liquidationObserver about the closest loan to the liquidatio margin
+ * and once the closest loan is underwater it executes the liquidation.
+ *
+ * @param {ZCF} zcf
+ * @param {Brand} collateralUnderlyingBrand
+ * @param {Brand} debtBrand
+ * @param {Notifier<AssetState>} assetNotifier
+ * @param {WrappedPriceAuthority} wrappedCollateralPriceAuthority
+ * @param {PriceAuthority} underlyingPriceAuthority
+ * @param {Promise<Notifier<PriceQuote>>} underlyingPriceNotifier
+ * @param {ManagerFacet} manager
+ * @param {TimerService} timer
+ * @param {Object} timingParams
+ * @returns {Promise<DebtsPerCollateral>}
+ */
+export const makeDebtsPerCollateral = async (
   zcf,
-  collateralBrand,
+  collateralUnderlyingBrand,
   debtBrand,
   assetNotifier,
   wrappedCollateralPriceAuthority,
   underlyingPriceAuthority,
+  underlyingPriceNotifier,
   manager,
   timer,
   timingParams,
 ) => {
   console.log("making makeDebtsPerCollateral")
-  const collateralDisplayInfoP = E(collateralBrand).getDisplayInfo();
-  const debtDisplayInfoP = E(manager.getUnderlyingBrand()).getDisplayInfo();
-  let vaultCounter = 0;
-  /** @type {MapStore<string, InnerVault>} */
-  const vaults = makeScalarMap('vaults');
-  const vaultsToLiquidate = makeScalarMap('vaultsToLiquidate');
-  console.log("making makeQuoteManager")
-  const quoteManager = makeQuoteManager();
 
-  // initialize notifiers
-  const collateralPriceNotifier = wrappedCollateralPriceAuthority.notifier;
-  const liquidationNotifier = E(timer).makeNotifier(
-    0n,
-    timingParams[PRICE_CHECK_PERIOD_KEY].value,
-  );
+  const debtIssuer = zcf.getIssuerForBrand(debtBrand);
+  const collateralIssuer = zcf.getIssuerForBrand(collateralUnderlyingBrand);
 
-  // set observers
-  const liquidationObserver = {
-    updateState: updateTime => {
-      // checkLiiquiditaions();
-      console.log('[INSIDE_LIQUIDATION]')
-    },
-    fail: reason => {
+  const [debtDisplayInfo, collateralDisplayInfo] = await Promise.all([
+    E(manager.getUnderlyingBrand()).getDisplayInfo(),
+    E(collateralUnderlyingBrand).getDisplayInfo()
+  ]);
 
-    },
-    finish: done => {
+  const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0;
+  const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0;
 
-    },
-  };
+  let loanCounter = 0;
 
-  const collateralPriceObserver = {
-    updateState: newQuote => {
-      quoteManager.updateLatestQuote(newQuote);
-    },
-    fail: reason => {
+  const loansToLiquidate = makeScalarMap('loansToLiquidate');
+  /** @type {LoanStore}*/
+  const orderedLoans = makeLoanStoreUtils();
+  const managerMethods = harden({
+    ...manager,
+    removeLoan: orderedLoans.removeLoan,
+    refreshLoanPriorityByAttributes: orderedLoans.refreshLoanPriorityByAttributes,
+    refreshLoanPriorityByKey: orderedLoans.refreshLoanPriorityByKey,
+    removeLoanByAttributes: orderedLoans.removeLoanByAttributes
+  });
 
-    },
-    finish: done => {
-
-    },
-  };
-
-  // register observers
-  observeNotifier(liquidationNotifier, liquidationObserver);
-  observeNotifier(collateralPriceNotifier, collateralPriceObserver);
-
-  const addNewVault = async (seat, underlyingAssetSeat, exchangeRate) => {
-    vaultCounter += 1;
-    const vaultId = String(vaultCounter);
-    console.log("addNewVault")
-    const innerVault = makeInnerVault(
-      zcf,
-      manager,
-      assetNotifier,
-      vaultId,
+  /** @type LiquidationObserver */
+  const liquidationObserver = makeLiquidationObserver({
+    wrappedCollateralPriceAuthority,
+    wrappedDebtPriceAuthority: { priceAuthority: underlyingPriceAuthority, notifier: underlyingPriceNotifier },
+    liquidationMargin: manager.getLiquidationMargin(),
+    loanData: {
+      collateralUnderlyingDecimals: collateralDecimalPlaces,
+      debtDecimals: debtDecimalPlaces,
       debtBrand,
+      collateralUnderlyingBrand,
+      compareBrand: manager.getThirdCurrencyBrand()
+    },
+    getExchangeRateForPool: manager.getExchangeRateForPool
+  });
+
+  const liquidation = {
+    instance: undefined,
+    liquidator: undefined
+  }
+
+  /**
+   *
+   * @param {ZCFSeat} seat
+   * @param {ZCFSeat} underlyingAssetSeat
+   * @param {Ratio} exchangeRate
+   * @returns {Promise<LoanKit>}
+   */
+  const addNewLoan = async (seat, underlyingAssetSeat, exchangeRate) => {
+    loanCounter += 1;
+    const loanId = String(loanCounter);
+    /** @type Loan */
+    const innerLoan = makeInnerLoan(
+      zcf,
+      managerMethods,
+      assetNotifier,
+      loanId,
+      debtBrand,
+      collateralUnderlyingBrand,
       underlyingPriceAuthority,
       wrappedCollateralPriceAuthority.priceAuthority,
     );
 
-    vaults.init(vaultId, innerVault);
-
-    const vaultKit = await innerVault.initVaultKit(seat, underlyingAssetSeat, exchangeRate);
+    const loanKey = orderedLoans.addLoan(loanId, innerLoan);
+    const loanKit = await innerLoan.initLoanKit(seat, underlyingAssetSeat, exchangeRate, loanKey);
     seat.exit();
-    return vaultKit;
+    return loanKit;
   };
 
-  const checkLiiquiditaions = async () => {
-    const collateralDisplayInfo = await collateralDisplayInfoP;
-    const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0n;
+  /**
+   *
+   *
+   */
+  const scheduleLiquidation = async () => {
+    const closestLoan = orderedLoans.firstDebtRatio();
+    if (!closestLoan) {
+      return;
+    }
+    const {
+      colLatestQuote,
+      debtLatestQuote,
+      loan
+    } = await liquidationObserver.schedule(closestLoan);
 
-    const debtDisplayInfo = await debtDisplayInfoP;
-    const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0n;
+    Array.from(orderedLoans.entries()).forEach(
+      ([key, loan]) => {
 
-    Array.from(vaults.entries()).forEach(
-       ([key, vault]) => {
-        const collateralValInCompareCurrency = getValInCompareCurrenct(vault.getCollateralAmount(),
-          quoteManager.getLatestQuote(), collateralBrand, collateralDecimalPlaces);
+        const collateralValInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCollateralAmount(),
+          colLatestQuote, collateralUnderlyingBrand, collateralDecimalPlaces, manager.getExchangeRateForPool(collateralUnderlyingBrand));
 
-        const debtValueInCompareCurrency = getValInCompareCurrenct(vault.getCurrentDebt(),
-          manager.getLatestUnderlyingQuote(), manager.getUnderlyingBrand(), debtDecimalPlaces);
+        const debtValueInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCurrentDebt(),
+          debtLatestQuote, manager.getUnderlyingBrand(), debtDecimalPlaces);
 
-        const vaultDebtToCollateral = makeRatioFromAmounts(debtValueInCompareCurrency, collateralValInCompareCurrency);
+        const loanDebtToCollateral = makeRatioFromAmounts(collateralValInCompareCurrency, debtValueInCompareCurrency);
 
-        if (ratioGTE(vaultDebtToCollateral, manager.getLiquidationMargin())) {
-          vaultsToLiquidate.init(key, vault);
-          vaults.delete(key);
+        if (ratioGTE(manager.getLiquidationMargin(), loanDebtToCollateral)) {
+          loansToLiquidate.init(key, loan);
+          orderedLoans.removeLoan(key);
         }
       },
     );
 
-    // executeLiquidation here
+    await executeLiquidation();
+    scheduleLiquidation();
   };
 
-  const getValInCompareCurrenct = (amountIn, latestQuote, scaleBrand, scaleDecimalPlaces) => {
-    return ceilMultiplyBy(
-      amountIn,
-      makeRatioFromAmounts(getAmountOut(latestQuote),
-        AmountMath.make(scaleBrand, 10 ** Nat(scaleDecimalPlaces)))
+  orderedLoans.setRescheduler(scheduleLiquidation);
+
+  /**
+   *
+   * @return {Promise<Awaited<unknown>[]>}
+   */
+  const executeLiquidation = async () => {
+    console.log("insideExecuteLiquidation")
+    console.log("loansToLiquidateSize", Array.from(loansToLiquidate.entries()).length)
+    // Start all promises in parallel
+    // XXX we should have a direct method to map over entries
+    const liquidations = Array.from(loansToLiquidate.entries()).map(
+      async ([key, loan]) => {
+        trace('liquidating', loan.getLoanSeat().getProposal());
+
+        try {
+          // Start liquidation (loanState: LIQUIDATING)
+          await liquidate(
+            zcf,
+            loan,
+            liquidation.liquidator,
+            manager.makeRedeemInvitation,
+            collateralUnderlyingBrand,
+            debtIssuer,
+            manager.getPenaltyRate(),
+            manager.transferLiquidatedFund,
+            manager.debtPaid
+          )
+
+          loansToLiquidate.delete(key);
+        } catch (e) {
+          // XXX should notify interested parties
+          console.error('liquidateAndRemove failed with', e);
+        }
+      },
     );
-  }
+    return Promise.all(liquidations);
+  };
+
+  /**
+   *
+   * @param {Installation} liquidationInstall
+   * @param {XYKAMMPublicFacet} ammPublicFacet
+   */
+  const setupLiquidator = async (
+    liquidationInstall,
+    ammPublicFacet
+  ) => {
+    const zoe = zcf.getZoeService();
+    const liquidationTerms = liquidationDetailTerms(collateralUnderlyingBrand);
+
+    trace('setup liquidator', {
+      collateralUnderlyingBrand,
+      liquidationTerms,
+    });
+    const { creatorFacet, instance } = await E(zoe).startInstance(
+      liquidationInstall,
+      harden({ In: collateralIssuer, Out: debtIssuer }),
+      harden({
+        ...liquidationTerms,
+        amm: ammPublicFacet,
+      }),
+    );
+    trace('setup liquidator complete', {
+      instance,
+      old: liquidation.instance,
+      equal: liquidation.instance === instance,
+    });
+    liquidation.instance = instance;
+    liquidation.liquidator = creatorFacet;
+  };
 
   return Far('DebtsPerCollateral', {
-    addNewVault
+    addNewLoan,
+    setupLiquidator,
   })
 };

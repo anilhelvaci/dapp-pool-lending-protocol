@@ -14,11 +14,10 @@ export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
 export const PRICE_CHECK_PERIOD_KEY = 'PriceCheckPeriod'
 
 export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
-export const INTEREST_RATE_KEY = 'InterestRate';
-export const LOAN_FEE_KEY = 'LoanFee';
 export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
 export const BASE_RATE_KEY = 'BaseRate';
 export const MULTIPILIER_RATE_KEY = 'MultipilierRate';
+export const PENALTY_RATE_KEY = 'PenaltyRate';
 
 /**
  * @param {Amount} electorateInvitationAmount
@@ -30,7 +29,7 @@ const makeElectorateParams = electorateInvitationAmount => {
 };
 
 /**
- * @param {LoanTiming} loanTiming
+ * @param {LendingPoolTiming} loanTiming
  * @param {Rates} rates
  */
 const makeLoanParams = (loanTiming, rates) => {
@@ -38,32 +37,28 @@ const makeLoanParams = (loanTiming, rates) => {
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT,  loanTiming.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, loanTiming.recordingPeriod],
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
     [MULTIPILIER_RATE_KEY]: [ParamTypes.RATIO, rates.multipilierRate],
   };
 };
 
 /**
- * @param {LoanTiming} initialValues
+ * @param {LendingPoolTiming} initialValues
  */
 const makeLoanTimingManager = initialValues => {
   return makeParamManagerSync({
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.recordingPeriod],
-    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod]
+    [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod] // TODO this now deprecated and not being used anywhere, should remove it
   })
 };
 
 /**
  * @param {Rates} rates
  */
-const makeVaultParamManager = rates => {
+const makeLoanParamManager = rates => {
   return makeParamManagerSync({
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
   })
 };
 
@@ -73,11 +68,10 @@ const makeVaultParamManager = rates => {
 const makePoolParamManager = rates => {
   return makeParamManagerSync({
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
-    [INTEREST_RATE_KEY]: [ParamTypes.RATIO, rates.interestRate],
-    [LOAN_FEE_KEY]: [ParamTypes.RATIO, rates.loanFee],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
     [MULTIPILIER_RATE_KEY]: [ParamTypes.RATIO, rates.multipilierRate],
+    [PENALTY_RATE_KEY]: [ParamTypes.RATIO, rates.penaltyRate],
   })
 };
 
@@ -85,7 +79,7 @@ const makePoolParamManager = rates => {
  * @param {ERef<ZoeService>} zoe
  * @param {Invitation} electorateInvitation
  * @returns {Promise<{
- *   getParams: GetGovernedVaultParams,
+ *   getParams: GetGovernedLoanParams,
  *   getInvitationAmount: (name: string) => Amount,
  *   getInternalParamValue: (name: string) => Invitation,
  *   updateElectorate: (invitation: Invitation) => void,
@@ -106,8 +100,8 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
  * @param {Amount} invitationAmount
  * @param {Rates} rates
  * @param {XYKAMMPublicFacet} ammPublicFacet
- * @param {bigint=} bootstrapPaymentValue
  * @param {Brand} compareCurrencyBrand
+ * @param {bigint=} bootstrapPaymentValue
  */
 const makeGovernedTerms = (
   priceManager,
@@ -117,12 +111,12 @@ const makeGovernedTerms = (
   invitationAmount,
   rates,
   ammPublicFacet,
+  compareCurrencyBrand,
   bootstrapPaymentValue = 0n,
-  compareCurrencyBrand
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
 
-  const rateParamMgr = makeVaultParamManager(rates);
+  const rateParamMgr = makeLoanParamManager(rates);
 
   return harden({
     ammPublicFacet,
@@ -137,7 +131,7 @@ const makeGovernedTerms = (
   });
 };
 
-harden(makeVaultParamManager);
+harden(makeLoanParamManager);
 harden(makePoolParamManager);
 harden(makeElectorateParamManager);
 harden(makeGovernedTerms);
@@ -146,7 +140,7 @@ harden(makeElectorateParams);
 
 export {
   makeElectorateParamManager,
-  makeVaultParamManager,
+  makeLoanParamManager,
   makePoolParamManager,
   makeGovernedTerms,
   makeLoanParams,

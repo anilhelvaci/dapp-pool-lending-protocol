@@ -15,6 +15,7 @@ const useStyles = makeStyles(theme => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    top: 0,
   },
   menuButton: ({ drawerWidth }) => ({
     marginRight: theme.spacing(2),
@@ -40,8 +41,8 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-function AppHeader({ handleDrawerToggle, children, drawerWidth }) {
-  const classes = useStyles({ drawerWidth });
+function AppHeader({ handleDrawerToggle, children }) {
+  const classes = useStyles();
 
   return (
     <div className={classes.appBar}>

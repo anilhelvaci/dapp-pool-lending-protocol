@@ -1,7 +1,8 @@
 // @ts-check
 import { Far } from '@endo/marshal';
 import { assertProposalShape } from '@agoric/zoe/src/contractSupport/index.js';
-import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
+import { AssetKind } from '@agoric/ertp';
+import { assert, details as X} from '@agoric/assert';
 
 /**
  * This is a faucet that provides liquidity for the ertp asset created
@@ -17,15 +18,21 @@ export async function start(zcf) {
 
   console.log(`${keyword} deployed successfully`);
 
+  let faucetOpen = true;
+
   const assetMint = await zcf.makeZCFMint(keyword, AssetKind.NAT, displayInfo);
   const { issuer } = assetMint.getIssuerRecord();
+
+  const assertWantAmountRecord = (seat, keyword) => {
+    const assertAmountKeywordRecord = {};
+    assertAmountKeywordRecord[keyword] = null;
+    assertProposalShape(seat, { want: assertAmountKeywordRecord });
+  };
 
   function makeFaucetInvitation() {
     /** @param {ZCFSeat} seat */
     async function faucetHook(seat) {
-      const assertAmountKeywordRecord = {};
-      assertAmountKeywordRecord[keyword] = null;
-      assertProposalShape(seat, { want: assertAmountKeywordRecord });
+      assertWantAmountRecord(seat, keyword);
       console.log("*[Proposal]*", seat.getProposal());
       const {
         want: proposalWantKeywordRecord,
@@ -39,11 +46,20 @@ export async function start(zcf) {
     return zcf.makeInvitation(faucetHook, 'Provide Liquidity');
   }
 
-  const creatorFacet = Far('faucetInvitationMaker', { makeFaucetInvitation });
+  const closeFaucet = () => {
+    faucetOpen = false;
+  };
+
+  const openFaucet = () => {
+    faucetOpen = true;
+  };
+
+  const creatorFacet = Far('faucetInvitationMaker', { closeFaucet, openFaucet });
   const publicFacet = Far('publicFacet',
     {
       hello: () => `Hello from ${keyword} liquidity provider`,
       getIssuer: () => issuer,
+      makeFaucetInvitation,
     });
   return harden({ creatorFacet, publicFacet });
 }

@@ -1,11 +1,10 @@
 // @ts-check
 import { Far } from '@endo/marshal';
-import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
+import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 
 export const start = async (zcf) => {
-  console.log("mdlaşksfşas")
   const creatorFacet = Far("creatorFacet", {
-    makeScriptedPriceAuthority: (options) => makeScriptedPriceAuthority(options)
+    makeManualPriceAuthority: (options) => makeManualPriceAuthority(options)
   });
   const publicFacet = Far("creatorFacet", {
     hello: () => "Hello from PriceAuthortiyFaucet"
