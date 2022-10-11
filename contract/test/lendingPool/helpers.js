@@ -6,6 +6,7 @@ import { resolve as importMetaResolve } from 'import-meta-resolve';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -20,8 +21,10 @@ const BASIS_POINTS = 10000n;
 export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   const underlyingIssuer = underlyingMint.getIssuer();
   const underlyingBrand = underlyingIssuer.getBrand();
-  const protocolBrand = await E(pm).getProtocolBrand();
-  const protocolIssuer = await E(pm).getProtocolIssuer();
+  const [protocolBrand, protocolIssuer] = await Promise.all([
+    E(pm).getProtocolBrand(),
+    E(pm).getProtocolIssuer()
+  ]);
   console.log('[BRAND]:', protocolBrand);
   console.log('[ISSUER]:', protocolIssuer);
   const displayInfo = underlyingBrand.getDisplayInfo();
@@ -38,6 +41,7 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   });
 
   const invitation = await E(pm).makeDepositInvitation();
+  /** @type UserSeat */
   const seat = await E(zoe).offer(
     invitation,
     proposal,
@@ -48,8 +52,11 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
     Protocol: protocolReceived,
   } = await E(seat).getPayouts();
 
-  const protocolAmount = await E(protocolIssuer).getAmountOf(protocolReceived);
-  return { payment: protocolReceived, amount: protocolAmount };
+  const [protocolAmount, offerResult] = await Promise.all([
+    E(protocolIssuer).getAmountOf(protocolReceived),
+    E(seat).getOfferResult(),
+  ]);
+  return { payment: protocolReceived, amount: protocolAmount, offerResult };
 };
 
 /**
@@ -105,12 +112,39 @@ export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPaym
  * @param {ERef<LendingPoolPublicFacet>} lendingPool
  * @param {Issuer} underlyingIssuer
  * @param {string} underlyingKeyword
- * @param {PriceAuthority} underlyingPriceAuthority
+ * @param {Ratio} price
+ * @param {TimerService} timer
  * @returns {Promise<PoolManager>}
  */
-export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underlyingKeyword, underlyingPriceAuthority) => {
-
+export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underlyingKeyword, price, timer) => {
+  const { numerator: { brand: compareBrand }, denominator: { brand: underlyingBrand } } = price;
+  const underlyingPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: underlyingBrand,
+    actualBrandOut: compareBrand,
+    initialPrice: price,
+    timer,
+  });
   return await E(lendingPool).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
+};
+
+/**
+ * @param {PoolManager} poolManager
+ * @returns {Promise<void>}
+ */
+export const getPoolMetadata = async poolManager => {
+  const [protocolBrand, protocolIssuer, underlyingIssuer, exchangeRate] = await Promise.all([
+    E(poolManager).getProtocolBrand(),
+    E(poolManager).getProtocolIssuer(),
+    E(poolManager).getUnderlyingIssuer(),
+    E(poolManager).getExchangeRate(),
+  ]);
+
+  return {
+    protocolBrand,
+    protocolIssuer,
+    underlyingIssuer,
+    exchangeRate
+  };
 };
 
 export const makeRates = (underlyingBrand, compareBrand) => {

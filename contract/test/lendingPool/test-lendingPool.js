@@ -18,7 +18,15 @@ import {
 import { makePromiseKit } from '@endo/promise-kit';
 import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 import { makePriceManager } from '../../src/lendingPool/priceManager.js';
-import { depositMoney, addPool, makeRates, setupAssets, borrow, makeMarketStateChecker } from './helpers.js';
+import {
+  depositMoney,
+  addPool,
+  makeRates,
+  setupAssets,
+  borrow,
+  makeMarketStateChecker,
+  getPoolMetadata,
+} from './helpers.js';
 
 import {
   setUpZoeForTest,
@@ -32,6 +40,7 @@ import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
 import { oneMinus } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { makeLendingPoolAssertions } from './lendingPoolAssertions.js';
 
 const test = unknownTest;
 
@@ -216,12 +225,15 @@ async function setupServices(
     },
   };
 
+  const assertions = makeLendingPoolAssertions(t);
+
   return {
     zoe,
     governor: g,
     lendingPool: l,
     ammFacets,
     timer,
+    assertions,
   };
 }
 
@@ -304,9 +316,14 @@ test('add-pool', async t => {
     vanKit: { brand: vanBrand, issuer: vanIssuer },
     compareCurrencyKit: { brand: usdBrand, issuer: usdIssuer },
     vanRates,
+    zoe,
   } = t.context;
 
-  const { zoe, lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet }, timer } = await setupServices(
+  const {
+    lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet },
+    timer,
+    assertions: { assertPoolAddedCorrectly },
+  } = await setupServices(
     t,
     [500n, 15n],
     AmountMath.make(vanBrand, 900n),
@@ -315,23 +332,13 @@ test('add-pool', async t => {
     500n,
     2222n,
     22222n,
-    2122n
+    2122n,
   );
 
-  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
-    actualBrandIn: vanBrand,
-    actualBrandOut: usdBrand,
-    priceList: [110n, 110n, 101n],
-    timer,
-    undefined,
-    unitAmountIn: AmountMath.make(vanBrand, 100n),
-    quoteInterval: secondsPerDay * 7n,
-  });
+  const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
+  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', price, timer);
 
-  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
-
-  t.is(await E(lendingPoolPublicFacet).hasPool(vanBrand), true);
-  t.deepEqual(await E(lendingPoolPublicFacet).getPool(vanBrand), vanPoolMan);
+  await assertPoolAddedCorrectly(vanPoolMan, lendingPoolPublicFacet);
 });
 
 /**
@@ -347,7 +354,12 @@ test('deposit', async t => {
     vanRates,
   } = t.context;
 
-  const { zoe, lendingPool: { lendingPoolCreatorFacet, lendingPoolPublicFacet }, timer } = await setupServices(
+  const {
+    zoe,
+    lendingPool: { lendingPoolCreatorFacet },
+    timer,
+    assertions: { assertDepositedCorrectly },
+  } = await setupServices(
     t,
     [500n, 15n],
     AmountMath.make(vanBrand, 900n),
@@ -356,68 +368,27 @@ test('deposit', async t => {
     500n,
     2222n,
     22222n,
-    2122n
+    2122n,
   );
 
-  const vanUsdPriceAuthority = makeScriptedPriceAuthority({
-    actualBrandIn: vanBrand,
-    actualBrandOut: usdBrand,
-    priceList: [110n, 110n, 101n],
-    timer,
-    undefined,
-    unitAmountIn: AmountMath.make(vanBrand, 100n),
-    quoteInterval: secondsPerDay * 7n,
-  });
+  // Add the pool to deposit money
+  const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
+  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', price, timer);
 
-  const vanPoolMan = await addPool(zoe, vanRates, lendingPoolCreatorFacet, vanIssuer, 'VAN', vanUsdPriceAuthority);
-  // It's possible to get the brand from the issuer object we let the user
-  // get the brand directly becasue it means one less await.
-  const [protocolBrand, protocolIssuer, underlyingIssuer, { checkMarketStateInSync }] = await Promise.all([
-    E(vanPoolMan).getProtocolBrand(),
-    E(vanPoolMan).getProtocolIssuer(),
-    E(vanPoolMan).getUnderlyingIssuer(),
-    await makeMarketStateChecker(t, vanPoolMan),
+  const [{ protocolBrand, protocolIssuer, exchangeRate }, { checkMarketStateInSync }] = await Promise.all([
+    getPoolMetadata(vanPoolMan),
+    makeMarketStateChecker(t, vanPoolMan),
   ])
   trace('Protocol Metadata', {
     protocolBrand,
     protocolIssuer
   });
 
-  const underlyingAmountIn = AmountMath.make(vanBrand, 111111111n);
-  // We used 'getProtocolAmountOut' here for offer safety but a slippage function
-  // will be implemented on the client side so we might need to remove this method.
-  const protocolAmountOut = await E(vanPoolMan).getProtocolAmountOut(underlyingAmountIn);
-  const proposal = harden({
-    give: { Underlying: underlyingAmountIn },
-    want: { Protocol: protocolAmountOut },
-  });
+  const { amount: protocolAmountReceived, offerResult: message } = await depositMoney(zoe, vanPoolMan, vanMint, 1n);
+  const vanAmountIn = AmountMath.make(vanBrand, 10n ** 8n);
+  const shouldReceiveProtocolAmount = floorDivideBy(vanAmountIn, exchangeRate);
 
-  const paymentKeywordRecord = harden({
-    Underlying: vanMint.mintPayment(underlyingAmountIn),
-  });
-
-  const invitation = E(lendingPoolPublicFacet).makeDepositInvitation(vanBrand);
-  const seat = await E(zoe).offer(
-    invitation,
-    proposal,
-    paymentKeywordRecord,
-  );
-
-  const message = await E(seat).getOfferResult();
-
-  const protocolTokenReceived = await E(seat).getPayouts();
-  const protocolReceived = protocolTokenReceived.Protocol;
-  t.truthy(
-    AmountMath.isEqual(
-      await E(protocolIssuer).getAmountOf(protocolReceived),
-      AmountMath.make(protocolBrand, 5555555550n),
-    ),
-  );
-
-  t.deepEqual(await E(vanPoolMan).getProtocolLiquidity(), AmountMath.make(protocolBrand, 5555555550n)); // We know that initial exchange rate is 0,02
-  t.deepEqual(await E(vanPoolMan).getUnderlyingLiquidity(), AmountMath.make(vanBrand, 111111111n));
-  t.deepEqual(vanIssuer, underlyingIssuer);
-  t.is(message, 'Finished');
+  await assertDepositedCorrectly(vanPoolMan, shouldReceiveProtocolAmount, vanAmountIn, protocolAmountReceived, message);
   await checkMarketStateInSync();
 });
 /**
