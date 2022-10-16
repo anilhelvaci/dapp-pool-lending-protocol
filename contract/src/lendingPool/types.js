@@ -267,3 +267,8 @@
  * @typedef {LoanTiming & Object} LendingPoolTiming
  * @property {NatValue} priceCheckPeriod
  */
+
+/**
+ * @typedef {Object} TestContext
+ * @property {ZoeService} zoe
+ */

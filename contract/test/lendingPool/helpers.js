@@ -1,12 +1,13 @@
 import { Nat } from '@agoric/nat';
 import { E } from '@endo/far';
 import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
-import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
+import { floorMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { resolve as importMetaResolve } from 'import-meta-resolve';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
+import { waitForPromisesToSettle } from './test-lendingPool.js';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -21,12 +22,11 @@ const BASIS_POINTS = 10000n;
 export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
   const underlyingIssuer = underlyingMint.getIssuer();
   const underlyingBrand = underlyingIssuer.getBrand();
-  const [protocolBrand, protocolIssuer] = await Promise.all([
-    E(pm).getProtocolBrand(),
-    E(pm).getProtocolIssuer()
-  ]);
-  console.log('[BRAND]:', protocolBrand);
-  console.log('[ISSUER]:', protocolIssuer);
+  const { protocolBrand, protocolIssuer } = await getPoolMetadata(pm);
+  trace('DepositMoney Metadata', {
+    protocolBrand,
+    protocolIssuer,
+  });
   const displayInfo = underlyingBrand.getDisplayInfo();
   const decimalPlaces = displayInfo?.decimalPlaces || 0n;
   const underlyingAmountIn = AmountMath.make(underlyingBrand, amountInUnit * 10n ** Nat(decimalPlaces));
@@ -71,19 +71,16 @@ export const depositMoney = async (zoe, pm, underlyingMint, amountInUnit) => {
  * @returns {Promise<{loanKit: LoanKit, moneyLeftInPool: Payment}>}
  */
 export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPayment, collateralUnderlyingPool, underlyingValue, debtBrand, debtValue) => {
-  const [collateralUnderlyingBrand, protocolBrand, protocolIssuer] = await Promise.all([
-    E(collateralUnderlyingPool).getUnderlyingBrand(),
-    E(collateralUnderlyingPool).getProtocolBrand(),
-    E(collateralUnderlyingPool).getProtocolIssuer(),
-  ]);
+  const { underlyingBrand: collateralUnderlyingBrand, protocolBrand, protocolIssuer, exchangeRate } = await getPoolMetadata(collateralUnderlyingPool);
 
-  const [collateralPayment, depositedMoneyMinusLoan] =
-    await E(protocolIssuer).split(poolDepositedMoneyPayment,
-      floorDivideBy(AmountMath.make(collateralUnderlyingBrand, underlyingValue), await E(collateralUnderlyingPool).getExchangeRate()));
+  const {
+    collateral: { payment: collateralPayment, amount: collateralAmount },
+    remaining: { payment: depositedMoneyMinusLoan },
+  } = await splitCollateral(collateralUnderlyingPool, poolDepositedMoneyPayment, underlyingValue);
 
   // build the proppsal
   const debtProposal = {
-    give: { Collateral: await E(protocolIssuer).getAmountOf(collateralPayment) },
+    give: { Collateral: collateralAmount },
     want: { Debt: AmountMath.make(debtBrand, debtValue) },
   };
 
@@ -92,6 +89,7 @@ export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPaym
   };
 
   // Get a loan for Alice
+  /** @type UserSeat */
   const borrowSeat = await E(zoe).offer(
     E(lendingPoolPublicFacet).makeBorrowInvitation(),
     debtProposal,
@@ -102,7 +100,89 @@ export const borrow = async (zoe, lendingPoolPublicFacet, poolDepositedMoneyPaym
   const borrowLoanKit = await E(borrowSeat).getOfferResult();
 
   return { moneyLeftInPool: depositedMoneyMinusLoan, loanKit: borrowLoanKit }
-}
+};
+
+export const adjust = async (zoe, loan, collateralConfig = undefined, debtConfig = undefined, collateralUnderlyingBrand) => {
+
+  const give = {};
+  const want = {};
+  const paymentRecords = {};
+
+  if (collateralConfig && collateralConfig.type && collateralConfig.type === 'give') {
+    give.Collateral = collateralConfig.amount;
+    paymentRecords.Collateral = collateralConfig.payment;
+  } else if (collateralConfig && collateralConfig.type && collateralConfig.type === 'want') {
+    want.Collateral = collateralConfig.amount;
+  }
+
+  if (debtConfig && debtConfig.type && debtConfig.type === 'give') {
+    give.Debt = debtConfig.amount;
+    paymentRecords.Debt = debtConfig.payment;
+  } else if (debtConfig && debtConfig.type && debtConfig.type === 'want') {
+    want.Debt = debtConfig.amount;
+  }
+
+  const proposal = harden({
+    give,
+    want,
+  });
+
+  // Send the offer to adjust the loan
+  const seat = await E(zoe).offer(
+    E(loan).makeAdjustBalancesInvitation(),
+    proposal,
+    harden(paymentRecords),
+    { collateralUnderlyingBrand },
+  );
+
+  await waitForPromisesToSettle();
+
+  return seat;
+};
+
+/**
+ *
+ * @param {ZoeService} zoe
+ * @param {WrappedLoan} loan
+ * @param {{
+ *   amount: Amount,
+ *   payment: Payment,
+ * }} debtConfig
+ * @param {{
+ *   collatelralUnderlyingAmount: Amount,
+ * }} collateralConfig
+ * @param {PoolManager} collateralUnderlyingPoolManager
+ * @returns {Promise<void>}
+ */
+export const closeLoan = async (
+  zoe, loan, debtConfig,
+  collateralConfig,
+  collateralUnderlyingPoolManager
+) => {
+  const { amount: debtAmount, payment: debtPayment } = debtConfig;
+  const { collateralUnderlyingAmount } = collateralConfig;
+  const { exchangeRate } = await getPoolMetadata(collateralUnderlyingPoolManager);
+
+  const collateralAmount = calculateProtocolFromUnderlying(collateralUnderlyingAmount, exchangeRate);
+
+  const proposal = harden({
+    give: { Debt: debtAmount },
+    want: { Collateral: collateralAmount },
+  });
+
+  const payment = harden({
+    Debt: debtPayment,
+  });
+
+  const seat = await E(zoe).offer(
+    E(loan).makeCloseInvitation(),
+    proposal,
+    payment,
+  );
+  await waitForPromisesToSettle();
+
+  return seat;
+};
 
 /**
  * Helper function to add a new pool to the protocol
@@ -132,19 +212,89 @@ export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underly
  * @returns {Promise<void>}
  */
 export const getPoolMetadata = async poolManager => {
-  const [protocolBrand, protocolIssuer, underlyingIssuer, exchangeRate] = await Promise.all([
+  const [protocolBrand, protocolIssuer, underlyingIssuer, underlyingBrand, exchangeRate] = await Promise.all([
     E(poolManager).getProtocolBrand(),
     E(poolManager).getProtocolIssuer(),
     E(poolManager).getUnderlyingIssuer(),
+    E(poolManager).getUnderlyingBrand(),
     E(poolManager).getExchangeRate(),
   ]);
+
+  trace('PoolMetadata', {
+    protocolBrand,
+    protocolIssuer,
+    underlyingIssuer,
+    underlyingBrand,
+    exchangeRate
+  });
 
   return {
     protocolBrand,
     protocolIssuer,
     underlyingIssuer,
-    exchangeRate
+    underlyingBrand,
+    exchangeRate,
   };
+};
+
+/**
+ * Calculates the amount of protocol tokens corresponding to the given underlyingAmount
+ *
+ * @param {Amount<'nat'>} underlyingAmount
+ * @param {Ratio} exchangeRate
+ * @returns {Amount<'nat'>}
+ */
+export const calculateProtocolFromUnderlying = (underlyingAmount, exchangeRate) => {
+  return floorDivideBy(
+    underlyingAmount,
+    exchangeRate,
+  );
+}
+
+/**
+ * Calculates the amount of underlying asset corresponding to the given protocolAmount
+ *
+ * @param {Amount<'nat'>} protocolAmount
+ * @param {Ratio} exchangeRate
+ * @return {Amount<'nat'>}
+ */
+export const calculateUnderlyingFromProtocol = (protocolAmount, exchangeRate) => {
+  return floorMultiplyBy(
+    protocolAmount,
+    exchangeRate,
+  );
+}
+
+/**
+ *
+ * @param {PoolManager} poolManager
+ * @param {Payment} totalPayment
+ * @param {BigInt} collateralUnderlyingValue
+ * @returns {Promise<{collateral, remaining}>}
+ */
+export const splitCollateral = async (poolManager, totalPayment, collateralUnderlyingValue) => {
+
+  const extractAmountFromPayment = async (issuer, payment) => {
+    const amount = await E(issuer).getAmountOf(payment);
+    return { payment, amount }
+  };
+
+  const { protocolIssuer, exchangeRate, underlyingBrand } = await getPoolMetadata(poolManager);
+
+  const [collateralPayment, remainingPayment] =
+    await E(protocolIssuer).split(totalPayment,
+      calculateProtocolFromUnderlying(
+        AmountMath.make(underlyingBrand, collateralUnderlyingValue),
+        exchangeRate
+      ),
+    );
+
+  const [collateral, remaining] = await Promise.all([
+    extractAmountFromPayment(protocolIssuer, collateralPayment),
+    extractAmountFromPayment(protocolIssuer, remainingPayment),
+  ])
+
+  return { collateral, remaining };
 };
 
 export const makeRates = (underlyingBrand, compareBrand) => {
