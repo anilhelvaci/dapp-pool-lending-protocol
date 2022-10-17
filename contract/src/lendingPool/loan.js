@@ -16,6 +16,7 @@ import { Far } from '@endo/marshal';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import { calculateCurrentDebt, reverseInterest } from '@agoric/run-protocol/src/interest-math.js';
 import { makeLoanKit } from './loanKit.js';
+import { assertDebtDeltaNotZero } from './assertionHelper.js'
 
 const { details: X, quote: q } = assert;
 
@@ -148,6 +149,7 @@ export const makeInnerLoan = (
     // const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
     // update loan manager which tracks total debt
+    assertDebtDeltaNotZero(oldDebt, newDebt)
     manager.applyDebtDelta(oldDebt, newDebt);
     // update position of this loan in liquidation priority queue
     // manager.refreshLoanPriority(getNormalizedDebt(), oldCollateral, idInManager);
