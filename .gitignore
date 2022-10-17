@@ -2,3 +2,4 @@ node_modules
 _agstate
 yarn.lock
 ui/src/generated/lendingPoolDefaults.js
+bundles
