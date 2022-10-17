@@ -81,7 +81,12 @@ export const assertEnoughLiquidtyExists = (
 };
 
 export const assertDebtDeltaNotZero = (oldDebt, newDebt) => {
-  assert(oldDebt != newDebt, 
-    X`Debt delta equal to zero`
+  assert(oldDebt != newDebt, X`Debt delta equal to zero`);
+};
+
+export const assertLiquidityFunds = loanAllocations => {
+  assert(
+    loanAllocations.Debt && loanAllocations.Debt !== undefined,
+    'The loan has no liquidated funds',
   );
 };

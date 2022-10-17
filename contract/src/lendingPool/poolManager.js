@@ -32,7 +32,7 @@ import {
   floorMultiplyBy,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATE_ASSET_STATE_OPERATION } from './constants.js';
-import { assertEnoughLiquidtyExists } from './assertionHelper.js';
+import { assertEnoughLiquidtyExists, assertLiquidityFunds } from './assertionHelper.js';
 
 const trace = makeTracer('PM');
 
@@ -313,10 +313,8 @@ export const makePoolManager = (
    */
   const transferLiquidatedFund = loanSeat => {
     const loanAllocations = loanSeat.getCurrentAllocation();
-    assert(
-      loanAllocations.Debt && loanAllocations.Debt !== undefined,
-      'The loan has no liquidated funds',
-    );
+    assertLiquidityFunds(loanAllocations)
+
     const { Debt: liquidatedAmount } = loanSeat.getCurrentAllocation();
 
     console.log(
@@ -332,6 +330,7 @@ export const makePoolManager = (
       'underlyingAssetSeatAfter',
       underlyingAssetSeat.getCurrentAllocation(),
     );
+    
     updateAssetState(UPDATE_ASSET_STATE_OPERATION.LIQUIDATED);
   };
 
