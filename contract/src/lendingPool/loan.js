@@ -14,9 +14,16 @@ import { assert } from '@agoric/assert';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
-import { calculateCurrentDebt, reverseInterest } from '@agoric/run-protocol/src/interest-math.js';
+import {
+  calculateCurrentDebt,
+  reverseInterest,
+} from '@agoric/run-protocol/src/interest-math.js';
 import { makeLoanKit } from './loanKit.js';
-import { assertDebtDeltaNotZero } from './assertionHelper.js'
+import {
+  assertDebtDeltaNotZero,
+  assertOnlyKeys,
+  assertBalancesHookArgs,
+} from './assertionHelper.js';
 
 const { details: X, quote: q } = assert;
 
@@ -76,12 +83,10 @@ export const makeInnerLoan = (
   debtBrand,
   collateralUnderlyingBrand,
   debtPriceAuthority,
-  collateralPriceAuthority
+  collateralPriceAuthority,
 ) => {
-
   const collateralBrand = manager.getCollateralBrand();
-  // const { brand: debtBrand } = mint.getIssuerRecord();
-  console.log("makeInnerLoan")
+  console.log('makeInnerLoan');
   /**
    * State object to support virtualization when available
    */
@@ -136,7 +141,6 @@ export const makeInnerLoan = (
    * @param {Amount} newDebt - principal and all accrued interest
    */
   const updateDebtSnapshot = newDebt => {
-    // update local state
     state.debtSnapshot = newDebt;
     state.interestSnapshot = manager.getCompoundedInterest();
   };
@@ -146,14 +150,15 @@ export const makeInnerLoan = (
    * @param {Amount<'nat'>} newDebt - actual principal and all accrued interest
    */
   const updateDebtAccounting = (oldDebt, newDebt) => {
-    // const newDebt = AmountMath.add(oldDebt, targetDebt);
     updateDebtSnapshot(newDebt);
-    // update loan manager which tracks total debt
-    assertDebtDeltaNotZero(oldDebt, newDebt)
+
+    assertDebtDeltaNotZero(oldDebt, newDebt);
     manager.applyDebtDelta(oldDebt, newDebt);
-    // update position of this loan in liquidation priority queue
-    // manager.refreshLoanPriority(getNormalizedDebt(), oldCollateral, idInManager);
-    state.loanKey = manager.refreshLoanPriorityByKey(state.loanKey, idInManager);
+
+    state.loanKey = manager.refreshLoanPriorityByKey(
+      state.loanKey,
+      idInManager,
+    );
   };
 
   /**
@@ -190,9 +195,10 @@ export const makeInnerLoan = (
   };
 
   const getCollateralAllocated = seat => {
-    console.log("collateralBrand", collateralBrand)
+    console.log('collateralBrand', collateralBrand);
     return seat.getAmountAllocated('Collateral', collateralBrand);
-  }
+  };
+
   const getDebtAllocated = seat => seat.getAmountAllocated('Debt', debtBrand);
 
   const assertLoanHoldsNoRun = () => {
@@ -209,8 +215,11 @@ export const makeInnerLoan = (
    * @returns {Promise<*>}
    */
   const maxDebtFor = async (collateralAmount, exchangeRate) => {
-    console.log("maxDebtFor: exchangeRate", exchangeRate);
-    const correspondingUnderlyingCollateral = calculateCollateralUnderlyingIn(collateralAmount, exchangeRate);
+    console.log('maxDebtFor: exchangeRate', exchangeRate);
+    const correspondingUnderlyingCollateral = floorMultiplyBy(
+      collateralAmount,
+      exchangeRate,
+    );
     const quoteAmount = await E(collateralPriceAuthority).quoteGiven(
       correspondingUnderlyingCollateral,
       manager.getThirdCurrencyBrand(),
@@ -223,27 +232,16 @@ export const makeInnerLoan = (
   };
 
   /**
-   * @param {Amount} protocolCollateralAmount
-   * @param {Ratio} exchangeRate
-   */
-  const calculateCollateralUnderlyingIn = (protocolCollateralAmount, exchangeRate) => {
-    return floorMultiplyBy(
-      protocolCollateralAmount,
-      exchangeRate
-    )
-  };
-
-  /**
    * @param {Amount} proposedUnderlyingDebt
    * @returns {Promise<undefined>}
    */
-  const getRequestedDebtValue = async (proposedUnderlyingDebt) => {
+  const getRequestedDebtValue = async proposedUnderlyingDebt => {
     const quoteAmount = await E(debtPriceAuthority).quoteGiven(
       proposedUnderlyingDebt,
       manager.getThirdCurrencyBrand(),
     );
     return quoteAmount;
-  }
+  };
 
   /**
    * @param {Amount} collateralAmount - Should be a protocolToken
@@ -255,15 +253,21 @@ export const makeInnerLoan = (
   const assertSufficientCollateral = async (
     collateralAmount,
     proposedUnderlyingDebt,
-    exchangeRate
+    exchangeRate,
   ) => {
     const maxDebtValueAmount = await maxDebtFor(collateralAmount, exchangeRate);
-    const requestedDebtQuote = await getRequestedDebtValue(proposedUnderlyingDebt);
+    const requestedDebtQuote = await getRequestedDebtValue(
+      proposedUnderlyingDebt,
+    );
     assert(
-      AmountMath.isGTE(maxDebtValueAmount,
+      AmountMath.isGTE(
+        maxDebtValueAmount,
         getAmountOut(requestedDebtQuote),
-        manager.getThirdCurrencyBrand()),
-      X`Requested ${q(proposedUnderlyingDebt)} exceeds max ${q(maxDebtValueAmount)}`,
+        manager.getThirdCurrencyBrand(),
+      ),
+      X`Requested ${q(proposedUnderlyingDebt)} exceeds max ${q(
+        maxDebtValueAmount,
+      )}`,
     );
   };
 
@@ -273,9 +277,9 @@ export const makeInnerLoan = (
    */
   const getCollateralAmount = () => {
     const { loanSeat, phase } = state;
-    console.log("loanSeatAllocations", loanSeat.getCurrentAllocation());
-    console.log("Phase", phase);
-    console.log("Exited", loanSeat.hasExited());
+    console.log('loanSeatAllocations', loanSeat.getCurrentAllocation());
+    console.log('Phase', phase);
+    console.log('Exited', loanSeat.hasExited());
     // getCollateralAllocated would return final allocations
     return loanSeat.hasExited()
       ? AmountMath.makeEmpty(collateralBrand)
@@ -283,7 +287,11 @@ export const makeInnerLoan = (
   };
 
   const snapshotState = newPhase => {
-    const { debtSnapshot: debt, interestSnapshot: interest, collateralUnderlyingBrand } = state;
+    const {
+      debtSnapshot: debt,
+      interestSnapshot: interest,
+      collateralUnderlyingBrand,
+    } = state;
 
     return harden({
       liquidationRatio: manager.getLiquidationMargin(),
@@ -336,8 +344,8 @@ export const makeInnerLoan = (
     updateUiState();
   };
 
-  /** @type {OfferHandler}
-   *
+  /**
+   * @type {OfferHandler}
    * */
   const closeHook = async seat => {
     assertCloseable();
@@ -398,23 +406,6 @@ export const makeInnerLoan = (
     return zcf.makeInvitation(closeHook, 'CloseLoan');
   };
 
-  // The proposal is not allowed to include any keys other than these,
-  // usually 'Collateral' and 'RUN'.
-  const assertOnlyKeys = (proposal, keys) => {
-    const onlyKeys = clause =>
-      Object.getOwnPropertyNames(clause).every(c => keys.includes(c));
-
-    assert(
-      onlyKeys(proposal.give),
-      X`extraneous terms in give: ${proposal.give}`,
-    );
-    assert(
-      onlyKeys(proposal.want),
-      X`extraneous terms in want: ${proposal.want}`,
-    );
-  };
-
-
   /**
    * Calculate the target level for Collateral for the loanSeat and
    * clientSeat implied by the proposal. If the proposal wants Collateral,
@@ -470,8 +461,8 @@ export const makeInnerLoan = (
 
   /**
    * Calculate the target Debt level for the loanSeat and clientSeat implied
-   * by the proposal. If the proposal wants collateral, transfer that amount
-   * from loan to client. If the proposal gives collateral, transfer the
+   * by the proposal. If the proposal wants debt, transfer that amount
+   * from loan to client. If the proposal gives debt, transfer the
    * opposite direction. Otherwise, return the current level.
    *
    * Since we don't allow the debt to go negative, we will reduce the amount we
@@ -489,8 +480,6 @@ export const makeInnerLoan = (
         client: AmountMath.add(clientAllocation, proposal.want.Debt),
       };
     } else if (proposal.give.Debt) {
-      // We don't allow debt to be negative, so we'll refund overpayments
-      // TODO this is the same as in `transferDebt`
       const currentDebt = getCurrentDebt();
       const acceptedDebt = AmountMath.isGTE(proposal.give.Debt, currentDebt)
         ? currentDebt
@@ -518,7 +507,7 @@ export const makeInnerLoan = (
     let newDebt;
     const currentDebt = getCurrentDebt();
     if (proposal.want.Debt) {
-      newDebt = AmountMath.add(proposal.want.Debt, currentDebt);
+      newDebt = AmountMath.add(currentDebt, proposal.want.Debt);
     } else if (proposal.give.Debt) {
       newDebt = AmountMath.subtract(currentDebt, debtAfter.loan);
     } else {
@@ -527,40 +516,28 @@ export const makeInnerLoan = (
     return newDebt;
   };
 
-  /**
-   * Allow loan holders to adjust their loans by,
-   * - Let them borrow more money
-   * - Let them pay their debt
-   * - Let them put some more collateral and borrow some more
-   *
-   * Logic here is very similar to the one in vault.js of VaultFactory.
-   * But we've adjuted it for our scenario.
-   *
-   * @param {ZCFSeat} clientSeat
-   * @param {Object} offerArgs
+   /**
+   * Return the max debt supported by current Collateral as modified by proposal
    */
-  const adjustBalancesHook = async (clientSeat, offerArgs) => {
-    assert(typeof offerArgs == 'object');
-    assert(offerArgs.hasOwnProperty('collateralUnderlyingBrand'), 'OfferArgs should contain a collateralUnderlyingBrand object');
-    const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
-
+  const getMaxDebtByCollateral = async (targetCollateralAmount, targetDebtAmount) => {
     const oldUpdater = state.outerUpdater;
-    const proposal = clientSeat.getProposal();
-    const oldDebt = getCurrentDebt();
-    trace("adjustBalancesHook: proposal", proposal);
-    assertOnlyKeys(proposal, ['Collateral', 'Debt']);
-    const targetCollateralAmount = targetCollateralLevels(clientSeat).loan;
-    const targetDebt = targetDebtLevels(clientSeat).client;
-    // max debt supported by current Collateral as modified by proposal
-    const [maxDebtForOriginalTarget, requestedQuoteInCompareBrand] =
-      await Promise.all([
-        maxDebtFor(targetCollateralAmount, manager.getExchangeRateForPool(collateralUnderlyingBrand)),
-        E(debtPriceAuthority).quoteGiven(
-          targetDebt,
-          manager.getThirdCurrencyBrand(),
-        )
-      ]);
-    const requestedDebtInCompareBrand = getAmountOut(requestedQuoteInCompareBrand);
+    const [
+      maxDebtForOriginalTarget,
+      requestedQuoteInCompareBrand,
+    ] = await Promise.all([
+      maxDebtFor(
+        targetCollateralAmount,
+        manager.getExchangeRateForPool(collateralUnderlyingBrand),
+      ),
+      E(debtPriceAuthority).quoteGiven(
+        targetDebtAmount,
+        manager.getThirdCurrencyBrand(),
+      ),
+    ]);
+    const requestedDebtInCompareBrand = getAmountOut(
+      requestedQuoteInCompareBrand,
+    );
+
     assert(
       oldUpdater === state.outerUpdater,
       X`Transfer during loan adjustment`,
@@ -572,10 +549,48 @@ export const makeInnerLoan = (
       targetCollateralAmount,
     );
 
+    return {
+      maxDebtForOriginalTarget,
+      requestedDebtInCompareBrand,
+      priceOfCollateralInCompareBrand,
+    };
+  };
+
+  /**
+   * Allow loan holders to adjust their loans by,
+   * - Let them borrow more money
+   * - Let them pay their debt
+   * - Let them put some more collateral and borrow some more money
+   *
+   * Logic here is very similar to the one in vault.js of VaultFactory.
+   * But we've adjuted it for our scenario.
+   *
+   * @param {ZCFSeat} clientSeat
+   * @param {Object} offerArgs
+   */
+  const adjustBalancesHook = async (clientSeat, offerArgs) => {
+    assertBalancesHookArgs(offerArgs);
+
+    const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
+    const oldUpdater = state.outerUpdater;
+    const proposal = clientSeat.getProposal();
+    const oldDebt = getCurrentDebt();
+
+    trace('adjustBalancesHook: proposal', proposal);
+    assertOnlyKeys(proposal, ['Collateral', 'Debt']);
+
+    const targetCollateralAmount = targetCollateralLevels(clientSeat).loan;
+    const targetDebtAmount = targetDebtLevels(clientSeat).client;
+
+    const {
+      maxDebtForOriginalTarget,
+      requestedDebtInCompareBrand,
+      priceOfCollateralInCompareBrand,
+    } = await getMaxDebtByCollateral(targetCollateralAmount, targetDebtAmount);
+
     // After the AWAIT, we retrieve the loan's allocations again.
     const collateralAfter = targetCollateralLevels(clientSeat);
     const debtAfter = targetDebtLevels(clientSeat);
-
     const newDebt = calculateNewDebt(proposal, debtAfter);
 
     // Get new balances after calling the priceAuthority, so we can compare
@@ -587,8 +602,8 @@ export const makeInnerLoan = (
       targetCollateralAmount,
       loanCollateral,
       requestedDebtInCompareBrand,
-      targetDebt,
-      newDebt
+      targetDebtAmount,
+      newDebt,
     });
 
     // If the collateral decreased after the await, we pro-rate maxDebt
@@ -608,10 +623,12 @@ export const makeInnerLoan = (
         )} is more than the collateralization ratio allows: ${q(maxDebtAfter)}`,
       );
 
+    } else if (
       // When the re-checked collateral was larger than the original amount, we
       // should restart, unless the new debt is less than the original target
       // (in which case, we're fine to proceed with the reallocate)
-    } else if (!AmountMath.isGTE(maxDebtForOriginalTarget, requestedDebtInCompareBrand)) {
+      !AmountMath.isGTE(maxDebtForOriginalTarget, requestedDebtInCompareBrand)
+    ) {
       return adjustBalancesHook(clientSeat);
     }
 
@@ -641,7 +658,13 @@ export const makeInnerLoan = (
    * @param {String} loanKey
    * @returns {Promise<LoanKit>}
    */
-  const initLoanKit = async (borrowerSeat, poolSeat, loan, exchangeRate, loanKey) => {
+  const initLoanKit = async (
+    borrowerSeat,
+    poolSeat,
+    loan,
+    exchangeRate,
+    loanKey,
+  ) => {
     assert(
       AmountMath.isEmpty(state.debtSnapshot),
       X`loan must be empty initially`,
@@ -660,15 +683,23 @@ export const makeInnerLoan = (
     trace('initLoanKit', {
       collateralAmount,
       proposedDebtAmount,
-      currentAllocation: poolSeat.getCurrentAllocation()
+      currentAllocation: poolSeat.getCurrentAllocation(),
     });
 
-    await assertSufficientCollateral(collateralAmount, proposedDebtAmount, exchangeRate);
+    await assertSufficientCollateral(
+      collateralAmount,
+      proposedDebtAmount,
+      exchangeRate,
+    );
 
     const { loanSeat } = state;
 
-    const underlyingKeywordRecord = poolSeat.decrementBy(harden({ Underlying: proposedDebtAmount }));
-    borrowerSeat.incrementBy(harden({Debt: underlyingKeywordRecord.Underlying}));
+    const underlyingKeywordRecord = poolSeat.decrementBy(
+      harden({ Underlying: proposedDebtAmount }),
+    );
+    borrowerSeat.incrementBy(
+      harden({ Debt: underlyingKeywordRecord.Underlying }),
+    );
     loanSeat.incrementBy(
       borrowerSeat.decrementBy(harden({ Collateral: collateralAmount })),
     );
@@ -687,7 +718,8 @@ export const makeInnerLoan = (
   const innerLoan = Far('innerLoan', {
     getLoanSeat: () => state.loanSeat,
     getPhase: () => state.phase,
-    initLoanKit: (seat, poolSeat, exchangeRate, loanKey) => initLoanKit(seat, poolSeat, innerLoan, exchangeRate, loanKey),
+    initLoanKit: (seat, poolSeat, exchangeRate, loanKey) =>
+      initLoanKit(seat, poolSeat, innerLoan, exchangeRate, loanKey),
     liquidating,
     liquidated,
     makeAdjustBalancesInvitation,
@@ -697,5 +729,5 @@ export const makeInnerLoan = (
     getNormalizedDebt,
   });
 
-  return innerLoan
+  return innerLoan;
 };

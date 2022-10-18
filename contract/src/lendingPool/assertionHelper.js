@@ -14,6 +14,16 @@ export const assertBorrowOfferArgs = offerArgs => {
   );
 };
 
+export const assertBalancesHookArgs = offerArgs => {
+  trace('BalancesHook: OfferArgs', offerArgs);
+
+  assert(typeof offerArgs == 'object');
+  assert(
+    offerArgs.hasOwnProperty('collateralUnderlyingBrand'),
+    'OfferArgs should contain a collateralUnderlyingBrand object',
+  );
+};
+
 export const assertBorrowCollateralUnderlyingBrand = (
   poolTypes,
   collateralUnderlyingBrand,
@@ -88,5 +98,21 @@ export const assertLiquidityFunds = loanAllocations => {
   assert(
     loanAllocations.Debt && loanAllocations.Debt !== undefined,
     'The loan has no liquidated funds',
+  );
+};
+
+// The proposal is not allowed to include any keys other than these,
+// usually 'Collateral' and 'RUN'.
+export const assertOnlyKeys = (proposal, keys) => {
+  const onlyKeys = clause =>
+    Object.getOwnPropertyNames(clause).every(c => keys.includes(c));
+
+  assert(
+    onlyKeys(proposal.give),
+    X`extraneous terms in give: ${proposal.give}`,
+  );
+  assert(
+    onlyKeys(proposal.want),
+    X`extraneous terms in want: ${proposal.want}`,
   );
 };
