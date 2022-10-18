@@ -212,29 +212,27 @@ export const addPool = async (zoe, rates, lendingPool, underlyingIssuer, underly
  * @returns {Promise<void>}
  */
 export const getPoolMetadata = async poolManager => {
-  const [protocolBrand, protocolIssuer, underlyingIssuer, underlyingBrand, exchangeRate] = await Promise.all([
+  const [protocolBrand, protocolIssuer, underlyingIssuer, underlyingBrand, exchangeRate, penaltyRate] = await Promise.all([
     E(poolManager).getProtocolBrand(),
     E(poolManager).getProtocolIssuer(),
     E(poolManager).getUnderlyingIssuer(),
     E(poolManager).getUnderlyingBrand(),
     E(poolManager).getExchangeRate(),
+    E(poolManager).getPenaltyRate(),
   ]);
 
-  trace('PoolMetadata', {
-    protocolBrand,
-    protocolIssuer,
-    underlyingIssuer,
-    underlyingBrand,
-    exchangeRate
-  });
-
-  return {
+  const result = {
     protocolBrand,
     protocolIssuer,
     underlyingIssuer,
     underlyingBrand,
     exchangeRate,
+    penaltyRate
   };
+
+  trace('PoolMetadata', result);
+
+  return result;
 };
 
 /**
@@ -273,12 +271,6 @@ export const calculateUnderlyingFromProtocol = (protocolAmount, exchangeRate) =>
  * @returns {Promise<{collateral, remaining}>}
  */
 export const splitCollateral = async (poolManager, totalPayment, collateralUnderlyingValue) => {
-
-  const extractAmountFromPayment = async (issuer, payment) => {
-    const amount = await E(issuer).getAmountOf(payment);
-    return { payment, amount }
-  };
-
   const { protocolIssuer, exchangeRate, underlyingBrand } = await getPoolMetadata(poolManager);
 
   const [collateralPayment, remainingPayment] =
@@ -296,6 +288,43 @@ export const splitCollateral = async (poolManager, totalPayment, collateralUnder
 
   return { collateral, remaining };
 };
+
+/**
+ *
+ * @param {PoolManager} poolManager
+ * @param {Payment} totalPayment
+ * @param {BigInt} collateralValue
+ * @returns {Promise<{collateral, remaining}>}
+ */
+export const splitCollateralByProtocol = async (poolManager, totalPayment, collateralValue) => {
+
+
+  const { /** @type Issuer */ protocolIssuer, protocolBrand } = await getPoolMetadata(poolManager);
+
+  const [collateralPayment, remainingPayment] =
+    await E(protocolIssuer).split(totalPayment,
+      AmountMath.make(protocolBrand, collateralValue * 10n ** 6n),
+    );
+
+  const [collateral, remaining] = await Promise.all([
+    extractAmountFromPayment(protocolIssuer, collateralPayment),
+    extractAmountFromPayment(protocolIssuer, remainingPayment),
+  ])
+
+  return { collateral, remaining };
+};
+
+/**
+ *
+ * @param {Issuer} issuer
+ * @param {Payment} payment
+ * @return {Promise<{amount: *, payment}>}
+ */
+const extractAmountFromPayment = async (issuer, payment) => {
+  const amount = await E(issuer).getAmountOf(payment);
+  return { payment, amount }
+};
+
 
 export const makeRates = (underlyingBrand, compareBrand) => {
   return harden({
