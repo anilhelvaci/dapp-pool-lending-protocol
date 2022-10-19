@@ -105,29 +105,30 @@ export const start = async (zcf, privateArgs) => {
 
   const { notifier: poolNotifier, updater: poolUpdater } = makeNotifierKit();
 
-  /**
-   *
-   */
+  const getPmAttributes = pm => {
+    return {
+      latestInterestRate: pm.getCurrentBorrowingRate(),
+      liquidationMargin: pm.getLiquidationMargin(),
+      underlyingIssuer: pm.getUnderlyingIssuer(),
+      underlyingBrand: pm.getUnderlyingBrand(),
+      protocolIssuer: pm.getProtocolIssuer(),
+      protocolBrand: pm.getProtocolBrand(),
+      thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
+      underlyingToThirdWrappedPriceAuthorityP: pm.getPriceAuthorityForBrand(
+        pm.getUnderlyingBrand(),
+      ),
+      exchangeRate: pm.getExchangeRate(),
+      totalDebt: pm.getTotalDebt(),
+      underlyingLiquidity: pm.getUnderlyingLiquidity(),
+      protocolLiquidity: pm.getProtocolLiquidity(),
+      notifier: pm.getNotifier(),
+    };
+  };
+
   const updatePoolState = () => {
     poolUpdater.updateState(
       [...poolTypes.values()].map(pm => {
-        return {
-          latestInterestRate: pm.getCurrentBorrowingRate(),
-          liquidationMargin: pm.getLiquidationMargin(),
-          underlyingIssuer: pm.getUnderlyingIssuer(),
-          underlyingBrand: pm.getUnderlyingBrand(),
-          protocolIssuer: pm.getProtocolIssuer(),
-          protocolBrand: pm.getProtocolBrand(),
-          thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
-          underlyingToThirdWrappedPriceAuthorityP: pm.getPriceAuthorityForBrand(
-            pm.getUnderlyingBrand(),
-          ),
-          exchangeRate: pm.getExchangeRate(),
-          totalDebt: pm.getTotalDebt(),
-          underlyingLiquidity: pm.getUnderlyingLiquidity(),
-          protocolLiquidity: pm.getProtocolLiquidity(),
-          notifier: pm.getNotifier(),
-        };
+        return getPmAttributes(pm);
       }),
     );
   };
@@ -300,22 +301,9 @@ export const start = async (zcf, privateArgs) => {
     return harden(
       Promise.all(
         [...poolTypes.entries()].map(async ([brand, pm]) => {
-          const underlyingWrappedPriceAuthority = await pm.getPriceAuthorityForBrand(
-            pm.getUnderlyingBrand(),
-          );
           return {
-            brand,
-            latestInterestRate: pm.getCurrentBorrowingRate(),
-            liquidationMargin: pm.getLiquidationMargin(),
-            underlyingBrand: pm.getUnderlyingBrand(),
-            protocolBrand: pm.getProtocolBrand(),
-            thirdCurrencyBrand: pm.getThirdCurrencyBrand(),
-            underlyingToThirdWrappedPriceAuthority: underlyingWrappedPriceAuthority,
-            exchangeRate: pm.getExchangeRate(),
-            totalDebt: pm.getTotalDebt(),
-            underlyingLiquidity: pm.getUnderlyingLiquidity(),
-            protocolLiquidity: pm.getProtocolLiquidity(),
-            notifier: pm.getNotifier(),
+            brand, 
+            ...getPmAttributes(pm),
           };
         }),
       ),
