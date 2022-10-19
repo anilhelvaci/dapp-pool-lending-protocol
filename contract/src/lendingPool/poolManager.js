@@ -32,7 +32,10 @@ import {
   floorMultiplyBy,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATE_ASSET_STATE_OPERATION } from './constants.js';
-import { assertEnoughLiquidtyExists, assertLiquidityFunds } from './assertionHelper.js';
+import {
+  assertEnoughLiquidtyExists,
+  assertLiquidityFunds,
+} from './assertionHelper.js';
 
 const trace = makeTracer('PM');
 
@@ -194,32 +197,25 @@ export const makePoolManager = (
     );
   };
 
-  /** @type {AssetState} */
-  const initialAssetState = {
-    compoundedInterest,
-    latestInterestRate: getCurrentBorrowingRate(),
-    latestInterestUpdate,
-    totalDebt,
-    exchangeRate: getExchangeRate(),
-    underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
-    protocolLiquidity: shared.getProtocolLiquidity(),
-  };
-
-  const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
-    harden(initialAssetState),
-  );
-
-  const updateAssetState = operationType => {
-    /** @type {AssetState} */
-    const payload = harden({
+  const getAssetState = () => {
+    return {
       compoundedInterest,
       latestInterestRate: shared.getCurrentBorrowingRate(),
       latestInterestUpdate,
       totalDebt,
-      exchangeRate: getExchangeRate(),
+      exchangeRate: shared.getExchangeRate(),
       underlyingLiquidity: shared.getUnderlyingLiquidity(underlyingBrand),
       protocolLiquidity: shared.getProtocolLiquidity(),
-    });
+    };
+  };
+
+  const { updater: assetUpdater, notifier: assetNotifer } = makeNotifierKit(
+    harden(getAssetState()),
+  );
+
+  const updateAssetState = operationType => {
+    /** @type {AssetState} */
+    const payload = harden(getAssetState());
     assetUpdater.updateState(payload);
 
     trace(
@@ -308,12 +304,12 @@ export const makePoolManager = (
   };
 
   /**
-   * Transfersto the pool the underlyingAsset received from the AMM after liquidation .
+   * Transfers to the pool the underlyingAsset received from the AMM after liquidation .
    * @param {ZCFSeat} loanSeat
    */
   const transferLiquidatedFund = loanSeat => {
     const loanAllocations = loanSeat.getCurrentAllocation();
-    assertLiquidityFunds(loanAllocations)
+    assertLiquidityFunds(loanAllocations);
 
     const { Debt: liquidatedAmount } = loanSeat.getCurrentAllocation();
 
@@ -330,7 +326,7 @@ export const makePoolManager = (
       'underlyingAssetSeatAfter',
       underlyingAssetSeat.getCurrentAllocation(),
     );
-    
+
     updateAssetState(UPDATE_ASSET_STATE_OPERATION.LIQUIDATED);
   };
 
@@ -366,12 +362,12 @@ export const makePoolManager = (
   };
 
   const addIfHasStagedAllocation = tempSeatList => {
-    const seatList = tempSeatList.filter(function(seat){
-      if (seat.hasStagedAllocation()){
-        return seat
+    const seatList = tempSeatList.filter(function(seat) {
+      if (seat.hasStagedAllocation()) {
+        return seat;
       }
-    })
-    return seatList
+    });
+    return seatList;
   };
 
   // Set up the notifier for interest period
@@ -379,7 +375,7 @@ export const makePoolManager = (
     0n,
     timingParams[RECORDING_PERIOD_KEY].value,
   );
-  
+
   const { zcfSeat: poolIncrementSeat } = zcf.makeEmptySeatKit();
 
   const timeObserver = {
@@ -423,6 +419,30 @@ export const makePoolManager = (
       (totalDebt = AmountMath.subtract(totalDebt, originalDebt)), // Update debt after payment
   });
 
+  const verifyDebtsPerCollateralStore = async collateralBrand => {
+    if (!debtsPerCollateralStore.has(collateralBrand)) {
+      /** @type {WrappedPriceAuthority} */
+      const wrappedCollateralPriceAuthority = await E(
+        priceManager,
+      ).getWrappedPriceAuthority(collateralBrand);
+      debtsPerCollateralStore.init(
+        collateralBrand,
+        await makeDebtsPerCollateral(
+          zcf,
+          collateralBrand,
+          underlyingBrand,
+          assetNotifer,
+          wrappedCollateralPriceAuthority,
+          priceAuthority,
+          priceAuthNotifier,
+          managerFacet,
+          timerService,
+          timingParams,
+        ),
+      );
+    }
+  };
+
   /**
    * Creates a loan object and organizes them by their
    * collateral type(One group for every protocol token).
@@ -447,28 +467,7 @@ export const makePoolManager = (
     );
 
     const collateralBrand = exchangeRate.numerator.brand;
-
-    if (!debtsPerCollateralStore.has(collateralBrand)) {
-      /** @type {WrappedPriceAuthority} */
-      const wrappedCollateralPriceAuthority = await E(
-        priceManager,
-      ).getWrappedPriceAuthority(collateralBrand); // should change the method name
-      debtsPerCollateralStore.init(
-        collateralBrand,
-        await makeDebtsPerCollateral(
-          zcf,
-          collateralBrand,
-          underlyingBrand,
-          assetNotifer,
-          wrappedCollateralPriceAuthority,
-          priceAuthority,
-          priceAuthNotifier,
-          managerFacet,
-          timerService,
-          timingParams,
-        ),
-      );
-    }
+    await verifyDebtsPerCollateralStore(collateralBrand);
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
     console.log('debtsPerCollateral: ', debtsPerCollateral);
@@ -501,17 +500,17 @@ export const makePoolManager = (
       want: { Underlying: askedAmount },
     } = seat.getProposal();
 
-    const underlyingAmountToRedeem = ceilMultiplyBy(
+    const redeemUnderlyingAmount = ceilMultiplyBy(
       redeemProtocolAmount,
       getExchangeRate(),
     );
     trace('RedeemAmounts', {
       redeemProtocolAmount,
-      underlyingAmountToRedeem,
+      redeemUnderlyingAmount,
       askedAmount,
     });
     assertEnoughLiquidtyExists(
-      underlyingAmountToRedeem,
+      redeemUnderlyingAmount,
       underlyingAssetSeat,
       underlyingBrand,
     );
@@ -524,7 +523,7 @@ export const makePoolManager = (
     );
     seat.incrementBy(
       underlyingAssetSeat.decrementBy(
-        harden({ Underlying: underlyingAmountToRedeem }),
+        harden({ Underlying: redeemUnderlyingAmount }),
       ),
     );
     zcf.reallocate(seat, underlyingAssetSeat, protocolAssetSeat);
