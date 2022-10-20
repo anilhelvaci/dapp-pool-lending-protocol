@@ -1,7 +1,7 @@
 import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { calculateProtocolFromUnderlying, getPoolMetadata } from './helpers.js';
-import { floorMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { floorMultiplyBy, makeRatio, ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { LARGE_DENOMINATOR, BASIS_POINTS } from '../../src/interest.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
 
@@ -261,43 +261,68 @@ export const makeLendingPoolAssertions = t => {
 
   /**
    *
-   * @param {PoolManager} poolManager
-   * @param {ERef<Notifier>} loanNotifier
+   * @param {PoolManager} debtPoolManager
+   * @param {WrappedLoan} loan
    * @param {{
    *   debtAmount: Amount,
-   *   initialLiquidityBeforeLoan: Amount
+   *   initialLiquidityBeforeLoan: Amount,
+   *   totalDebt: Amount,
+   *   borrowRate: Ratio,
+   *   exchangeRateNumerator: BigInt,
+   *   initialColUnderlyingVal: BigInt,
    * }} expected
    * @returns {Promise<void>}
    */
-  const assertLiquidation = async (poolManager, loanNotifier, expected) => {
-    const { penaltyRate } = await getPoolMetadata(poolManager);
+  const assertLiquidation = async (debtPoolManager, loan, expected) => {
+    const {
+      exchangeRate: debtExchangeRate,
+      underlyingBrand: debtUnderlyingBrand,
+      protocolBrand: debtProtocolBrand,
+    } = await getPoolMetadata(debtPoolManager);
     // Get the latest state
-    const { value: { loanState } } = await E(loanNotifier).getUpdateSince();
-    // Check if the loan is liquidated
+    const { value: { loanState } } = await E(E(loan).getNotifier()).getUpdateSince();
+    const expectedExchangeRate = makeRatio(expected.exchangeRateNumerator, debtUnderlyingBrand, LARGE_DENOMINATOR, debtProtocolBrand);
+
+    const [
+      currentLiquidity, totalDebt, borrowingRate, collatelralLeftAsProtocol,
+      loanDebt, loanCollateralUnderlyingAmount] = await Promise.all([
+      E(debtPoolManager).getUnderlyingLiquidity(),
+      E(debtPoolManager).getTotalDebt(),
+      E(debtPoolManager).getCurrentBorrowingRate(),
+      E(loan).getCollateralAmount(),
+      E(loan).getCurrentDebt(),
+      E(loan).getCollateralUnderlyingAmount(),
+    ]);
+
     t.is(loanState, LoanPhase.LIQUIDATED);
+    t.truthy(AmountMath.isGTE(currentLiquidity, expected.initialLiquidityBeforeLoan));
+    t.truthy(AmountMath.isEmpty(collatelralLeftAsProtocol));
+    t.truthy(AmountMath.isEmpty(loanDebt));
+    t.truthy(!AmountMath.isEmpty(loanCollateralUnderlyingAmount));
+    t.deepEqual(borrowingRate, expected.borrowRate);
+    t.truthy(ratioGTE(debtExchangeRate, expectedExchangeRate));
+    t.deepEqual(totalDebt, expected.totalDebt);
+  };
 
-    const penalty = floorMultiplyBy(expected.debtAmount, penaltyRate);
-    const debtWithPenalty = AmountMath.add(penalty, expected.debtAmount);
+  /**
+   *
+   * @param {WrappedLoan} loan
+   * @returns {Promise<void>}
+   */
+  const assertActiveLoan = async (loan) => {
 
-    const currentLiquidity = await E(poolManager).getUnderlyingLiquidity();
-    const liquidityBeforeLiquidation = AmountMath.subtract(expected.initialLiquidityBeforeLoan, expected.debtAmount);
-    // PAN Pool underyling liquidity should be greater than the initail liquidity
-    // because we've sold the collateral + penalty rate in the AMM.
-    // We've went for an assertion like this because it's hard for us to know the
-    // exact price we'll receive form the AMM but we know that current liquidty of
-    // the PAN Pool should be greater than the one before liquidation and smaller
-    // than than exact debtWithPenalty + panPoolInitialLiquidity
-    console.log({
-      debtWithPenalty,
-      liquidityBeforeLiquidation,
-      currentLiquidity,
-      added: AmountMath.add(debtWithPenalty, liquidityBeforeLiquidation),
-    })
-    t.truthy(AmountMath.isGTE(currentLiquidity, expected.initialLiquidityBeforeLoan)
-      && AmountMath.isGTE(
-        AmountMath.add(debtWithPenalty, liquidityBeforeLiquidation),
-        currentLiquidity));
+    const [{ value: { loanState } }, loanDebt, loanCollatelrel, loanColUnderlying] = await Promise.all([
+        E(E(loan).getNotifier()).getUpdateSince(),
+        E(loan).getCurrentDebt(),
+        E(loan).getCollateralAmount(),
+        E(loan).getCollateralUnderlyingAmount(),
+      ],
+    );
 
+    t.deepEqual(loanState, LoanPhase.ACTIVE);
+    t.truthy(!AmountMath.isEmpty(loanDebt));
+    t.truthy(!AmountMath.isEmpty(loanCollatelrel));
+    t.truthy(AmountMath.isEmpty(loanColUnderlying));
   };
 
   return harden({
@@ -310,5 +335,6 @@ export const makeLendingPoolAssertions = t => {
     assertLoanClosedCorrectly,
     assertRedeemSuccessful,
     assertLiquidation,
+    assertActiveLoan,
   })
 }

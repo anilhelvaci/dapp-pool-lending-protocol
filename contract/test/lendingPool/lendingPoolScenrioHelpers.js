@@ -129,6 +129,11 @@ export const makeLendingPoolScenarioHelpers = (
     return { payment: protocolReceived, amount: protocolAmount, offerResult };
   };
 
+  /**
+   *
+   * @param {BigInt} underlyingValue
+   * @param {BigInt} debtValue
+   */
   const borrow = async (underlyingValue, debtValue) => {
     await assertBorrowSetupReady();
 
@@ -156,6 +161,7 @@ export const makeLendingPoolScenarioHelpers = (
     );
 
     const borrowLoanKit = await E(borrowSeat).getOfferResult();
+    updateFaucet(POOL_TYPES.COLLATERAL, depositedMoneyMinusLoan);
 
     return { moneyLeftInPool: depositedMoneyMinusLoan, loanKit: borrowLoanKit }
   };
@@ -166,23 +172,28 @@ export const makeLendingPoolScenarioHelpers = (
    * @param {AdjustConfig} debtConfig
    */
   const adjust = async (loan, collateralConfig = undefined, debtConfig = undefined) => {
+    const { exchangeRate } = await getPoolMetadata(collateralPoolManager);
+
+    const debtAmount = debtConfig ? AmountMath.make(debtBrand, debtConfig.value)
+      : undefined;
 
     const give = {};
     const want = {};
     const paymentRecords = {};
 
     if (collateralConfig && collateralConfig.type && collateralConfig.type === ADJUST_PROPOSAL_TYPE.GIVE) {
-      give.Collateral = collateralConfig.amount;
-      paymentRecords.Collateral = collateralUnderlyingMint.mintPayment(collateralConfig.amount);
+      const { payment, amount } = await getProtocolTokenFromFaucetByColUnderlying(POOL_TYPES.COLLATERAL, collateralConfig.value);
+      give.Collateral = amount;
+      paymentRecords.Collateral = payment;
     } else if (collateralConfig && collateralConfig.type && collateralConfig.type === ADJUST_PROPOSAL_TYPE.WANT) {
-      want.Collateral = collateralConfig.amount;
+      want.Collateral = calculateProtocolFromUnderlying(AmountMath.make(collateralUnderlyingBrand, collateralConfig.value), exchangeRate);
     }
 
     if (debtConfig && debtConfig.type && debtConfig.type === ADJUST_PROPOSAL_TYPE.GIVE) {
-      give.Debt = debtConfig.amount;
-      paymentRecords.Debt = debtMint.mintPayment(debtConfig.amount);
+      give.Debt = debtAmount;
+      paymentRecords.Debt = debtMint.mintPayment(debtAmount);
     } else if (debtConfig && debtConfig.type && debtConfig.type === ADJUST_PROPOSAL_TYPE.WANT) {
-      want.Debt = debtConfig.amount;
+      want.Debt = debtAmount;
     }
 
     const proposal = harden({
@@ -206,12 +217,15 @@ export const makeLendingPoolScenarioHelpers = (
   /**
    *
    * @param {WrappedLoan} loan
-   * @param debtConfig
+   * @param {{
+   *   value: BigInt,
+   * }} debtConfig
    */
   const closeLoan = async (
     loan, debtConfig,
   ) => {
-    const { amount: debtAmount } = debtConfig;
+    const { value: debtValue } = debtConfig;
+    const debtAmount = AmountMath.make(debtBrand, debtValue);
 
     const collateralAmount = await E(loan).getCollateralAmount();
 
@@ -366,6 +380,22 @@ export const makeLendingPoolScenarioHelpers = (
       remaining: { payment: remainingPayment },
       collateral: splittedProtocol,
     } = await splitCollateralByProtocol(poolManager, protocolFaucet, collateralValue);
+    updateFaucet(poolType, remainingPayment);
+
+    return splittedProtocol;
+  };
+
+  /**
+   *
+   * @param {String} poolType
+   * @param {BigInt} collateralUnderlyingValue
+   */
+  const getProtocolTokenFromFaucetByColUnderlying = async (poolType, collateralUnderlyingValue) => {
+    const { protocolFaucet, poolManager } = getPoolConfigFromType(poolType);
+    const {
+      remaining: { payment: remainingPayment },
+      collateral: splittedProtocol,
+    } = await splitCollateral(poolManager, protocolFaucet, collateralUnderlyingValue);
     updateFaucet(poolType, remainingPayment);
 
     return splittedProtocol;

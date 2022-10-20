@@ -177,6 +177,7 @@
  * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
  * @property {() => Promise<Invitation>} makeCloseInvitation
  * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCollateralUnderlyingAmount
  * @property {() => Amount<'nat'>} getCurrentDebt
  * @property {() => Amount<'nat'>} getNormalizedDebt
  */
@@ -199,6 +200,7 @@
  * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
  * @property {() => Promise<Invitation>} makeCloseInvitation
  * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCollateralUnderlyingAmount
  * @property {() => Amount<'nat'>} getCurrentDebt
  * @property {() => Amount<'nat'>} getNormalizedDebt
  */
@@ -276,7 +278,7 @@
 /**
  *
  * @typedef {Object} AdjustConfig
- * @property {Amount} amount
+ * @property {BigInt} value
  * @property {String} type
  */
 
