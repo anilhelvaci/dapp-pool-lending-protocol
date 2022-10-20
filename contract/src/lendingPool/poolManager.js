@@ -419,7 +419,7 @@ export const makePoolManager = (
       (totalDebt = AmountMath.subtract(totalDebt, originalDebt)), // Update debt after payment
   });
 
-  const verifyDebtsPerCollateralStore = async collateralBrand => {
+  const checkDebtsPerCollateralStore = async collateralBrand => {
     if (!debtsPerCollateralStore.has(collateralBrand)) {
       /** @type {WrappedPriceAuthority} */
       const wrappedCollateralPriceAuthority = await E(
@@ -467,7 +467,7 @@ export const makePoolManager = (
     );
 
     const collateralBrand = exchangeRate.numerator.brand;
-    await verifyDebtsPerCollateralStore(collateralBrand);
+    await checkDebtsPerCollateralStore(collateralBrand);
 
     const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
     console.log('debtsPerCollateral: ', debtsPerCollateral);

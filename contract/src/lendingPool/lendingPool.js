@@ -127,9 +127,7 @@ export const start = async (zcf, privateArgs) => {
 
   const updatePoolState = () => {
     poolUpdater.updateState(
-      [...poolTypes.values()].map(pm => {
-        return getPmAttributes(pm);
-      }),
+      [...poolTypes.values()].map(getPmAttributes),
     );
   };
 
@@ -300,12 +298,7 @@ export const start = async (zcf, privateArgs) => {
   const getMarkets = async () => {
     return harden(
       Promise.all(
-        [...poolTypes.entries()].map(async ([brand, pm]) => {
-          return {
-            brand, 
-            ...getPmAttributes(pm),
-          };
-        }),
+        [...poolTypes.entries()].map(getPmAttributes),
       ),
     );
   };
