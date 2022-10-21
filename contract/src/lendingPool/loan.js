@@ -13,11 +13,11 @@ import {
 import { assert } from '@agoric/assert';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import {
   calculateCurrentDebt,
   reverseInterest,
-} from '@agoric/run-protocol/src/interest-math.js';
+} from '@agoric/inter-protocol/src/interest-math.js';
 import { makeLoanKit } from './loanKit.js';
 import {
   assertDebtDeltaNotZero,

@@ -4,7 +4,7 @@ import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
 import '@agoric/zoe/exported.js';
 import { makeScalarMap } from '@agoric/store';
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 
 /**
  * This the place where we wrap the PriceManager inside a vat.

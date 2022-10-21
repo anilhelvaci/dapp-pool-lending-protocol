@@ -6,7 +6,7 @@ import '@agoric/zoe/src/contracts/exported.js';
 import { E } from '@endo/far';
 import '@agoric/governance/src/exported.js';
 import { AmountMath, AssetKind } from '@agoric/ertp';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { makeScalarMap } from '@agoric/store';
 import { assertProposalShape } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';

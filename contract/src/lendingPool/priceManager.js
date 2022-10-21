@@ -3,7 +3,7 @@ import '@agoric/zoe/exported.js';
 import { makeScalarMap } from '@agoric/store';
 import { Far } from '@endo/marshal';
 import { Nat } from '@agoric/nat';
-import { E } from '@agoric/eventual-send';
+import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 
 /**

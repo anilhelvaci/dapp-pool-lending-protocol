@@ -1,10 +1,8 @@
 // @ts-check
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
-
-const trace = makeTracer('TestST');
-
-import { test as unknownTest } from '@agoric/zoe/tools/prepare-test-env-ava.js'; // swingset-vat to zoe
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import '@agoric/zoe/exported.js';
+import '@agoric/zoe/tools/prepare-test-env.js';
+import test from 'ava';
 import { deeplyFulfilled } from '@endo/marshal';
 
 import { E } from '@endo/far';
@@ -19,15 +17,13 @@ import { makePromiseKit } from '@endo/promise-kit';
 import { makeScriptedPriceAuthority } from '@agoric/zoe/tools/scriptedPriceAuthority.js';
 import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import {
-  depositMoney,
-  addPool,
   makeRates,
   setupAssets,
-  borrow,
   makeMarketStateChecker,
   getPoolMetadata,
   calculateUnderlyingFromProtocol,
-  calculateProtocolFromUnderlying, splitCollateral, adjust, closeLoan,
+  calculateProtocolFromUnderlying,
+  splitCollateral,
 } from './helpers.js';
 
 import {
@@ -37,21 +33,21 @@ import {
   setupAmmAndElectorate,
 } from './setup.js';
 import { SECONDS_PER_YEAR } from '../../src/interest.js';
-import * as Collect from '@agoric/run-protocol/src/collect.js';
-import { unsafeMakeBundleCache } from '@agoric/run-protocol/test/bundleTool.js';
+import * as Collect from '@agoric/inter-protocol/src/collect.js';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
 import { oneMinus } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeLendingPoolAssertions } from './lendingPoolAssertions.js';
 import { ADJUST_PROPOSAL_TYPE, makeLendingPoolScenarioHelpers, POOL_TYPES } from './lendingPoolScenrioHelpers.js';
 
-const test = unknownTest;
+const trace = makeTracer('TestST');
 
 const contractRoots = {
   faucet: './faucet.js',
   liquidate: '../../src/lendingPool/liquidateMinimum.js',
   LendingPool: '../../src/lendingPool/lendingPool.js',
-  amm: '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
+  amm: '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
 };
 
 const BASIS_POINTS = 10000n;

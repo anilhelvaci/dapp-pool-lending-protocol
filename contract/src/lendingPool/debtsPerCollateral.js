@@ -7,7 +7,7 @@ import {
   makeRatioFromAmounts,
 } from '@agoric/zoe/src/contractSupport/index.js';
 import { liquidationDetailTerms, liquidate } from './liquidation.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeLiquidationObserver } from './liquidationObserver.js';
 import { makeLoanStoreUtils } from './loanStoreUtils.js';

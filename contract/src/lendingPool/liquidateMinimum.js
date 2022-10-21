@@ -7,7 +7,7 @@ import {
 import { AmountMath } from '@agoric/ertp';
 import { Far, E } from '@endo/far';
 
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const trace = makeTracer('LiqMin');
 

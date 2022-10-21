@@ -2,7 +2,7 @@
 
 import { AmountMath } from '@agoric/ertp';
 import { assert, details as X } from '@agoric/assert';
-import { makeInterestCalculator, calculateCompoundedInterest } from '@agoric/run-protocol/src/interest.js';
+import { makeInterestCalculator, calculateCompoundedInterest } from '@agoric/inter-protocol/src/interest.js';
 
 export const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n;
 export const BASIS_POINTS = 10000n;

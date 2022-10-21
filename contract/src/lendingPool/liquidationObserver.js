@@ -11,7 +11,7 @@ import { getAmountOut } from '@agoric/zoe/src/contractSupport/index.js';
 import { getAmountIn } from '@agoric/zoe/src/contractSupport/priceQuote.js';
 import { Nat } from '@agoric/nat';
 import { E } from '@endo/far';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const tracer = makeTracer('LiquidationObserver');
 

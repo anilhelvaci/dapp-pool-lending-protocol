@@ -1,5 +1,5 @@
 import { assert, details as X, q } from '@agoric/assert';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { AmountMath } from '@agoric/ertp';
 
 const trace = makeTracer('LendingPool');

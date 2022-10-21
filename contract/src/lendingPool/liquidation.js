@@ -4,7 +4,7 @@
 import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
 import { makeRatio, offerTo } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 
 const trace = makeTracer('LIQ');
 
