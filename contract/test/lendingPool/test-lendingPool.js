@@ -1134,7 +1134,7 @@ test('redeem-underlying', async t => {
   const {
     vanKit: { brand: vanBrand },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { issuer: panIssuer, brand: panBrand },
+    panKit: { brand: panBrand },
     vanRates,
     panRates,
   } = t.context;
@@ -1231,85 +1231,6 @@ test('redeem-underlying', async t => {
     checkVanPoolStateInSync(),
     checkPanPoolStateInSync(),
   ]);
-});
-
-test('amm-play-around', async t => {
-  const {
-    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
-    compareCurrencyKit: { brand: usdBrand },
-    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
-    vanRates,
-    panRates,
-    installation
-  } = t.context;
-
-  t.context.loanTiming = {
-    chargingPeriod: secondsPerDay,
-    recordingPeriod: secondsPerDay * 7n,
-    priceCheckPeriod: secondsPerDay * 7n * 2n,
-  };
-
-  const { zoe, ammFacets: { ammPublicFacet }, timer } = await setupServices(
-    t,
-    [500n, 15n],
-    AmountMath.make(vanBrand, 900n),
-    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
-    secondsPerDay * 7n,
-    10n * 10n ** 6n,
-    10n * 10n ** 6n,
-    10n * 110n * 10n ** 8n,
-    10n * 200n * 10n ** 8n
-  );
-
-  const debt = AmountMath.make(panBrand, 4n * 10n ** 6n);
-
-  const penaltyRate = makeRatio(10n, panBrand, 100n);
-  // const penalty = floorMultiplyBy(debt, penaltyRate);
-  // const debtWithPenalty = AmountMath.add(penalty, debt);
-  // const poolFeeRatioAmountOut = makeRatio(24n, panBrand, BASIS_POINTS);
-  // const poolFee = floorMultiplyBy(debtWithPenalty, poolFeeRatioAmountOut);
-  // console.log("zaaaaPoolFee", poolFee);
-  // console.log("debtWithPenalty", debtWithPenalty);
-  // console.log("debtWithPenaltyMinusPoolFee", AmountMath.subtract(debtWithPenalty, poolFee));
-  // const debtInputPan = await E(ammPublicFacet).getInputPrice(
-  //   debtWithPenalty,
-  //   AmountMath.makeEmpty(vanBrand));
-  //
-  // const panInputDebt = await E(ammPublicFacet).getInputPrice(
-  //   debtInputPan.amountOut,
-  //   AmountMath.makeEmpty(panBrand));
-  //
-  //
-  // console.log("debtInputPan", debtInputPan);
-  // console.log("panInputDebt", panInputDebt);
-
-  const { creatorFacet: liquidator } = await E(zoe).startInstance(
-    installation.liquidate,
-    undefined,
-    {amm: ammPublicFacet}
-  );
-
-  const liquidateMinimumProp = harden({
-    give: { In: AmountMath.make(vanBrand, 10n ** 8n) },
-    want: { Out: debt }
-  });
-
-  const liquidateMinimumPayment = {
-    In: vanMint.mintPayment(AmountMath.make(vanBrand, 10n ** 8n)),
-  };
-
-  const testSeat = await E(zoe).offer(
-    E(liquidator).makeLiquidateInvitation(),
-    liquidateMinimumProp,
-    liquidateMinimumPayment,
-    { debt, penaltyRate }
-  );
-
-  const colPayout = await E(testSeat).getPayout("In");
-  const debtPayout = await E(testSeat).getPayout("Out");
-  console.log("colPayout", await E(vanIssuer).getAmountOf(colPayout));
-  console.log("debtPayout", await E(panIssuer).getAmountOf(debtPayout));
-  t.is("assert", "assert");
 });
 
 /**
@@ -2087,7 +2008,3 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
     checkPanPoolStateInSync(),
   ]);
 });
-
-
-
-
