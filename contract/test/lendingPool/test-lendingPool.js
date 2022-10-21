@@ -2058,7 +2058,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
   const expectedValuesAfterInterest = {
     principalDebt: 4019n * 10n ** 4n,
     accruedInterest: 35877n,
-    exchangeRateNumerator: 2000489n,
+    exchangeRateNumerator: 2000072n,
     borrowingRate: 331n,
   }
 
@@ -2077,7 +2077,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
     totalDebt: AmountMath.makeEmpty(panBrand),
     borrowRate: makeRatio(250n, panBrand, BASIS_POINTS),
-    exchangeRateNumerator: 2000489n,
+    exchangeRateNumerator: 2000072n,
   };
 
   // Check market state after liquidation
