@@ -38,6 +38,7 @@ const wrapLoan = innerLoan => {
     makeCloseInvitation: () => owned(loan).makeCloseInvitation(),
     // for status/debugging
     getCollateralAmount: () => owned(loan).getCollateralAmount(),
+    getCollateralUnderlyingAmount: () => owned(loan).getCollateralUnderlyingAmount(),
     getCurrentDebt: () => owned(loan).getCurrentDebt(),
     getNormalizedDebt: () => owned(loan).getNormalizedDebt(),
   });

@@ -112,6 +112,7 @@ export const makePoolManager = (
     // loans below this margin may be liquidated
     getLiquidationMargin: () => getLoanParams()[LIQUIDATION_MARGIN_KEY].value,
     getCurrentBorrowingRate: () => getCurrentBorrowingRate(),
+    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value,
     getTotalDebt: () => totalDebt,
     getInitialExchangeRate: () =>
       getLoanParams()[INITIAL_EXCHANGE_RATE_KEY].value,
@@ -413,7 +414,6 @@ export const makePoolManager = (
     getCompoundedInterest: () => compoundedInterest,
     getExchangeRateForPool,
     makeRedeemInvitation,
-    getPenaltyRate: () => getLoanParams()[PENALTY_RATE_KEY].value, // Penalty rate to be enforced when there's a liquidation
     transferLiquidatedFund,
     debtPaid: originalDebt =>
       (totalDebt = AmountMath.subtract(totalDebt, originalDebt)), // Update debt after payment

@@ -199,6 +199,10 @@ export const makeInnerLoan = (
     return seat.getAmountAllocated('Collateral', collateralBrand);
   };
 
+  const getCollateralUnderlyingAllocated = seat => {
+    return seat.getAmountAllocated('CollateralUnderlying', collateralUnderlyingBrand);
+  };
+
   const getDebtAllocated = seat => seat.getAmountAllocated('Debt', debtBrand);
 
   const assertLoanHoldsNoRun = () => {
@@ -284,6 +288,21 @@ export const makeInnerLoan = (
     return loanSeat.hasExited()
       ? AmountMath.makeEmpty(collateralBrand)
       : getCollateralAllocated(loanSeat);
+  };
+
+  /**
+   *
+   * @returns {Amount<'nat'>}
+   */
+  const getCollateralUnderlyingAmount = () => {
+    const { loanSeat, phase } = state;
+    console.log("loanSeatAllocations", loanSeat.getCurrentAllocation());
+    console.log("Phase", phase);
+    console.log("Exited", loanSeat.hasExited());
+
+    return loanSeat.hasExited()
+      ? AmountMath.makeEmpty(collateralBrand)
+      : getCollateralUnderlyingAllocated(loanSeat);
   };
 
   const snapshotState = newPhase => {
@@ -725,6 +744,7 @@ export const makeInnerLoan = (
     makeAdjustBalancesInvitation,
     makeCloseInvitation,
     getCollateralAmount,
+    getCollateralUnderlyingAmount,
     getCurrentDebt,
     getNormalizedDebt,
   });

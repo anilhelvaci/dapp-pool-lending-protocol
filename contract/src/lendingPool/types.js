@@ -78,6 +78,7 @@
  * @typedef {Object} ManagerShared
  * @property {() => Ratio} getLiquidationMargin
  * @property {() => Ratio} getCurrentBorrowingRate
+ * @property {() => Ratio} getPenaltyRate
  * @property {() => Amount} getTotalDebt
  * @property {() => Ratio} getInitialExchangeRate
  * @property {() => Ratio} getExchangeRate
@@ -109,7 +110,6 @@
  * @property {(underlyingBrand: Brand) => Invitation} makeRedeemInvitation
  * @property {TransferLiquidatedFund} transferLiquidatedFund
  * @property {(originalDebt: Amount) => Amount} debtPaid
- * @property {() => Ratio} getPenaltyRate
  */
 
 /**
@@ -177,6 +177,7 @@
  * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
  * @property {() => Promise<Invitation>} makeCloseInvitation
  * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCollateralUnderlyingAmount
  * @property {() => Amount<'nat'>} getCurrentDebt
  * @property {() => Amount<'nat'>} getNormalizedDebt
  */
@@ -199,6 +200,7 @@
  * @property {() => Promise<Invitation>} makeAdjustBalancesInvitation
  * @property {() => Promise<Invitation>} makeCloseInvitation
  * @property {() => Amount<'nat'>} getCollateralAmount
+ * @property {() => Amount<'nat'>} getCollateralUnderlyingAmount
  * @property {() => Amount<'nat'>} getCurrentDebt
  * @property {() => Amount<'nat'>} getNormalizedDebt
  */
@@ -266,4 +268,26 @@
 /**
  * @typedef {LoanTiming & Object} LendingPoolTiming
  * @property {NatValue} priceCheckPeriod
+ */
+
+/**
+ * @typedef {Object} TestContext
+ * @property {ZoeService} zoe
+ */
+
+/**
+ *
+ * @typedef {Object} AdjustConfig
+ * @property {BigInt} value
+ * @property {String} type
+ */
+
+/**
+ * @typedef {Object} LendingPoolScenarioHelpers
+ * @property {(rates: Object, price: Ratio, underlyingKeyword: String, type: String) => void} addPool
+ * @property {(poolType: String, amountInUnit: BigInt) => void} depositMoney
+ * @property {(underlyingValue: BigInt, debtValue: BigInt) => void} borrow
+ * @property {(loan: WrappedLoan, collateralConfig: AdjustConfig, debtConfig: AdjustConfig) => void} adjust
+ * @property {(loan: WrappedLoan, debtConfig) => void} closeLoan
+ * @property {(poolType: String, protocolRedeemValue: BigInt) => void} redeem
  */
