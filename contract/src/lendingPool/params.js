@@ -8,6 +8,7 @@ import {
   CONTRACT_ELECTORATE,
   ParamTypes
 } from '@agoric/governance';
+import { makeStoredPublishKit } from '@agoric/notifier';
 
 export const CHARGING_PERIOD_KEY = 'ChargingPeriod';
 export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
@@ -43,10 +44,12 @@ const makeLoanParams = (loanTiming, rates) => {
 };
 
 /**
+ * @param {ERef<StorageNode>} storageNode
+ * @param {ERef<Marshaller>} marshaller
  * @param {LendingPoolTiming} initialValues
  */
-const makeLoanTimingManager = initialValues => {
-  return makeParamManagerSync({
+const makeLoanTimingManager = (storageNode, marshaller, initialValues) => {
+  return makeParamManagerSync(makeStoredPublishKit(storageNode, marshaller),{
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.recordingPeriod],
     [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod] // TODO this now deprecated and not being used anywhere, should remove it
@@ -54,19 +57,23 @@ const makeLoanTimingManager = initialValues => {
 };
 
 /**
+ * @param {ERef<StorageNode>} storageNode
+ * @param {ERef<Marshaller>} marshaller
  * @param {Rates} rates
  */
-const makeLoanParamManager = rates => {
-  return makeParamManagerSync({
+const makeLoanParamManager = (storageNode, marshaller, rates) => {
+  return makeParamManagerSync(makeStoredPublishKit(storageNode, marshaller), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
   })
 };
 
 /**
+ * @param {ERef<StorageNode>} storageNode
+ * @param {ERef<Marshaller>} marshaller
  * @param {Rates} rates
  */
-const makePoolParamManager = rates => {
-  return makeParamManagerSync({
+const makePoolParamManager = (storageNode, marshaller, rates) => {
+  return makeParamManagerSync(makeStoredPublishKit(storageNode, marshaller), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
@@ -76,6 +83,8 @@ const makePoolParamManager = rates => {
 };
 
 /**
+ * @param {ERef<StorageNode>} storageNode
+ * @param {ERef<Marshaller>} marshaller
  * @param {ERef<ZoeService>} zoe
  * @param {Invitation} electorateInvitation
  * @returns {Promise<{
@@ -85,14 +94,18 @@ const makePoolParamManager = rates => {
  *   updateElectorate: (invitation: Invitation) => void,
  * }>}
  */
-const makeElectorateParamManager = async (zoe, electorateInvitation) => {
-  return makeParamManager({
+const makeElectorateParamManager = async (zoe, storageNode, marshaller, electorateInvitation) => {
+  return makeParamManager(makeStoredPublishKit(storageNode, marshaller), {
       [CONTRACT_ELECTORATE]: [ParamTypes.INVITATION, electorateInvitation],
     },
     zoe);
 };
 
 /**
+ * @param {{
+ *   storageNode,
+ *   marshaller
+ * }} publishKitParams
  * @param {ERef<PriceManager>} priceManager
  * @param {LoanTiming} loanTiming
  * @param {Installation} liquidationInstall
@@ -104,6 +117,7 @@ const makeElectorateParamManager = async (zoe, electorateInvitation) => {
  * @param {bigint=} bootstrapPaymentValue
  */
 const makeGovernedTerms = (
+  { storageNode, marshaller },
   priceManager,
   loanTiming,
   liquidationInstall,
@@ -114,9 +128,9 @@ const makeGovernedTerms = (
   compareCurrencyBrand,
   bootstrapPaymentValue = 0n,
 ) => {
-  const timingParamMgr = makeLoanTimingManager(loanTiming);
+  const timingParamMgr = makeLoanTimingManager(storageNode, marshaller, loanTiming);
 
-  const rateParamMgr = makeLoanParamManager(rates);
+  const rateParamMgr = makeLoanParamManager(storageNode, marshaller, rates);
 
   return harden({
     ammPublicFacet,

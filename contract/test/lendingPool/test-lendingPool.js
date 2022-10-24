@@ -27,11 +27,14 @@ import {
 } from './helpers.js';
 
 import {
-  setUpZoeForTest,
+  setupServices,
+  CONTRACT_ROOTS,
   getPath,
   startLendingPool,
   setupAmmAndElectorate,
 } from './setup.js';
+import { setUpZoeForTest } from '@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup.js';
+import { objectMap } from '@agoric/internal';
 import { SECONDS_PER_YEAR } from '../../src/interest.js';
 import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
@@ -43,23 +46,8 @@ import { ADJUST_PROPOSAL_TYPE, makeLendingPoolScenarioHelpers, POOL_TYPES } from
 
 const trace = makeTracer('TestST');
 
-const contractRoots = {
-  faucet: './faucet.js',
-  liquidate: '../../src/lendingPool/liquidateMinimum.js',
-  LendingPool: '../../src/lendingPool/lendingPool.js',
-  amm: '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
-};
-
 const BASIS_POINTS = 10000n;
 const secondsPerDay = SECONDS_PER_YEAR / 365n;
-
-// Define locally to test that loanFactory uses these values
-export const Phase = /** @type {Object} */ ({
-  ACTIVE: 'active',
-  LIQUIDATING: 'liquidating',
-  CLOSED: 'closed',
-  LIQUIDATED: 'liquidated',
-});
 
 // Some notifier updates aren't propagating sufficiently quickly for the tests.
 // This invocation (thanks to Warner) waits for all promises that can fire to
@@ -71,187 +59,55 @@ export async function waitForPromisesToSettle() {
 }
 
 /**
- * This function installs and instantiates lendingPool and amm contracts alongside
- * with all the necessary variables.
- *
- * For the tests here, we've determined 3 types of tokens to run our tests. Those
- * tokens; VAN, PAN and USD. Here we use all those digital assets to set our
- * environment up.
- *
- * @param t
- * @param {ManualTimer} timer
- * @param ammPoolsConfig
- * @returns {Promise<{zoe: *, timer: (ManualTimer|*), ammFacets: {instance: *, ammPanPoolLiquidity: *, ammCreatorFacet: *, ammPublicFacet: GovernedPublicFacet<XYKAMMPublicFacet>, ammVanPoolLiquidity: *}, lendingPool: {lendingPoolPublicFacet: unknown extends (object & {then(onfulfilled: infer F): any}) ? (F extends ((value: infer V, ...args: any) => any) ? Awaited<V> : never) : unknown, lendingPoolCreatorFacet: unknown extends (object & {then(onfulfilled: infer F): any}) ? (F extends ((value: infer V, ...args: any) => any) ? Awaited<V> : never) : unknown}, scenarioHelpers: LendingPoolScenarioHelpers, governor: {governorInstance: unknown extends (object & {then(onfulfilled: infer F): any}) ? (F extends ((value: infer V, ...args: any) => any) ? Awaited<V> : never) : unknown, governorCreatorFacet: *, governorPublicFacet: *}, assertions}>}
- */
-async function setupServices(
-  t,
-  timer = buildManualTimer(t.log),
-  ammPoolsConfig = undefined,
-) {
-  const {
-    zoe,
-    compareCurrencyKit: { brand: compCurrencyBrand, mint: compCurrencyMint },
-    vanKit: { brand: vanBrand, issuer: vanIssuer, mint: vanMint },
-    panKit: { brand: panBrand, issuer: panIssuer, mint: panMint },
-    loanTiming,
-  } = t.context;
-  t.context.timer = timer;
-
-  const {
-    compareVanInitialLiquidityValue,
-    comparePanInitialLiquidityValue,
-    vanInitialLiquidityValue,
-    panInitialLiquidityValue,
-  } = ammPoolsConfig ? ammPoolsConfig : t.context.ammPoolsConfig;
-
-  const van = value => AmountMath.make(vanBrand, value);
-  const pan = value => AmountMath.make(panBrand, value);
-  const usd = value => AmountMath.make(compCurrencyBrand, value);
-
-  const compareVanPoolPayment = compCurrencyMint.mintPayment(usd(compareVanInitialLiquidityValue));
-
-  const compLiquidityVanPool = {
-    proposal: harden(usd(compareVanInitialLiquidityValue)),
-    payment: compareVanPoolPayment,
-  };
-
-  const vanLiquidity = {
-    proposal: van(vanInitialLiquidityValue),
-    payment: vanMint.mintPayment(van(vanInitialLiquidityValue)),
-  };
-
-  const comparePanPoolPayment = compCurrencyMint.mintPayment(usd(comparePanInitialLiquidityValue));
-
-  const compLiquidityPanPool = {
-    proposal: harden(usd(comparePanInitialLiquidityValue)),
-    payment: comparePanPoolPayment,
-  };
-
-  const panLiquidity = {
-    proposal: pan(panInitialLiquidityValue),
-    payment: panMint.mintPayment(pan(panInitialLiquidityValue)),
-  };
-  const { amm: ammFacets, space } = await setupAmmAndElectorate(
-    t,
-    vanLiquidity,
-    compLiquidityVanPool,
-    panLiquidity,
-    compLiquidityPanPool
-  );
-  const { consume, produce, instance } = space;
-  // trace(t, 'amm', { ammFacets });
-
-  const {
-    installation: { produce: iProduce },
-  } = space;
-  iProduce.LendingPool.resolve(t.context.installation.LendingPool);
-  iProduce.liquidate.resolve(t.context.installation.liquidate);
-  /** @type PriceManager*/
-  const priceManager = makePriceManager({});
-  produce.priceManager.resolve(priceManager);
-
-  await startLendingPool(space, { loanParams: loanTiming });
-
-  const governorCreatorFacet = consume.lendingPoolGovernorCreator;
-  /** @type {Promise<LendingPoolCreatorFacet>} */
-  const lendingPoolCreatorFacetP = (
-    E(governorCreatorFacet).getCreatorFacet()
-  );
-
-  /** @type {[any, LendingPoolCreatorFacet, LendingPoolPublicFacet]} */
-  const [
-      governorInstance,
-      lendingPoolCreatorFacet,
-      lendingPoolPublicFacet,
-    ] = await Promise.all([
-      instance.consume.lendingPoolGovernor,
-      lendingPoolCreatorFacetP,
-      E(governorCreatorFacet).getPublicFacet(),
-    ]);
-
-  const { g, l } = {
-    g: {
-      governorInstance,
-      governorPublicFacet: E(zoe).getPublicFacet(governorInstance),
-      governorCreatorFacet,
-    },
-    l: {
-      lendingPoolCreatorFacet,
-      lendingPoolPublicFacet,
-    },
-  };
-
-  /** @type LendingPoolScenarioHelpers */
-  const scenarioHelpers = makeLendingPoolScenarioHelpers(
-    zoe,
-    { lendingPoolCreatorFacet, lendingPoolPublicFacet },
-    timer,
-    compCurrencyBrand,
-    vanMint,
-    panMint);
-
-  const assertions = makeLendingPoolAssertions(t);
-
-  return {
-    zoe,
-    governor: g,
-    lendingPool: l,
-    ammFacets,
-    timer,
-    assertions,
-    scenarioHelpers,
-  };
-}
-
-/**
  * Runs before every test separetly and injects necessary data to its `context`
  * property.
  */
 test.before(async t => {
-  const { zoe } = setUpZoeForTest();
+  const farZoeKit = setUpZoeForTest();
 
   const bundleCache = await unsafeMakeBundleCache('./bundles/'); // package-relative
   // note that the liquidation might be a different bundle name
   const bundles = await Collect.allValues({
-    faucet: bundleCache.load(await getPath(contractRoots.faucet), 'faucet'),
-    liquidate: bundleCache.load(await getPath(contractRoots.liquidate), 'liquidateMinimum'),
-    LendingPool: bundleCache.load(await getPath(contractRoots.LendingPool), 'lendingPool'),
-    amm: bundleCache.load(await getPath(contractRoots.amm), 'amm'),
+    faucet: bundleCache.load(await getPath(CONTRACT_ROOTS.faucet), 'faucet'),
+    liquidate: bundleCache.load(await getPath(CONTRACT_ROOTS.liquidate), 'liquidateMinimum'),
+    LendingPool: bundleCache.load(await getPath(CONTRACT_ROOTS.LendingPool), 'lendingPool'),
+    amm: bundleCache.load(await getPath(CONTRACT_ROOTS.amm), 'amm'),
+    reserve: bundleCache.load(await getPath(CONTRACT_ROOTS.reserve), 'reserve'),
   });
-  const installation = Collect.mapValues(bundles, bundle =>
-    E(zoe).install(bundle),
-  );
+  const installations = objectMap(bundles, bundle => E(farZoeKit.zoe).install(bundle));
 
   const { vanKit, usdKit, panKit, agVanKit } = setupAssets();
 
   const contextPs = {
-    zoe,
+    farZoeKit,
     bundles,
-    installation,
+    installations,
     electorateTerms: undefined,
-    vanKit,
-    compareCurrencyKit: usdKit,
-    panKit,
-    agVanKit,
     loanTiming: {
       chargingPeriod: 2n,
       recordingPeriod: 6n,
       priceCheckPeriod: 6n,
     },
     minInitialDebt: 50n,
-    vanRates: makeRates(vanKit.brand, usdKit.brand),
-    panRates: makeRates(panKit.brand, usdKit.brand),
-    vanInitialLiquidity: AmountMath.make(vanKit.brand, 300n),
-    panInitialLiquidity: AmountMath.make(panKit.brand, 300n),
+    // All values are in units
     ammPoolsConfig: {
-      compareVanInitialLiquidityValue: 1n * 100n * 10n ** 6n,
-      comparePanInitialLiquidityValue: 1n * 100n * 10n ** 6n,
-      vanInitialLiquidityValue: 90n * 10n ** 8n * 100n,
-      panInitialLiquidityValue: 100n * 10n ** 8n * 100n
+      compareVanInitialLiquidityValue: 100n,
+      comparePanInitialLiquidityValue: 100n,
+      vanInitialLiquidityValue: 90n * 100n,
+      panInitialLiquidityValue: 100n * 100n,
     },
   };
   const frozenCtx = await deeplyFulfilled(harden(contextPs));
-  t.context = { ...frozenCtx, bundleCache };
+  t.context = {
+    ...frozenCtx,
+    bundleCache,
+    vanKit,
+    compareCurrencyKit: usdKit,
+    panKit,
+    agVanKit,
+    vanRates: makeRates(vanKit.brand, usdKit.brand),
+    panRates: makeRates(panKit.brand, usdKit.brand),
+  };
   // trace(t, 'CONTEXT');
 });
 
@@ -260,7 +116,7 @@ test.before(async t => {
  * any importance when it comes to work logic.
  */
 test('initial', async t => {
-  const services = await setupServices(t,);
+  const services = await setupServices(t);
   console.log('services', services);
   t.is('is', 'is');
 });
