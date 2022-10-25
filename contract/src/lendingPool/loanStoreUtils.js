@@ -1,4 +1,4 @@
-import { keyEQ, keyLT } from '@agoric/store';
+import { keyEQ, keyLT, makeScalarMap } from '@agoric/store';
 import { AmountMath } from '@agoric/ertp';
 import { toVaultKey } from '@agoric/inter-protocol/src/vaultFactory/storeUtils.js';
 import { makeOrderedVaultStore } from '@agoric/inter-protocol/src/vaultFactory/orderedVaultStore.js';
@@ -26,7 +26,7 @@ import { LoanPhase } from './loan.js'
  * @return {LoanStore}
  */
 export const makeLoanStoreUtils = () => {
-  const store = makeOrderedVaultStore('store');
+  const store = makeOrderedVaultStore(makeScalarMap('store'));
   let firstKey;
   let reschedule;
 

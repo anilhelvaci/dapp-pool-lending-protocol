@@ -9,7 +9,7 @@ import {
 } from './helpers.js';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
-import { waitForPromisesToSettle } from './test-lendingPool.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { makeScalarMap } from '@agoric/store';
 import { floorDivideBy, floorMultiplyBy, makeRatio, oneMinus } from '@agoric/zoe/src/contractSupport/index.js';
 
@@ -209,7 +209,7 @@ export const makeLendingPoolScenarioHelpers = (
       { collateralUnderlyingBrand },
     );
 
-    await waitForPromisesToSettle();
+    await eventLoopIteration();
 
     return seat;
   };
@@ -243,7 +243,7 @@ export const makeLendingPoolScenarioHelpers = (
       proposal,
       payment,
     );
-    await waitForPromisesToSettle();
+    await eventLoopIteration();
 
     return seat;
   };
@@ -282,7 +282,7 @@ export const makeLendingPoolScenarioHelpers = (
       redeemPaymentRecord
     );
 
-    await waitForPromisesToSettle();
+    await eventLoopIteration();
     return redeemUserSeat
   };
 

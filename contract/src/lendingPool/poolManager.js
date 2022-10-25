@@ -401,7 +401,8 @@ export const makePoolManager = (
     },
   };
 
-  observeNotifier(periodNotifier, timeObserver);
+  observeNotifier(periodNotifier, timeObserver)
+    .catch(error => console.log('Error building observer', error));
 
   /** @type {ManagerFacet} */
   const managerFacet = harden({

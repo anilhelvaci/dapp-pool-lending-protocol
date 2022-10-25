@@ -25,7 +25,7 @@ import {
   calculateProtocolFromUnderlying,
   splitCollateral,
 } from './helpers.js';
-
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import {
   setupServices,
   CONTRACT_ROOTS,
@@ -48,15 +48,6 @@ const trace = makeTracer('TestST');
 
 const BASIS_POINTS = 10000n;
 const secondsPerDay = SECONDS_PER_YEAR / 365n;
-
-// Some notifier updates aren't propagating sufficiently quickly for the tests.
-// This invocation (thanks to Warner) waits for all promises that can fire to
-// have all their callbacks run
-export async function waitForPromisesToSettle() {
-  const pk = makePromiseKit();
-  setImmediate(pk.resolve);
-  return pk.promise;
-}
 
 /**
  * Runs before every test separetly and injects necessary data to its `context`
@@ -251,7 +242,7 @@ test('borrow', async t => {
     priceCheckPeriod: secondsPerDay * 5n * 2n,
   };
 
-  t.plan(27);
+  t.plan(29);
 
   // Start services
   const { lendingPool: { lendingPoolPublicFacet }, assertions, scenarioHelpers } = await setupServices(
@@ -320,12 +311,11 @@ test('borrow-rate-fluctuate', async t => {
    * zoe: ZoeService
   }} TestContext */
   const {
-    vanKit: { mint: vanMint, issuer: vanIssuer, brand: vanBrand },
+    vanKit: { brand: vanBrand },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { mint: panMint, issuer: panIssuer, brand: panBrand },
+    panKit: { brand: panBrand },
     vanRates,
     panRates,
-    zoe,
   } = t.context;
 
   // Set loan timing
@@ -404,14 +394,14 @@ test('borrow-rate-fluctuate', async t => {
     checkPanPoolStateInSync(),
   ]);
   // Accrue some interest
-  await timer.tick();
-  await waitForPromisesToSettle();
+  await timer.advanceTo(secondsPerDay * 7n);
+  await eventLoopIteration();
 
   const expectedValuesAfterInterest = {
     principalDebt: 6n * 10n ** 6n,
     accruedInterest: 3183n,
     exchangeRateNumerator: 2000016n,
-    borrowingRate: 281n,
+    borrowingRate: 280n,
   };
 
   await Promise.all([
@@ -715,7 +705,7 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Accrue interst by one chargingPeriod
   await timer.tick();
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterInterestCharged = {
     principalDebt: 4n * 10n ** 6n,
@@ -756,7 +746,7 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Accrue one more chargingPeriod of interest
   await timer.tick();
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterSecondInterestCharged = {
     principalDebt: 4n * 10n ** 6n + 7n * 10n ** 6n + 280n,
@@ -1054,7 +1044,7 @@ test('redeem-underlying', async t => {
 
   // interest time
   await timer.tick();
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterInterest = {
     principalDebt: 4n * 10n ** 6n,
@@ -1175,7 +1165,7 @@ test('collateral-price-drop-liquidate', async t => {
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
   // This means that we're now underwater, so liquidation should be triggerred
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
     debtAmount: AmountMath.make(panBrand, 35n * 10n ** 6n + 3021n),
@@ -1310,7 +1300,7 @@ test('close-the-first-loan-liquidate-second', async t => {
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
   // This means that we're now underwater, so liquidation should be triggerred
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
@@ -1409,7 +1399,7 @@ test('debt-price-up-liquidate', async t => {
 
   // Value of the debt is now 77 USD, so liquidate
   panUsdPriceAuthority.setPrice(makeRatio(220n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
@@ -1454,7 +1444,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
       panInitialLiquidityValue: 10n ** 8n * 100n,
     },
   );
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const {
     assertEnoughLiquidityInPool,
@@ -1517,7 +1507,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
   panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   vanUsdPriceAuthority.setPrice(makeRatio(102n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   // Check market state after price change
   await Promise.all([
@@ -1530,7 +1520,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
   panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
@@ -1572,7 +1562,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     buildManualTimer(console.log, 0n, secondsPerDay),
   );
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const {
     assertEnoughLiquidityInPool,
@@ -1692,7 +1682,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
   panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   vanUsdPriceAuthority.setPrice(makeRatio(106n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   await Promise.all([
     assertActiveLoan(aliceLoan),
@@ -1709,7 +1699,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
   panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
   vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterAliceLiquidation = {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n - 35n * 10n ** 6n - 4n * 10n ** 6n),
@@ -1826,7 +1816,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // On one tick 10 periods of interest will accrue in a compounded manner
   await timer.tick()
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterInterest = {
     principalDebt: 4019n * 10n ** 4n,
@@ -1844,7 +1834,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // A price update is necessary to initiate liquidation
   vanUsdPriceAuthority.setPrice(makeRatio(108n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),

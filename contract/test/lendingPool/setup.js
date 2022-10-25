@@ -68,7 +68,7 @@ export const setupServices = async (
   ammPoolsConfig = undefined,
 ) => {
   const {
-    zoe,
+    farZoeKit: { zoe },
     compareCurrencyKit: { brand: compCurrencyBrand },
     vanKit: { mint: vanMint },
     panKit: { mint: panMint },
@@ -228,7 +228,9 @@ export const startLendingPool = async (
     instance.consume.economicCommittee,
     contractGovernor,
   ]);
+
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
+  console.log('ammPublicFacet', ammPublicFacet)
   const priceManager = await priceManagerP;
   const timer = await chainTimerService;
   const storageNode = await makeStorageNodeChild(chainStorage, STORAGE_PATH);
@@ -246,7 +248,7 @@ export const startLendingPool = async (
     compareBrand,
     undefined
   );
-  // console.log("loanFactoryTerms", loanFactoryTerms)
+
   const governorTerms = harden({
     timer,
     electorateInstance,
@@ -254,7 +256,6 @@ export const startLendingPool = async (
     governed: {
       terms: loanFactoryTerms,
       issuerKeywordRecord: {},
-      privateArgs: harden({ initialPoserInvitation }),
     },
   });
   const { creatorFacet: governorCreatorFacet, instance: governorInstance } =
@@ -262,7 +263,11 @@ export const startLendingPool = async (
       contractGovernorInstall,
       undefined,
       governorTerms,
-      harden({ electorateCreatorFacet }),
+      harden({
+        electorateCreatorFacet, governed: {
+          initialPoserInvitation, storageNode, marshaller,
+        },
+      }),
     );
 
   const [lendingPoolInstance, lendingPoolCreator] = await Promise.all([

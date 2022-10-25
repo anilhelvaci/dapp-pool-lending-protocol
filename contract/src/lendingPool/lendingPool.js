@@ -74,7 +74,7 @@ const trace = makeTracer('LendingPool');
  * since we might add a DAO later.
  *
  * @param {ZCF} zcf
- * @param {{initialPoserInvitation: Invitation}} privateArgs
+ * @param {{initialPoserInvitation: Invitation, storageNode: ERef<StorageNode>, marshaller: ERef<Marshaller>}} privateArgs
  */
 export const start = async (zcf, privateArgs) => {
   /** @type {LendingPoolTerms}*/
@@ -88,9 +88,11 @@ export const start = async (zcf, privateArgs) => {
     compareCurrencyBrand,
   } = terms;
 
-  const { initialPoserInvitation } = privateArgs;
+  const { initialPoserInvitation, storageNode, marshaller } = privateArgs;
   const electorateParamManager = await makeElectorateParamManager(
     E(zcf).getZoeService(),
+    storageNode,
+    marshaller,
     initialPoserInvitation,
   );
 
@@ -169,7 +171,7 @@ export const start = async (zcf, privateArgs) => {
       initialExchangeRate,
     });
 
-    const poolParamManager = makePoolParamManager(ratesUpdated);
+    const poolParamManager = makePoolParamManager(storageNode, marshaller, ratesUpdated);
     poolParamManagers.init(underlyingBrand, poolParamManager);
 
     const [startTimeStamp, priceAuthNotifier] = await Promise.all([

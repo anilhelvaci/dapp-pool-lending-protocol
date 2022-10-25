@@ -7,7 +7,7 @@ import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
 import * as Collect from '@agoric/run-protocol/src/collect.js';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
-import { waitForPromisesToSettle } from './test-lendingPool.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -135,7 +135,7 @@ export const adjust = async (zoe, loan, collateralConfig = undefined, debtConfig
     { collateralUnderlyingBrand },
   );
 
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   return seat;
 };
@@ -179,7 +179,7 @@ export const closeLoan = async (
     proposal,
     payment,
   );
-  await waitForPromisesToSettle();
+  await eventLoopIteration();
 
   return seat;
 };
