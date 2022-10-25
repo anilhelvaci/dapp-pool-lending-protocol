@@ -234,7 +234,7 @@ export const makeLendingPoolAssertions = t => {
       E(redeemUserSeat).getPayout("Underlying"),
       E(redeemUserSeat).getPayout("Protocol"),
       E(redeemUserSeat).getOfferResult(),
-      E(redeemUserSeat).getCurrentAllocation(),
+      E(redeemUserSeat).getCurrentAllocationJig(),
     ]);
 
     const [

@@ -201,7 +201,6 @@ export const startLendingPool = async (
     E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
   ]);
 
-  console.log("compareBrandP", compareBrandP)
   const compareBrand = await compareBrandP;
 
   /**
@@ -230,7 +229,6 @@ export const startLendingPool = async (
   ]);
 
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
-  console.log('ammPublicFacet', ammPublicFacet)
   const priceManager = await priceManagerP;
   const timer = await chainTimerService;
   const storageNode = await makeStorageNodeChild(chainStorage, STORAGE_PATH);
@@ -305,7 +303,6 @@ export const setupAmmAndElectorate = async (
     electorateTerms = { committeeName: 'The Cabal', committeeSize: 1 },
     timer,
   } = t.context;
-
   const { feeMintAccess, zoe } = farZoeKit;
   const space = await setupAMMBootstrap(timer, farZoeKit);
   space.produce.zoe.resolve(farZoeKit.zoe);
@@ -428,7 +425,6 @@ const makeAmmLiquidityManager = (t, zoe, ammPublicFacet, centralR) => {
     t.is(
       await E(addLiquiditySeat).getOfferResult(),
       'Added liquidity.',
-      `Added Secondary and Central Liquidity`,
     );
 
     return { seat: addLiquiditySeat, lpTokenIssuer };

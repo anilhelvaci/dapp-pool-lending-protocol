@@ -245,10 +245,7 @@ test('borrow', async t => {
   t.plan(29);
 
   // Start services
-  const { lendingPool: { lendingPoolPublicFacet }, assertions, scenarioHelpers } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay * 5n),
-  );
+  const { lendingPool: { lendingPoolPublicFacet }, assertions, scenarioHelpers } = await setupServices(t);
 
   const { assertEnoughLiquidityInPool, assertBorrowSuccessfulNoInterest } = assertions;
   const { addPool, depositMoney, borrow } = scenarioHelpers;
@@ -330,10 +327,7 @@ test('borrow-rate-fluctuate', async t => {
     timer,
     assertions,
     scenarioHelpers,
-  } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
-  );
+  } = await setupServices(t);
 
   const { assertEnoughLiquidityInPool, assertBorrowSuccessfulNoInterest, assertInterestCharged } = assertions;
   const { addPool, depositMoney, borrow } = scenarioHelpers;
@@ -434,12 +428,9 @@ test('adjust-balances-no-interest', async t => {
   };
 
   // Setup services
-  const { assertions, scenarioHelpers } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay * 7n),
-  );
+  const { assertions, scenarioHelpers } = await setupServices(t);
 
-  t.plan(40);
+  t.plan(42);
 
   const {
     assertEnoughLiquidityInPool,
@@ -540,8 +531,7 @@ test('adjust-balances-no-interest-pay-debt', async t => {
   };
 
   // Setup services
-  const { assertions, scenarioHelpers }
-    = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay * 7n));
+  const { assertions, scenarioHelpers } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -644,10 +634,7 @@ test('adjust-balances-interest-accrued', async t => {
   };
 
   // Setup services
-  const { timer, assertions, scenarioHelpers } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay),
-  );
+  const { timer, assertions, scenarioHelpers } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -704,13 +691,13 @@ test('adjust-balances-interest-accrued', async t => {
   ]);
 
   // Accrue interst by one chargingPeriod
-  await timer.tick();
+  await timer.advanceTo(secondsPerDay);
   await eventLoopIteration();
 
   const expectedValuesAfterInterestCharged = {
     principalDebt: 4n * 10n ** 6n,
     accruedInterest: 280n,
-    borrowingRate: 259n,
+    borrowingRate: 258n,
     exchangeRateNumerator: 2000001n,
   };
 
@@ -745,14 +732,14 @@ test('adjust-balances-interest-accrued', async t => {
   ]);
 
   // Accrue one more chargingPeriod of interest
-  await timer.tick();
+  await timer.advanceTo(secondsPerDay * 2n);
   await eventLoopIteration();
 
   const expectedValuesAfterSecondInterestCharged = {
     principalDebt: 4n * 10n ** 6n + 7n * 10n ** 6n + 280n,
-    accruedInterest: 812n,
-    borrowingRate: 273n,
-    exchangeRateNumerator: 2000003n,
+    accruedInterest: 809n,
+    borrowingRate: 272n,
+    exchangeRateNumerator: 2000002n,
   }
 
   // Check market state after interest
@@ -786,7 +773,7 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
   const {
     assertions,
     scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -889,10 +876,7 @@ test('close-loan', async t => {
     priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
-  const { assertions, scenarioHelpers } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay),
-  );
+  const { assertions, scenarioHelpers } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -991,7 +975,7 @@ test('redeem-underlying', async t => {
     timer,
     assertions,
     /** @type LendingPoolScenarioHelpers */ scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay * 7n));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -1043,13 +1027,13 @@ test('redeem-underlying', async t => {
   ]);
 
   // interest time
-  await timer.tick();
+  await timer.advanceTo(t.context.loanTiming.recordingPeriod);
   await eventLoopIteration();
 
   const expectedValuesAfterInterest = {
     principalDebt: 4n * 10n ** 6n,
     accruedInterest: 1960n,
-    borrowingRate: 259n,
+    borrowingRate: 258n,
     exchangeRateNumerator: 2000004n,
   }
 
@@ -1104,7 +1088,7 @@ test('collateral-price-drop-liquidate', async t => {
   const {
     assertions,
     scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -1145,7 +1129,7 @@ test('collateral-price-drop-liquidate', async t => {
   ]);
 
   const {
-    loanKit: { loan: aliceLoan, publicNotifiers: { loanNotifier: aliceLoanNotifier } },
+    loanKit: { loan: aliceLoan },
   } = await borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
@@ -1168,7 +1152,7 @@ test('collateral-price-drop-liquidate', async t => {
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
-    debtAmount: AmountMath.make(panBrand, 35n * 10n ** 6n + 3021n),
+    debtAmount: AmountMath.make(panBrand, 35n * 10n ** 6n),
     initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
     totalDebt: AmountMath.makeEmpty(panBrand),
     borrowRate: makeRatio(250n, panBrand, BASIS_POINTS),
@@ -1198,9 +1182,10 @@ test('close-the-first-loan-liquidate-second', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const { assertions,
+  const {
+    assertions,
     scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -1338,7 +1323,7 @@ test('debt-price-up-liquidate', async t => {
 
   const {
     assertions, scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -1436,7 +1421,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
 
   const { assertions, scenarioHelpers } = await setupServices(
     t,
-    buildManualTimer(console.log, 0n, secondsPerDay),
+    undefined,
     {
       compareVanInitialLiquidityValue: 100n * 10n ** 6n * 100n,
       comparePanInitialLiquidityValue: 193n * 10n ** 6n * 100n,
@@ -1557,10 +1542,7 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const { assertions, scenarioHelpers } = await setupServices(
-    t,
-    buildManualTimer(console.log, 0n, secondsPerDay),
-  );
+  const { assertions, scenarioHelpers } = await setupServices(t);
 
   await eventLoopIteration();
 
@@ -1748,7 +1730,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
   const {
     timer, assertions,
     scenarioHelpers,
-  } = await setupServices(t, buildManualTimer(console.log, 0n, secondsPerDay * 10n));
+  } = await setupServices(t);
 
   const {
     assertEnoughLiquidityInPool,
@@ -1803,7 +1785,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
     requestedDebt: AmountMath.make(panBrand, 4019n * 10n ** 4n),
     totalDebt: AmountMath.make(panBrand, 4019n * 10n ** 4n),
     underlyingBalanceBefore: AmountMath.make(panBrand, 10n * 10n ** 8n),
-    borrowingRate: makeRatio(331n, panBrand, BASIS_POINTS),
+    borrowingRate: makeRatio(330n, panBrand, BASIS_POINTS),
   };
 
   // Check market state after Alice borrow
@@ -1815,14 +1797,14 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
   ]);
 
   // On one tick 10 periods of interest will accrue in a compounded manner
-  await timer.tick()
+  await timer.advanceTo(t.context.loanTiming.recordingPeriod);
   await eventLoopIteration();
 
   const expectedValuesAfterInterest = {
     principalDebt: 4019n * 10n ** 4n,
-    accruedInterest: 35877n,
+    accruedInterest: 35768n,
     exchangeRateNumerator: 2000072n,
-    borrowingRate: 331n,
+    borrowingRate: 330n,
   }
 
   // Check market state after interest charged
