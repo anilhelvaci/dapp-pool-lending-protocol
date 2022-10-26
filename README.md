@@ -7,7 +7,7 @@ Please make sure you install the agoric-sdk first.
 ### IMPORTANT - Agoric SDK
 1. Clone the agoric SDK repository (`git clone https://github.com/Agoric/agoric-sdk`)
 2. `cd agoric-sdk`
-3. `git checkout 75965ee3ba8e4ef42b55a710cc743ea8a874c4ef`
+3. `git checkout fedf049435d7307311219fbab1b2b342ec6acce8`
 4. Now, do:
    1. `yarn install`
    2. `yarn build`
