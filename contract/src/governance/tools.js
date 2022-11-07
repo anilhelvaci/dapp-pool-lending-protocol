@@ -1,0 +1,31 @@
+import { QuorumRule } from '@agoric/governance';
+import { natSafeMath } from '@agoric/zoe/src/contractSupport/index.js';
+import { assert, details as X, q } from '@agoric/assert';
+import { AmountMath } from '@agoric/ertp';
+
+const { ceilDivide } = natSafeMath;
+
+export const quorumThreshold = quorumRule => {
+  switch (quorumRule) {
+    case QuorumRule.MAJORITY:
+      return ceilDivide(committeeSize, 2);
+    case QuorumRule.ALL:
+      return committeeSize;
+    case QuorumRule.NO_QUORUM:
+      return 0;
+    default:
+      throw Error(`${quorumRule} is not a recognized quorum rule`);
+  }
+};
+
+/**
+ *
+ * @param {ZCFSeat} poserSeat
+ * @param {String} keyword
+ * @param {Amount} treshold
+ */
+export const assertCanPoseQuestions = (poserSeat, keyword, treshold) => {
+  const { give: { [keyword]: amountToLock } } = poserSeat.getProposal();
+  assert(!AmountMath.isGTE(amountToLock, treshold),
+    X`The amount ${amountToLock} should be greater than or equal to the treshold amount ${treshold}`);
+};
