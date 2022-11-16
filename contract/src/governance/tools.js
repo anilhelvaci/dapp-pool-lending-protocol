@@ -7,12 +7,14 @@ import { getOpenQuestions, getQuestion, startCounter } from '@agoric/governance/
 
 const { ceilDivide } = natSafeMath;
 
+const COMMITEE_SIZE = 3;
+
 export const quorumThreshold = quorumRule => {
   switch (quorumRule) {
     case QuorumRule.MAJORITY:
-      return ceilDivide(committeeSize, 2);
+      return ceilDivide(COMMITEE_SIZE, 2);
     case QuorumRule.ALL:
-      return committeeSize;
+      return COMMITEE_SIZE;
     case QuorumRule.NO_QUORUM:
       return 0;
     default:
@@ -28,7 +30,7 @@ export const quorumThreshold = quorumRule => {
  */
 export const assertCanPoseQuestions = (poserSeat, keyword, treshold) => {
   const { give: { [keyword]: amountToLock } } = poserSeat.getProposal();
-  assert(!AmountMath.isGTE(amountToLock, treshold),
+  assert(AmountMath.isGTE(amountToLock, treshold),
     X`The amount ${amountToLock} should be greater than or equal to the treshold amount ${treshold}`);
 };
 
@@ -37,7 +39,7 @@ export const assertCanPoseQuestions = (poserSeat, keyword, treshold) => {
  * @param {ElectorateFacet} electorateFacet
  */
 export const getElectorateFacetInvitation = (zcf, electorateFacet) => {
-  const electorateFacetHandler = () => Far(`questionPoser`, electorateFacet);
+  const electorateFacetHandler = () => Far(`ElectorateFacet`, electorateFacet);
   return zcf.makeInvitation(electorateFacetHandler, `electorateFacet`);
 };
 

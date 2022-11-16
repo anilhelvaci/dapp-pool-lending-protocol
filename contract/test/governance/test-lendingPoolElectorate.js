@@ -10,8 +10,10 @@ import { deeplyFulfilled } from '@endo/marshal';
 import { getPath } from '../lendingPool/setup.js';
 import { AmountMath, makeIssuerKit, AssetKind } from '@agoric/ertp';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
-import { setupApiGovernance } from '@agoric/governance/src/contractGovernance/governApi.js';
+import { makeApiInvocationPositions, setupApiGovernance } from '@agoric/governance/src/contractGovernance/governApi.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { ChoiceMethod, coerceQuestionSpec, ElectionType, QuorumRule } from '@agoric/governance';
+import { TimeMath } from '@agoric/swingset-vat/src/vats/timer/timeMath.js';
 
 // Paths are given according to ../lendingPool/setup.js
 const CONTRACT_ROOTS = {
@@ -28,11 +30,13 @@ const setupServices = async (t) => {
 
   const {
     brand: govBrand,
-    issuer: govIssuer
+    issuer: govIssuer,
+    mint: govMint,
   } = makeIssuerKit('GOV', AssetKind.NAT);
 
   const installs = await Collect.allValues({
     lendingPoolElectorate: installations.lendingPoolElectorate,
+    dummyElectionManager: installations.dummyElectionManager,
     counter: installations.counter,
   });
 
@@ -41,12 +45,22 @@ const setupServices = async (t) => {
     publicFacet: electoratePublicFacet,
   } = await E(zoe).startInstance(installs.lendingPoolElectorate, {}, {});
 
+  const { creatorFacet: electionManagerCreatorFacet, } = await E(zoe).startInstance(
+    installs.dummyElectionManager,
+    { GOV: govIssuer },
+    {},
+    { electorateFacetInvitation: E(electorateCreatorFacet).getElectorateFacetInvitation() });
+
   return harden({
     zoe,
     electorateCreatorFacet,
     electoratePublicFacet,
-    govBrand,
-    govIssuer,
+    electionManagerCreatorFacet,
+    govKit: {
+      govBrand,
+      govIssuer,
+      govMint,
+    },
     timer: buildManualTimer(t.log),
     counterInstallation: installs.counter,
   });
@@ -109,31 +123,112 @@ test('addQuestion-successful', async t => {
     zoe,
     electorateCreatorFacet,
     electoratePublicFacet,
-    govBrand,
-    govIssuer,
+    govKit: { govBrand, govIssuer, govMint },
     timer,
-    counterInstallation
+    counterInstallation,
   } = await setupServices(t);
 
   const treshold = AmountMath.make(govBrand, 25000n);
   await E(electorateCreatorFacet).initGovernedContext('GOV', govBrand, govIssuer, treshold);
 
-  const { voteOnApiInvocation } = await setupApiGovernance(
-    zoe,
-    undefined,
-    { 'hello': word => console.log(word) },
-    ['hello'],
-    timer,
-    () => electorateCreatorFacet,
+  const apiMethodName = 'hello';
+  const methodArgs = ['Hello World!'];
+  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n)
+
+  const { positive, negative } = makeApiInvocationPositions(
+    apiMethodName,
+    methodArgs,
   );
 
+  /** @type {ApiInvocationIssue} */
+  const issue = harden({ apiMethodName, methodArgs });
+  /** @type QuestionSpec */
+  const questionSpec = coerceQuestionSpec({
+    method: ChoiceMethod.UNRANKED,
+    issue,
+    positions: [positive, negative],
+    electionType: ElectionType.API_INVOCATION,
+    maxChoices: 1,
+    closingRule: { timer, deadline },
+    quorumRule: QuorumRule.MAJORITY,
+    tieOutcome: negative,
+  });
+
+  // More than the treshold
+  const poserGovAmount = AmountMath.make(govBrand, 25100n);
+
+  /** @type UserSeat */
+  const userSeatP = E(zoe).offer(
+    E(electorateCreatorFacet).makeAddQuestionInvitation(),
+    harden({ give: { GOV: poserGovAmount } }),
+    harden({ GOV: govMint.mintPayment(poserGovAmount) }),
+    { counterInstallation, questionSpec }
+  );
+
+  const { publicFacet: voteCounterPublicFacet, instance: voteCounterInstance } = await E(userSeatP).getOfferResult();
+
+  const questionP = E(voteCounterPublicFacet).getQuestion();
+
+  const [openQuestions, questionsDetails, questionCounterInstance] = await Promise.all([
+    E(electoratePublicFacet).getOpenQuestions(),
+    E(questionP).getDetails(),
+    E(questionP).getVoteCounter(),
+  ]);
+
+  t.is(openQuestions.length, 1);
+  t.deepEqual(openQuestions[0], questionsDetails.questionHandle);
+  t.deepEqual(voteCounterInstance, questionCounterInstance);
+});
+
+test('addQuestion-fails-insufficient-token-balance', async t => {
   const {
-    outcomeOfUpdate,
-    details,
-  } = await voteOnApiInvocation('hello', ['Hello World!'], counterInstallation, 10n);
+    zoe,
+    electorateCreatorFacet,
+    electoratePublicFacet,
+    govKit: { govBrand, govIssuer, govMint },
+    timer,
+    counterInstallation,
+  } = await setupServices(t);
 
-  t.log('Details', details);
-  t.log('Outcome', outcomeOfUpdate);
+  const treshold = AmountMath.make(govBrand, 25000n);
+  await E(electorateCreatorFacet).initGovernedContext('GOV', govBrand, govIssuer, treshold);
 
-  t.is('is', 'is');
+  const apiMethodName = 'hello';
+  const methodArgs = ['Hello World!'];
+  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n)
+
+  const { positive, negative } = makeApiInvocationPositions(
+    apiMethodName,
+    methodArgs,
+  );
+
+  /** @type {ApiInvocationIssue} */
+  const issue = harden({ apiMethodName, methodArgs });
+  /** @type QuestionSpec */
+  const questionSpec = coerceQuestionSpec({
+    method: ChoiceMethod.UNRANKED,
+    issue,
+    positions: [positive, negative],
+    electionType: ElectionType.API_INVOCATION,
+    maxChoices: 1,
+    closingRule: { timer, deadline },
+    quorumRule: QuorumRule.MAJORITY,
+    tieOutcome: negative,
+  });
+
+  // More than the treshold
+  const poserGovAmount = AmountMath.make(govBrand, 24900n);
+
+  /** @type UserSeat */
+  const userSeatP = E(zoe).offer(
+    E(electorateCreatorFacet).makeAddQuestionInvitation(),
+    harden({ give: { GOV: poserGovAmount } }),
+    harden({ GOV: govMint.mintPayment(poserGovAmount) }),
+    { counterInstallation, questionSpec }
+  );
+
+  await t.throwsAsync(() => E(userSeatP).getOfferResult());
+
+  const openQuestions = await E(electoratePublicFacet).getOpenQuestions();
+  t.is(openQuestions.length, 0);
 });

@@ -20,17 +20,8 @@ const start = async (zcf, privateArgs) => {
     const userSeatP = E(zoe).offer(electorateFacetInvitation);
     const electorateFacet = await E(userSeatP).getOfferResult();
 
-    const makeAddQuestionInvitation = () => {
-      /** @type OfferHandler */
-      const addQuestionOfferHandler = (poserSeat, { counterInstallation, questionSpec }) => {
-        return E(electorateFacet).addQuestion(poserSeat, counterInstallation, questionSpec);
-      };
-
-      return zcf.makeInvitation(addQuestionOfferHandler, 'AddQuestion');
-    };
-
     const creatorFacet = Far('DummyElectionManagerCreatorFacet', {
-      makeAddQuestionInvitation,
+      makeAddQuestionInvitation: () => E(electorateFacet).makeAddQuestionInvitation(),
     });
 
     return { creatorFacet };

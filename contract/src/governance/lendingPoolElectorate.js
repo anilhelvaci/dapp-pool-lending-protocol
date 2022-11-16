@@ -1,6 +1,6 @@
 import { makeStore } from '@agoric/store';
 import { QuorumRule } from '@agoric/governance';
-import { makeSubscriptionKit } from '@agoric/notifier';
+import { makePublishKit, makeSubscriptionKit } from '@agoric/notifier';
 import {
   quorumThreshold,
   assertCanPoseQuestions,
@@ -10,7 +10,7 @@ import {
   getOpenQuestions,
   startCounter,
 } from './tools.js';
-import { Far } from '@endo/far';
+import { E, Far } from '@endo/far';
 
 /**
  *
@@ -24,7 +24,7 @@ const start = (zcf) => {
   const {
     publisher: questionsPublisher,
     subscriber: questionsSubscriber,
-  } = makeSubscriptionKit();
+  } = makePublishKit();
 
   const initGovernedContext = async (keyword, brand, issuer, treshold) => {
     Object.assign(governedContext, {
@@ -37,44 +37,44 @@ const start = (zcf) => {
     harden(governedContext);
   };
 
-  /**
-   *
-   * @param {ZCFSeat} poserSeat
-   * @param {Installation} voteCounter
-   * @param {QuestionSpec} questionSpec
-   */
-  const addQuestion = async (poserSeat, voteCounter, questionSpec) => {
-    assertGovernedContextInitialized(governedContext);
-    assertCanPoseQuestions(poserSeat, governedContext.keyword, governedContext.treshold);
 
-    const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
-    const { give: { [tokenKeyword]: amountToLock } } = poserSeat.getProposal();
+  const makeAddQuestionInvitation = () => {
+    /** @type OfferHandler */
+    const addQuestion = async (poserSeat, { counterInstallation, questionSpec }) => {
+      assertGovernedContextInitialized(governedContext);
+      assertCanPoseQuestions(poserSeat, governedContext.keyword, governedContext.treshold);
+      // TODO: assertOfferArgs
 
-    questionSeat.incrementBy(
-      poserSeat.decrementBy({[tokenKeyword]: amountToLock})
-    );
+      const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
+      const { give: { [governedContext.keyword]: amountToLock } } = poserSeat.getProposal();
 
-    zcf.reallocate(questionSeat, poserSeat);
+      questionSeat.incrementBy(
+        poserSeat.decrementBy(harden({ [governedContext.keyword]: amountToLock })),
+      );
 
-    const { creatorFacet, publicFacet, deadline, questionHandle, instance } = startCounter(
-      zcf,
-      questionSpec,
-      quorumThreshold(questionSpec.quorumRule),
-      voteCounter,
-      allQuestions,
-      questionsPublisher,
-    );
+      zcf.reallocate(questionSeat, poserSeat);
 
-    const questionFacet = { voteCap: creatorFacet, publicFacet, deadline, questionSeat };
-    allQuestions.set(questionHandle, questionFacet);
+      const { creatorFacet, publicFacet, deadline, questionHandle, instance } = await startCounter(
+        zcf,
+        questionSpec,
+        quorumThreshold(questionSpec.quorumRule),
+        counterInstallation,
+        allQuestions,
+        questionsPublisher,
+      );
 
-    return { publicFacet, instance };
+      const questionFacet = { voteCap: creatorFacet, publicFacet, deadline, questionSeat };
+      allQuestions.set(questionHandle, questionFacet);
+
+      return { publicFacet, instance };
+    };
+    return zcf.makeInvitation(addQuestion, 'AddQuestion');
   };
 
   const eleltorateFacet = {
-    addQuestion,
+    makeAddQuestionInvitation,
     initGovernedContext,
-  }
+  };
 
   const publicFacet = Far('PublicFacet', {
     getQuestionSubscriber: () => questionsSubscriber,
@@ -86,7 +86,7 @@ const start = (zcf) => {
   const creatorFacet = Far('CreatorFacet', {
     getElectorateFacetInvitation: () => getElectorateFacetInvitation(zcf, eleltorateFacet),
     getQuestionSubscriber: () => questionsSubscriber,
-    addQuestion,
+    makeAddQuestionInvitation,
     initGovernedContext,
   });
 
