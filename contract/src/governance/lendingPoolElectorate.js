@@ -1,9 +1,16 @@
 import { makeStore } from '@agoric/store';
 import { QuorumRule } from '@agoric/governance';
-import { getOpenQuestions, getQuestion, startCounter } from '@agoric/governance/src/electorateTools.js';
 import { makeSubscriptionKit } from '@agoric/notifier';
-import { quorumThreshold, assertCanPoseQuestions } from './tools.js';
-
+import {
+  quorumThreshold,
+  assertCanPoseQuestions,
+  getElectorateFacetInvitation,
+  assertGovernedContextInitialized,
+  getQuestion,
+  getOpenQuestions,
+  startCounter,
+} from './tools.js';
+import { Far } from '@endo/far';
 
 /**
  *
@@ -11,15 +18,24 @@ import { quorumThreshold, assertCanPoseQuestions } from './tools.js';
  */
 const start = (zcf) => {
 
-  /** @type {{tokenKeyword: String, treshold: Amount}} terms */
-  const { tokenKeyword, treshold } = zcf.getTerms();
-
+  const governedContext = {};
   const allQuestions = makeStore('Question');
 
   const {
     publisher: questionsPublisher,
     subscriber: questionsSubscriber,
   } = makeSubscriptionKit();
+
+  const initGovernedContext = async (keyword, brand, issuer, treshold) => {
+    Object.assign(governedContext, {
+      keyword: keyword,
+      brand: brand,
+      issuer: issuer,
+      treshold: treshold
+    });
+    await zcf.saveIssuer(issuer, keyword);
+    harden(governedContext);
+  };
 
   /**
    *
@@ -28,7 +44,8 @@ const start = (zcf) => {
    * @param {QuestionSpec} questionSpec
    */
   const addQuestion = async (poserSeat, voteCounter, questionSpec) => {
-    assertCanPoseQuestions(poserSeat, tokenKeyword, treshold);
+    assertGovernedContextInitialized(governedContext);
+    assertCanPoseQuestions(poserSeat, governedContext.keyword, governedContext.treshold);
 
     const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
     const { give: { [tokenKeyword]: amountToLock } } = poserSeat.getProposal();
@@ -54,14 +71,24 @@ const start = (zcf) => {
     return { publicFacet, instance };
   };
 
-  const publicFacet = {
+  const eleltorateFacet = {
+    addQuestion,
+    initGovernedContext,
+  }
+
+  const publicFacet = Far('PublicFacet', {
+    getQuestionSubscriber: () => questionsSubscriber,
     getOpenQuestions: () => getOpenQuestions(allQuestions),
     getQuestion: handleP => getQuestion(handleP, allQuestions),
-  };
+    getGovernedBrand: () => governedContext.brand,
+  });
 
-  const creatorFacet = {
-    addQuestion
-  };
+  const creatorFacet = Far('CreatorFacet', {
+    getElectorateFacetInvitation: () => getElectorateFacetInvitation(zcf, eleltorateFacet),
+    getQuestionSubscriber: () => questionsSubscriber,
+    addQuestion,
+    initGovernedContext,
+  });
 
   return { creatorFacet, publicFacet };
 };
