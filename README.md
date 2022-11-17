@@ -21,7 +21,7 @@ Please make sure you install the agoric-sdk first.
      echo ${GOBIN-${GOPATH-$HOME/go}/bin}
      # Attempt to run a binary that was installed there.
      ag-cosmos-helper version --long
-    ```1
+    ```
 
 ### Lending Protocol
 
