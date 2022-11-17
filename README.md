@@ -12,7 +12,15 @@ Please make sure you install the agoric-sdk first.
    1. `yarn install`
    2. `yarn build`
    3. `yarn link-cli ~/bin/agoric` (or other directory you might prefer)
-5. Build the `cosmic-swingset` package. Follow the first [two steps here](https://docs.agoric.com/guides/agoric-cli/starting-multiuser-dapps.html#usage). 
+5. Build the `cosmic-swingset` package.
+     ```shell
+     cd agoric-sdk/packages/cosmic-swingset && make
+     # Display the directory that should be in your $PATH.
+     echo ${GOBIN-${GOPATH-$HOME/go}/bin}
+     # Attempt to run a binary that was installed there.
+     ag-cosmos-helper version --long
+    ```
+
 
 ### Lending Protocol
 
