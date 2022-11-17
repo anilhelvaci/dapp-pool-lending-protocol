@@ -1,4 +1,4 @@
-# Bytepitch & Agoric - Lending Protocol Cosomoverse Workshop
+# Bytepitch & Agoric - Lending Protocol
 
 ## Setup
 
