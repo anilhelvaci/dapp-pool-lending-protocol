@@ -12,6 +12,8 @@ Please make sure you install the agoric-sdk first.
    1. `yarn install`
    2. `yarn build`
    3. `yarn link-cli ~/bin/agoric` (or other directory you might prefer)
+   4. `agoric --version`
+   > The version should be 0.15.0
 5. Build the `cosmic-swingset` package.
      ```shell
      cd agoric-sdk/packages/cosmic-swingset && make
@@ -19,8 +21,7 @@ Please make sure you install the agoric-sdk first.
      echo ${GOBIN-${GOPATH-$HOME/go}/bin}
      # Attempt to run a binary that was installed there.
      ag-cosmos-helper version --long
-    ```
-
+    ```1
 
 ### Lending Protocol
 
