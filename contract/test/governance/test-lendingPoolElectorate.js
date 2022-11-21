@@ -98,137 +98,51 @@ test.before(async t => {
   // trace(t, 'CONTEXT');
 });
 
-test('governedContext-immutable', async t => {
-  const { electorateCreatorFacet, electoratePublicFacet } = await setupServices(t);
-
-  const { brand: moolaBrand, issuer: moolaIssuer } = makeIssuerKit('Moola', AssetKind.NAT);
-  const { brand: simoleansBrand, issuer: simoleansIssuer } = makeIssuerKit('Simoleans', AssetKind.NAT);
-
-  await t.notThrowsAsync(() =>
-    E(electorateCreatorFacet).initGovernedContext('Moola', moolaBrand,
-      moolaIssuer, AmountMath.makeEmpty(moolaBrand))
-  );
-
-  await t.throwsAsync(
-    () => E(electorateCreatorFacet).initGovernedContext('Simoleans', simoleansBrand,
-      simoleansIssuer, AmountMath.makeEmpty(simoleansBrand))
-  );
-
-  const governedBrand = await E(electoratePublicFacet).getGovernedBrand();
-  t.deepEqual(governedBrand, moolaBrand);
-});
-
 test('addQuestion-successful', async t => {
   const {
     zoe,
     electorateCreatorFacet,
     electoratePublicFacet,
-    govKit: { govBrand, govIssuer, govMint },
     timer,
     counterInstallation,
   } = await setupServices(t);
 
-  const treshold = AmountMath.make(govBrand, 25000n);
-  await E(electorateCreatorFacet).initGovernedContext('GOV', govBrand, govIssuer, treshold);
-
-  const apiMethodName = 'hello';
-  const methodArgs = ['Hello World!'];
-  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n)
-
-  const { positive, negative } = makeApiInvocationPositions(
-    apiMethodName,
-    methodArgs,
-  );
-
-  /** @type {ApiInvocationIssue} */
-  const issue = harden({ apiMethodName, methodArgs });
-  /** @type QuestionSpec */
-  const questionSpec = coerceQuestionSpec({
-    method: ChoiceMethod.UNRANKED,
-    issue,
-    positions: [positive, negative],
-    electionType: ElectionType.API_INVOCATION,
-    maxChoices: 1,
-    closingRule: { timer, deadline },
-    quorumRule: QuorumRule.MAJORITY,
-    tieOutcome: negative,
+  const electorateFacet = Far('ElectorateFacet - Test', {
+    addQuestion: E(electorateCreatorFacet).addQuestion,
+    voteOnQuestion: E(electorateCreatorFacet).voteOnQuestion,
+    updateTotalSupply: E(electorateCreatorFacet).updateTotalSupply,
   });
 
-  // More than the treshold
-  const poserGovAmount = AmountMath.make(govBrand, 25100n);
+  await E(electorateCreatorFacet).updateTotalSupply(1000n);
 
-  /** @type UserSeat */
-  const userSeatP = E(zoe).offer(
-    E(electorateCreatorFacet).makeAddQuestionInvitation(),
-    harden({ give: { GOV: poserGovAmount } }),
-    harden({ GOV: govMint.mintPayment(poserGovAmount) }),
-    { counterInstallation, questionSpec }
-  );
-
-  const { publicFacet: voteCounterPublicFacet, instance: voteCounterInstance } = await E(userSeatP).getOfferResult();
-
-  const questionP = E(voteCounterPublicFacet).getQuestion();
-
-  const [openQuestions, questionsDetails, questionCounterInstance] = await Promise.all([
-    E(electoratePublicFacet).getOpenQuestions(),
-    E(questionP).getDetails(),
-    E(questionP).getVoteCounter(),
-  ]);
-
-  t.is(openQuestions.length, 1);
-  t.deepEqual(openQuestions[0], questionsDetails.questionHandle);
-  t.deepEqual(voteCounterInstance, questionCounterInstance);
-});
-
-test('addQuestion-fails-insufficient-token-balance', async t => {
   const {
-    zoe,
-    electorateCreatorFacet,
-    electoratePublicFacet,
-    govKit: { govBrand, govIssuer, govMint },
-    timer,
-    counterInstallation,
-  } = await setupServices(t);
+    voteOnApiInvocation,
+  } = await setupApiGovernance(zoe, undefined,
+    { hello: (name) => console.log(`Hello ${name}!`) },
+    ['hello'], timer, () => electorateFacet);
 
-  const treshold = AmountMath.make(govBrand, 25000n);
-  await E(electorateCreatorFacet).initGovernedContext('GOV', govBrand, govIssuer, treshold);
+  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n);
 
-  const apiMethodName = 'hello';
-  const methodArgs = ['Hello World!'];
-  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n)
+  const {
+    outcomeOfUpdate,
+    instance,
+    details
+  } = await voteOnApiInvocation('hello', ['Anil'], counterInstallation, deadline);
 
-  const { positive, negative } = makeApiInvocationPositions(
-    apiMethodName,
-    methodArgs,
-  );
-
-  /** @type {ApiInvocationIssue} */
-  const issue = harden({ apiMethodName, methodArgs });
-  /** @type QuestionSpec */
-  const questionSpec = coerceQuestionSpec({
-    method: ChoiceMethod.UNRANKED,
-    issue,
-    positions: [positive, negative],
-    electionType: ElectionType.API_INVOCATION,
-    maxChoices: 1,
-    closingRule: { timer, deadline },
-    quorumRule: QuorumRule.MAJORITY,
-    tieOutcome: negative,
-  });
-
-  // More than the treshold
-  const poserGovAmount = AmountMath.make(govBrand, 24900n);
-
-  /** @type UserSeat */
-  const userSeatP = E(zoe).offer(
-    E(electorateCreatorFacet).makeAddQuestionInvitation(),
-    harden({ give: { GOV: poserGovAmount } }),
-    harden({ GOV: govMint.mintPayment(poserGovAmount) }),
-    { counterInstallation, questionSpec }
-  );
-
-  await t.throwsAsync(() => E(userSeatP).getOfferResult());
-
+  const { questionHandle } = await details;
   const openQuestions = await E(electoratePublicFacet).getOpenQuestions();
-  t.is(openQuestions.length, 0);
+
+  t.deepEqual(openQuestions[0], questionHandle);
+  t.deepEqual(await E(E(electoratePublicFacet).getQuestion(questionHandle)).getVoteCounter(), instance)
+
+  outcomeOfUpdate.then(result => console.log('[OUTCOME_OF_UPDATE]', result))
+    .catch(error => console.log('[OUTCOME_OF_UPDATE]', error));
+
+  const positive = harden({ apiMethodName: 'hello', methodArgs: ['Anil'] });
+  const negative = harden({ dontInvoke: 'hello' });
+  await E(electorateCreatorFacet).voteOnQuestion(questionHandle, [positive], 501n);
+
+  await timer.tickN(10n);
+  await eventLoopIteration();
+
 });

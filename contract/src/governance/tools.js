@@ -7,14 +7,12 @@ import { getOpenQuestions, getQuestion, startCounter } from '@agoric/governance/
 
 const { ceilDivide } = natSafeMath;
 
-const COMMITEE_SIZE = 3;
-
-export const quorumThreshold = quorumRule => {
+export const quorumThreshold = (committeeSize, quorumRule) => {
   switch (quorumRule) {
     case QuorumRule.MAJORITY:
-      return ceilDivide(COMMITEE_SIZE, 2);
+      return ceilDivide(committeeSize, 2);
     case QuorumRule.ALL:
-      return COMMITEE_SIZE;
+      return committeeSize;
     case QuorumRule.NO_QUORUM:
       return 0;
     default:
@@ -45,10 +43,9 @@ export const getElectorateFacetInvitation = (zcf, electorateFacet) => {
 
 export const assertGovernedContextInitialized = (governedContext) => {
   console.log('governedContext', governedContext);
-  const { keyword, brand, issuer, treshold } = governedContext;
-  assert(keyword || brand || issuer || treshold,
-    X`Make sure you initialize the governedContext with the following  + 
-    properities: keyword, brand, issuer, treshold`);
+  const { totalSupply } = governedContext;
+  assert(totalSupply,
+    X`Make sure you initialize the governedContext with the following properities: totalSupply`);
 };
 
 export {

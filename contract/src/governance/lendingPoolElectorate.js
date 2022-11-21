@@ -11,6 +11,7 @@ import {
   startCounter,
 } from './tools.js';
 import { E, Far } from '@endo/far';
+import { makeHandle } from '@agoric/zoe/src/makeHandle.js';
 
 /**
  *
@@ -26,54 +27,34 @@ const start = (zcf) => {
     subscriber: questionsSubscriber,
   } = makePublishKit();
 
-  const initGovernedContext = async (keyword, brand, issuer, treshold) => {
-    Object.assign(governedContext, {
-      keyword: keyword,
-      brand: brand,
-      issuer: issuer,
-      treshold: treshold
-    });
-    await zcf.saveIssuer(issuer, keyword);
-    harden(governedContext);
+  const updateTotalSupply = totalSupply => {
+    governedContext.totalSupply = totalSupply;
   };
 
+  const addQuestion = async (counterInstallation, questionSpec) => {
+    assertGovernedContextInitialized(governedContext);
 
-  const makeAddQuestionInvitation = () => {
-    /** @type OfferHandler */
-    const addQuestion = async (poserSeat, { counterInstallation, questionSpec }) => {
-      assertGovernedContextInitialized(governedContext);
-      assertCanPoseQuestions(poserSeat, governedContext.keyword, governedContext.treshold);
-      // TODO: assertOfferArgs
+    const { publicFacet, instance } = await startCounter(
+      zcf,
+      questionSpec,
+      quorumThreshold(governedContext.totalSupply, questionSpec.quorumRule),
+      counterInstallation,
+      allQuestions,
+      questionsPublisher,
+    );
 
-      const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
-      const { give: { [governedContext.keyword]: amountToLock } } = poserSeat.getProposal();
+    return { publicFacet, instance };
+  };
 
-      questionSeat.incrementBy(
-        poserSeat.decrementBy(harden({ [governedContext.keyword]: amountToLock })),
-      );
-
-      zcf.reallocate(questionSeat, poserSeat);
-
-      const { creatorFacet, publicFacet, deadline, questionHandle, instance } = await startCounter(
-        zcf,
-        questionSpec,
-        quorumThreshold(questionSpec.quorumRule),
-        counterInstallation,
-        allQuestions,
-        questionsPublisher,
-      );
-
-      const questionFacet = { voteCap: creatorFacet, publicFacet, deadline, questionSeat };
-      allQuestions.set(questionHandle, questionFacet);
-
-      return { publicFacet, instance };
-    };
-    return zcf.makeInvitation(addQuestion, 'AddQuestion');
+  const voteOnQuestion = (questionHandle, positions, shares) => {
+    const { voteCap } = allQuestions.get(questionHandle);
+    return E(voteCap).submitVote(makeHandle('Voter'), positions, shares);
   };
 
   const eleltorateFacet = {
-    makeAddQuestionInvitation,
-    initGovernedContext,
+    addQuestion,
+    voteOnQuestion,
+    updateTotalSupply,
   };
 
   const publicFacet = Far('PublicFacet', {
@@ -86,8 +67,9 @@ const start = (zcf) => {
   const creatorFacet = Far('CreatorFacet', {
     getElectorateFacetInvitation: () => getElectorateFacetInvitation(zcf, eleltorateFacet),
     getQuestionSubscriber: () => questionsSubscriber,
-    makeAddQuestionInvitation,
-    initGovernedContext,
+    addQuestion,
+    voteOnQuestion,
+    updateTotalSupply,
   });
 
   return { creatorFacet, publicFacet };
