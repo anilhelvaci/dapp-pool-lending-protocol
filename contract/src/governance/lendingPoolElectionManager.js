@@ -1,6 +1,11 @@
 import { E, Far } from '@endo/far';
 import { makeStore } from '@agoric/store';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
+import { makeApiInvocationPositions, setupApiGovernance } from '@agoric/governance/src/contractGovernance/governApi.js';
+import { PROPOSAL_TRESHOLD_KEY } from '../lendingPool/params.js';
+import { assertCanPoseQuestions } from './tools.js';
+import { AssetKind, AmountMath } from '@agoric/ertp';
+import { assert, details as X } from '@agoric/assert';
 
 /**
  *
@@ -44,8 +49,22 @@ const start = async (zcf, privateArgs) => {
 
   const questionSeats = makeStore('QuestionSeats');
 
-  const limitedCreatorFacet = E(governedCF).getLimitedCreatorFacet();
-  const governedParamMgrRetriever = E(governedCF).getParamMgrRetriever();
+  const limitedCreatorFacetP = E(governedCF).getLimitedCreatorFacet();
+  const governedParamMgrRetrieverP = E(governedCF).getParamMgrRetriever();
+
+  /** @type ZCFMint */
+  const [popMint, govBrand, govIssuer, governanceKeyword] = await Promise.all([
+    zcf.makeZCFMint('POP', AssetKind.SET), // Proof of participation token
+    E(governedPF).getGovernanceBrand(),
+    E(governedPF).getGovernanceIssuer(),
+    E(governedPF).getGovernanceKeyword(),
+  ]);
+
+  const { brand: popBrand, issuer: popIssuer } = popMint.getIssuerRecord();
+  await Promise.all([
+    // zcf.saveIssuer(popIssuer, 'POP'),
+    zcf.saveIssuer(govIssuer, governanceKeyword)
+  ])
 
   /** @type {() => Promise<Instance>} */
   const getElectorateInstance = async () => {
@@ -55,21 +74,104 @@ const start = async (zcf, privateArgs) => {
     return invitationAmount.value[0].instance;
   };
 
-  /** @type {() => Promise<PoserFacet>} */
-  const getUpdatedPoserFacet = async () => {
+  /** @type {() => Promise<electorateFacet>} */
+  const getUpdatedElectorateFacet = async () => {
     const newInvitation = await E(
-      E(governedParamMgrRetriever).get({ key: 'governedParams' }),
+      E(governedParamMgrRetrieverP).get({ key: 'governedParams' }),
     ).getInternalParamValue(CONTRACT_ELECTORATE);
 
     return E(E(zoe).offer(newInvitation)).getOfferResult();
   };
-  const poserFacet = await getUpdatedPoserFacet();
-  assert(poserFacet, 'question poser facet must be initialized');
+
+  const electorateFacet = await getUpdatedElectorateFacet();
+  assert(electorateFacet, 'question poser facet must be initialized');
+
+  const initApiGovernance = async () => {
+    const [governedApis, governedNames] = await Promise.all([
+      E(governedCF).getGovernedApis(),
+      E(governedCF).getGovernedApiNames(),
+    ]);
+    if (governedNames.length) {
+      return setupApiGovernance(
+        zoe,
+        governedInstance,
+        governedApis,
+        governedNames,
+        timer,
+        () => electorateFacet,
+      );
+    }
+
+    // if we aren't governing APIs, voteOnApiInvocation shouldn't be called
+    return {
+      voteOnApiInvocation: () => {
+        throw Error('api governance not configured');
+      },
+      createdQuestion: () => false,
+    };
+  };
+
+  const getGovernanceMetadata = async () => {
+    const [ propsalTreshold ] = await Promise.all([
+      E(governedPF).getProposalTreshold()
+    ])
+    return { propsalTreshold }
+  }
+
+  const { voteOnApiInvocation, createdQuestion: createdApiQuestion } =
+    await initApiGovernance();
 
   const makePoseQuestionsInvitation = () => {
     /** @type OfferHandler */
-    const poseQuestion = (poserSeat) => {
+    const poseQuestion = async (poserSeat, offerArgs) => {
+      const { governanceKeyword, proposalTreshold } = await getGovernanceMetadata();
+      const amountToLock = assertCanPoseQuestions(poserSeat, governanceKeyword, proposalTreshold);
 
+      // TODO: Implement some method like `assertOfferArgs`
+      const {
+        apiMethodName,
+        methodArgs,
+        voteCounterInstallation,
+        deadline,
+        vote
+      } = offerArgs;
+
+      const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
+
+      questionSeat.incrementBy(
+        poserSeat.decrementBy( harden({ [governanceKeyword]: amountToLock }) ),
+      );
+
+      popMint.mintGains({ POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) }, poserSeat);
+
+      zcf.reallocate(poserSeat, questionSeat);
+
+      const {
+        details,
+        outcomeOfUpdate,
+      } = await voteOnApiInvocation(apiMethodName, methodArgs, voteCounterInstallation, deadline);
+
+      const { questionHandle } = await details;
+      questionSeats.init(questionHandle, questionSeat);
+
+      if (vote) {
+        const { positive } = makeApiInvocationPositions(apiMethodName, methodArgs);
+        const voteWeight = AmountMath.getValue(govBrand);
+        await E(electorateFacet).voteOnQuestion(questionHandle, [positive], voteWeight);
+      }
+
+      const popAmount = AmountMath.make(popBrand, harden([{
+        govLocked: amountToLock,
+        status: 'success',
+        role: 'poser',
+        questionDetails: details,
+        outcomeOfUpdate
+      }]));
+
+      popMint.mintGains({ POP: popAmount }, poserSeat);
+      poserSeat.exit();
+
+      return 'The questison has been successfuly asked. Please redeem your tokens after the voting is ended.';
     };
 
     return zcf.makeInvitation(poseQuestion, 'PoseQuestionsInvittion');
@@ -102,7 +204,7 @@ const start = async (zcf, privateArgs) => {
 
   const creatorFacet = Far('CreatorFacet', {
     getElectorateInstance,
-    getCreatorFacet: () => limitedCreatorFacet,
+    getCreatorFacet: () => limitedCreatorFacetP,
     getAdminFacet: () => adminFacet,
     getInstance: () => governedInstance,
     getPublicFacet: () => governedPF,

@@ -19,6 +19,7 @@ export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
 export const BASE_RATE_KEY = 'BaseRate';
 export const MULTIPILIER_RATE_KEY = 'MultipilierRate';
 export const PENALTY_RATE_KEY = 'PenaltyRate';
+export const PROPOSAL_TRESHOLD_KEY = 'ProposalTreshold';
 
 /**
  * @param {Amount} electorateInvitationAmount

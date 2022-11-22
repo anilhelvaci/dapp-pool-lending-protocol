@@ -14,6 +14,7 @@ import { makeApiInvocationPositions, setupApiGovernance } from '@agoric/governan
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { ChoiceMethod, coerceQuestionSpec, ElectionType, QuorumRule } from '@agoric/governance';
 import { TimeMath } from '@agoric/swingset-vat/src/vats/timer/timeMath.js';
+import { makePromiseKit } from '@endo/promise-kit';
 
 // Paths are given according to ../lendingPool/setup.js
 const CONTRACT_ROOTS = {
@@ -98,7 +99,7 @@ test.before(async t => {
   // trace(t, 'CONTEXT');
 });
 
-test('addQuestion-successful', async t => {
+test('addQuestion-successful-positive-outcome', async t => {
   const {
     zoe,
     electorateCreatorFacet,
@@ -106,6 +107,16 @@ test('addQuestion-successful', async t => {
     timer,
     counterInstallation,
   } = await setupServices(t);
+
+  t.plan(4);
+
+  const resolveArgument = argument => {
+    testPromiseKit.resolve(`Hello ${argument}!!!`);
+  };
+
+  /** @type PromiseKit */
+  const testPromiseKit = makePromiseKit();
+  const testPromise = testPromiseKit.promise;
 
   const electorateFacet = Far('ElectorateFacet - Test', {
     addQuestion: E(electorateCreatorFacet).addQuestion,
@@ -118,8 +129,8 @@ test('addQuestion-successful', async t => {
   const {
     voteOnApiInvocation,
   } = await setupApiGovernance(zoe, undefined,
-    { hello: (name) => console.log(`Hello ${name}!`) },
-    ['hello'], timer, () => electorateFacet);
+    Far('', { resolveArgument }),
+    ['resolveArgument'], timer, () => electorateFacet);
 
   const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n);
 
@@ -127,7 +138,7 @@ test('addQuestion-successful', async t => {
     outcomeOfUpdate,
     instance,
     details
-  } = await voteOnApiInvocation('hello', ['Anil'], counterInstallation, deadline);
+  } = await voteOnApiInvocation('resolveArgument', ['Anil'], counterInstallation, deadline);
 
   const { questionHandle } = await details;
   const openQuestions = await E(electoratePublicFacet).getOpenQuestions();
@@ -135,14 +146,73 @@ test('addQuestion-successful', async t => {
   t.deepEqual(openQuestions[0], questionHandle);
   t.deepEqual(await E(E(electoratePublicFacet).getQuestion(questionHandle)).getVoteCounter(), instance)
 
-  outcomeOfUpdate.then(result => console.log('[OUTCOME_OF_UPDATE]', result))
-    .catch(error => console.log('[OUTCOME_OF_UPDATE]', error));
-
-  const positive = harden({ apiMethodName: 'hello', methodArgs: ['Anil'] });
-  const negative = harden({ dontInvoke: 'hello' });
+  const positive = harden({ apiMethodName: 'resolveArgument', methodArgs: ['Anil'] });
   await E(electorateCreatorFacet).voteOnQuestion(questionHandle, [positive], 501n);
 
   await timer.tickN(10n);
   await eventLoopIteration();
+
+  outcomeOfUpdate.then(result => t.deepEqual(positive, result))
+    .catch(error => console.log("[OUTCOME_OF_UPDATE]", error));
+  testPromise.then(result => t.deepEqual(result, `Hello Anil!!!`))
+    .catch(error => console.log("[ERROR]", error));
+});
+
+test('addQuestion-successful-negative-outcome', async t => {
+  const {
+    zoe,
+    electorateCreatorFacet,
+    electoratePublicFacet,
+    timer,
+    counterInstallation,
+  } = await setupServices(t);
+
+  t.plan(3);
+
+  const resolveArgument = argument => {
+    testPromiseKit.resolve(`Hello ${argument}!!!`);
+  };
+
+  /** @type PromiseKit */
+  const testPromiseKit = makePromiseKit();
+  const testPromise = testPromiseKit.promise;
+
+  const electorateFacet = Far('ElectorateFacet - Test', {
+    addQuestion: E(electorateCreatorFacet).addQuestion,
+    voteOnQuestion: E(electorateCreatorFacet).voteOnQuestion,
+    updateTotalSupply: E(electorateCreatorFacet).updateTotalSupply,
+  });
+
+  await E(electorateCreatorFacet).updateTotalSupply(1000n);
+
+  const {
+    voteOnApiInvocation,
+  } = await setupApiGovernance(zoe, undefined,
+    { resolveArgument },
+    ['resolveArgument'], timer, () => electorateFacet);
+
+  const deadline = TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n);
+
+  const {
+    outcomeOfUpdate,
+    instance,
+    details
+  } = await voteOnApiInvocation('resolveArgument', ['Anil'], counterInstallation, deadline);
+
+  const { questionHandle } = await details;
+  const openQuestions = await E(electoratePublicFacet).getOpenQuestions();
+
+  t.deepEqual(openQuestions[0], questionHandle);
+  t.deepEqual(await E(E(electoratePublicFacet).getQuestion(questionHandle)).getVoteCounter(), instance)
+
+  const { negative } = makeApiInvocationPositions('resolveArgument', ['Anil'])
+
+  await E(electorateCreatorFacet).voteOnQuestion(questionHandle, [negative], 501n);
+
+  await timer.tickN(10n);
+  await eventLoopIteration();
+
+  outcomeOfUpdate.then(result => t.deepEqual(negative, result))
+    .catch(error => console.log("[OUTCOME_OF_UPDATE]", error));
 
 });

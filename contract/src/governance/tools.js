@@ -30,6 +30,8 @@ export const assertCanPoseQuestions = (poserSeat, keyword, treshold) => {
   const { give: { [keyword]: amountToLock } } = poserSeat.getProposal();
   assert(AmountMath.isGTE(amountToLock, treshold),
     X`The amount ${amountToLock} should be greater than or equal to the treshold amount ${treshold}`);
+
+  return amountToLock;
 };
 
 /**
