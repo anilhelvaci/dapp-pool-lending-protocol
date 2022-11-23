@@ -5,6 +5,7 @@ import { makePublishKit, makeStoredPublisherKit } from '@agoric/notifier';
 import { AssetKind, AmountMath } from '@agoric/ertp';
 import { assert, details as X } from '@agoric/assert';
 import { makePromiseKit } from '@endo/promise-kit';
+import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 /**
  *
@@ -28,12 +29,14 @@ const start = async (zcf, privateArgs) => {
   const govMint = await zcf.makeZCFMint('GOV', AssetKind.NAT, { decimalPlaces: 6 });
   const { brand: govBrand, issuer: govIssuer } = govMint.getIssuerRecord();
   /**
-   *
    * @type {Amount<K>}
    */
-  const limit = AmountMath.make(govBrand, 5n * 10n ** 6n); // 5 units of GOV at a time at max.
+  const limit = AmountMath.make(govBrand, 5n * 10n ** 6n + 1n); // 5 units of GOV at a time at max.
   /**
-   *
+   * @type {Ratio}
+   */
+  const tresholdRatio = makeRatio(2n, govBrand);
+  /**
    * @type {Amount<K>}
    */
   let totalSupply = AmountMath.makeEmpty(govBrand);
@@ -66,6 +69,10 @@ const start = async (zcf, privateArgs) => {
     testPromiseKit.resolve(`Hello ${argument}!!!`);
   };
 
+  const getProposalTreshold = () => {
+    return ceilMultiplyBy(totalSupply, tresholdRatio);
+  };
+
   const getParamMgrRetriever = () =>
     Far('paramManagerRetriever', {
       get: paramDesc => {
@@ -81,6 +88,7 @@ const start = async (zcf, privateArgs) => {
     getTotalSupply: () => totalSupply,
     makeFaucetInvitation,
     getTestPromise: () => testPromiseKit.promise,
+    getProposalTreshold,
   });
 
   const limitedCreatorFacet = Far('Limited Creator Facet', {

@@ -47,7 +47,7 @@ const start = async (zcf, privateArgs) => {
     privateArgs.governed,
   );
 
-  const questionSeats = makeStore('QuestionSeats');
+  const questions = makeStore('questions');
 
   const limitedCreatorFacetP = E(governedCF).getLimitedCreatorFacet();
   const governedParamMgrRetrieverP = E(governedCF).getParamMgrRetriever();
@@ -112,11 +112,17 @@ const start = async (zcf, privateArgs) => {
   };
 
   const getGovernanceMetadata = async () => {
-    const [ propsalTreshold ] = await Promise.all([
-      E(governedPF).getProposalTreshold()
+    const [ proposalTreshold, totalSupply ] = await Promise.all([
+      E(governedPF).getProposalTreshold(),
+      E(governedPF).getTotalSupply()
     ])
-    return { propsalTreshold }
-  }
+    return { proposalTreshold, totalSupply }
+  };
+  
+  const getQuestionData = (questionHandle) => {
+    const { details, outcomeOfUpdate, instance } = questions.get(questionHandle);
+    return { details, outcomeOfUpdate, instance };
+  };
 
   const { voteOnApiInvocation, createdQuestion: createdApiQuestion } =
     await initApiGovernance();
@@ -124,7 +130,8 @@ const start = async (zcf, privateArgs) => {
   const makePoseQuestionsInvitation = () => {
     /** @type OfferHandler */
     const poseQuestion = async (poserSeat, offerArgs) => {
-      const { governanceKeyword, proposalTreshold } = await getGovernanceMetadata();
+      const { totalSupply, proposalTreshold } = await getGovernanceMetadata();
+      assert(!AmountMath.isEmpty(totalSupply), X`Can't pose questions when there's no governance token supply`);
       const amountToLock = assertCanPoseQuestions(poserSeat, governanceKeyword, proposalTreshold);
 
       // TODO: Implement some method like `assertOfferArgs`
@@ -146,17 +153,20 @@ const start = async (zcf, privateArgs) => {
 
       zcf.reallocate(poserSeat, questionSeat);
 
+      await E(electorateFacet).updateTotalSupply(AmountMath.getValue(govBrand, totalSupply));
+
       const {
         details,
         outcomeOfUpdate,
+        instance,
       } = await voteOnApiInvocation(apiMethodName, methodArgs, voteCounterInstallation, deadline);
 
       const { questionHandle } = await details;
-      questionSeats.init(questionHandle, questionSeat);
+      questions.init(questionHandle, { questionSeat, details, outcomeOfUpdate, instance });
 
       if (vote) {
         const { positive } = makeApiInvocationPositions(apiMethodName, methodArgs);
-        const voteWeight = AmountMath.getValue(govBrand);
+        const voteWeight = AmountMath.getValue(govBrand, amountToLock);
         await E(electorateFacet).voteOnQuestion(questionHandle, [positive], voteWeight);
       }
 
@@ -164,8 +174,7 @@ const start = async (zcf, privateArgs) => {
         govLocked: amountToLock,
         status: 'success',
         role: 'poser',
-        questionDetails: details,
-        outcomeOfUpdate
+        questionHandle,
       }]));
 
       popMint.mintGains({ POP: popAmount }, poserSeat);
@@ -199,7 +208,9 @@ const start = async (zcf, privateArgs) => {
     makePoseQuestionsInvitation,
     makeVoteOnQuestionInvitation,
     makeRedeemAssetInvitation,
-    getGovernedContract: () => governedInstance
+    getGovernedContract: () => governedInstance,
+    getPopInfo: () => harden({ popBrand, popIssuer }),
+    getQuestionData,
   });
 
   const creatorFacet = Far('CreatorFacet', {

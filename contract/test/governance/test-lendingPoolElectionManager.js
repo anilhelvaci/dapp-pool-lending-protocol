@@ -17,6 +17,7 @@ import { CONTRACT_ELECTORATE } from '@agoric/governance';
 import { makeMockChainStorageRoot } from '@agoric/vats/tools/storage-test-utils.js';
 import { makeStorageNodeChild } from '@agoric/vats/src/lib-chainStorage.js';
 import { makeBoard } from '@agoric/vats/src/lib-board.js';
+import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 // Paths are given according to ../lendingPool/setup.js
 const CONTRACT_ROOTS = {
@@ -51,7 +52,10 @@ const setupServices = async (t) => {
     publicFacet: electoratePublicFacet,
   } = await E(zoe).startInstance(installs.lendingPoolElectorate, {}, {});
 
-  const { creatorFacet: electionManagerCreatorFacet } = await E(zoe).startInstance(
+  const {
+    creatorFacet: electionManagerCreatorFacet,
+    publicFacet: electionManagerPublicFacet,
+  } = await E(zoe).startInstance(
     installs.lendingPoolElectionManager,
     harden({}),
     harden({
@@ -76,8 +80,12 @@ const setupServices = async (t) => {
   ])
 
   return {
+    zoe,
     timer,
-    electionManagerCreatorFacet,
+    electionManager: {
+      electionManagerCreatorFacet,
+      electionManagerPublicFacet,
+    },
     electorate: {
       electorateCreatorFacet,
       electoratePublicFacet,
@@ -85,7 +93,8 @@ const setupServices = async (t) => {
     governed: {
       governedPF,
       governedCF,
-    }
+    },
+    installs,
   };
 };
 
@@ -129,3 +138,156 @@ test('initial', async t => {
   t.is('test', 'test');
 });
 
+test('addQuestion', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerCreatorFacet, electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs
+  } = await setupServices(t);
+
+  const [govBrand, govIssuer, govKeyword, { popBrand, popIssuer }] = await Promise.all([
+    E(governedPF).getGovernanceBrand(),
+    E(governedPF).getGovernanceIssuer(),
+    E(governedPF).getGovernanceKeyword(),
+    E(electionManagerPublicFacet).getPopInfo(),
+  ]);
+
+  const govAmountWanted = AmountMath.make(govBrand, 5n * 10n ** 6n);
+
+  /**
+   * @type {UserSeat}
+   */
+  const aliceUserSeat = await E(zoe).offer(
+    E(governedPF).makeFaucetInvitation(),
+    harden({ want: { [govKeyword]: govAmountWanted } }),
+  );
+
+  const [offerResult, govPayout, propTreshold] = await Promise.all([
+    E(aliceUserSeat).getOfferResult(),
+    E(aliceUserSeat).getPayout(govKeyword),
+    E(governedPF).getProposalTreshold(),
+  ]);
+
+  const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
+  t.deepEqual(offerResult, 'Sucess! Check your payouts.')
+  t.deepEqual(govAmountReceived, govAmountWanted);
+  t.deepEqual(propTreshold, ceilMultiplyBy(
+    govAmountReceived,
+    makeRatio(2n, govBrand)
+  ));
+
+  const offerArgs = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n),
+    vote: false,
+  });
+
+  const propsal = harden({
+    give: { [govKeyword]: govAmountReceived },
+    want: { POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) }
+  });
+
+  const payment = harden({
+    [govKeyword]: govPayout,
+  });
+
+  const aliceQuestionsSeat = await E(zoe).offer(
+    E(electionManagerPublicFacet).makePoseQuestionsInvitation(),
+    propsal,
+    payment,
+    offerArgs
+  );
+
+  const questionOfferResult = await E(aliceQuestionsSeat).getOfferResult();
+  const popPayoutP = E(aliceQuestionsSeat).getPayout('POP');
+
+  const [openQuestions, popAmountReceived] = await Promise.all([
+    E(electoratePublicFacet).getOpenQuestions(),
+    E(popIssuer).getAmountOf(popPayoutP),
+  ]);
+
+  const { value: [{ questionHandle } ] } = popAmountReceived;
+  const questionFromElectorateP = E(electoratePublicFacet).getQuestion(openQuestions[0]);
+  const voteCounterFromElectorate = await E(questionFromElectorateP).getVoteCounter();
+  const { instance } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+
+  t.log(popAmountReceived);
+
+  t.deepEqual(questionOfferResult,
+    'The questison has been successfuly asked. Please redeem your tokens after the voting is ended.');
+  t.truthy(openQuestions.length === 1);
+  t.deepEqual(openQuestions[0], questionHandle);
+  t.deepEqual(voteCounterFromElectorate, instance);
+
+});
+
+test('addQuestion-lower-than-treshold', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerCreatorFacet, electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs
+  } = await setupServices(t);
+
+  const [govBrand, govIssuer, govKeyword, { popBrand, popIssuer }] = await Promise.all([
+    E(governedPF).getGovernanceBrand(),
+    E(governedPF).getGovernanceIssuer(),
+    E(governedPF).getGovernanceKeyword(),
+    E(electionManagerPublicFacet).getPopInfo(),
+  ]);
+
+  const govAmountWanted = AmountMath.make(govBrand, 5n * 10n ** 6n);
+
+  /**
+   * @type {UserSeat}
+   */
+  const aliceUserSeat = await E(zoe).offer(
+    E(governedPF).makeFaucetInvitation(),
+    harden({ want: { [govKeyword]: govAmountWanted } }),
+  );
+
+  const [offerResult, govPayout, propTreshold] = await Promise.all([
+    E(aliceUserSeat).getOfferResult(),
+    E(aliceUserSeat).getPayout(govKeyword),
+    E(governedPF).getProposalTreshold(),
+  ]);
+
+  const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
+  t.deepEqual(offerResult, 'Sucess! Check your payouts.')
+  t.deepEqual(govAmountReceived, govAmountWanted);
+  t.deepEqual(propTreshold, ceilMultiplyBy(
+    govAmountReceived,
+    makeRatio(2n, govBrand)
+  ));
+
+  const lockAmount = ceilMultiplyBy(govAmountReceived, makeRatio(1n, govBrand));
+  const [lockPayment] = await E(govIssuer).split(govPayout, lockAmount);
+
+  const proposal = harden({
+    give: { [govKeyword]: lockAmount },
+    want: { POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) },
+  });
+
+  const payment = harden({
+    [govKeyword]: lockPayment,
+  });
+
+  /**
+   * @type {UserSeat}
+   */
+  const aliceBadQuestionSeat = await E(zoe).offer(
+    E(electionManagerPublicFacet).makePoseQuestionsInvitation(),
+    proposal,
+    payment,
+    harden({}),
+  );
+
+  await t.throwsAsync(async () => await E(aliceBadQuestionSeat).getOfferResult());
+});
