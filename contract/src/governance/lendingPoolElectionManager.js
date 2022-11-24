@@ -208,7 +208,7 @@ const start = async (zcf, privateArgs) => {
       questionSeat.incrementBy(
         voterSeat.decrementBy(harden({ [governanceKeyword]: amountToLock }))
       );
-      zcf.reallocate();
+      zcf.reallocate(questionSeat, voterSeat);
 
       const popAmount = AmountMath.make(popBrand, harden([{
         govLocked: amountToLock,

@@ -304,23 +304,49 @@ test('voteOnQuestion', async t => {
     installs
   } = await setupServices(t);
 
-  const { fetchGovFromFaucet, addQuestion } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
-  const { checkGovFetchedCorrectly, checkQuestionAskedCorrectly } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+  const { fetchGovFromFaucet, addQuestion, voteOnQuestion } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+  const { checkGovFetchedCorrectly, checkQuestionAskedCorrectly, checkVotedSuccessfully } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
 
-  const aliceGovSeat = await fetchGovFromFaucet(5n);
+  const aliceGovSeat = await fetchGovFromFaucet({ unitsWanted: 5n });
   const aliceGovPayout = await checkGovFetchedCorrectly(aliceGovSeat, { unitsWanted: 5n});
+
+  const bobGovSeat = await fetchGovFromFaucet({ unitsWanted: 1n });
+  const bobGovPayout = await checkGovFetchedCorrectly(bobGovSeat, { unitsWanted: 1n });
+
+  const maggieGovSeat = await fetchGovFromFaucet({ unitsWanted: 2n });
+  const maggieGovPayout = await checkGovFetchedCorrectly(maggieGovSeat, { unitsWanted: 2n })
+
+  const peterGovSeat = await fetchGovFromFaucet({ unitsWanted: 15n, decimals: 5n });
+  const peterGovPayout = await checkGovFetchedCorrectly(peterGovSeat, { unitsWanted: 15n, decimals: 5n })
 
   const offerArgs = harden({
     apiMethodName: 'resolveArgument',
     methodArgs: ['Alice'],
     voteCounterInstallation: installs.counter,
     deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n),
-    vote: true,
+    vote: false,
   });
 
+  // Alice adds a new question
   const aliceQuestionSeat = await addQuestion(aliceGovPayout, offerArgs);
   const aliceQuestionHandle = await checkQuestionAskedCorrectly(aliceQuestionSeat);
 
-  // Work in progress
+  // Prepare Positions
+  const { positive, negative } = makeApiInvocationPositions(offerArgs.apiMethodName, offerArgs.methodArgs);
+
+  // Bob votes `For`
+  const bobVoteSeat = await voteOnQuestion(bobGovPayout, positive, aliceQuestionHandle);
+  await checkVotedSuccessfully(bobVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 1n });
+
+  // Maggie votes `Against`
+  const maggieVoteSeat = await voteOnQuestion(maggieGovPayout, negative, aliceQuestionHandle);
+  await checkVotedSuccessfully(maggieVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 2n });
+
+  // Petet votes `For`
+  const peterVoteSeat = await voteOnQuestion(peterGovPayout, positive, aliceQuestionHandle);
+  await checkVotedSuccessfully(peterVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 15n, decimals: 5n });
+
+  // await E(timer).tickN(10n);
+
 
 });

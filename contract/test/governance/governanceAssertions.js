@@ -15,19 +15,26 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     E(electoratePublicFacet).getQuestionSubscriber(),
   ]);
 
-  const checkGovFetchedCorrectly = async (fetchSeat, { unitsWanted }) => {
+  let totalGovFetched = AmountMath.makeEmpty(govBrand);
+
+  const checkGovFetchedCorrectly = async (fetchSeat, { unitsWanted, decimals }) => {
     const [offerResult, govPayout, propTreshold] = await Promise.all([
       E(fetchSeat).getOfferResult(),
       E(fetchSeat).getPayout(govKeyword),
       E(governedPF).getProposalTreshold(),
     ]);
 
-    const govAmountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(govDecimals));
+    const effectiveDecimals = decimals ? decimals : govDecimals;
+
+    const govAmountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(effectiveDecimals));
     const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
     t.deepEqual(offerResult, 'Sucess! Check your payouts.')
     t.deepEqual(govAmountReceived, govAmountWanted);
+
+    totalGovFetched = AmountMath.add(totalGovFetched, govAmountReceived);
+
     t.deepEqual(propTreshold, ceilMultiplyBy(
-      govAmountReceived,
+      totalGovFetched,
       makeRatio(2n, govBrand)
     ));
 
@@ -69,9 +76,38 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     return questionHandle;
   };
 
+  const checkVotedSuccessfully = async (voteSeat, { questionHandle, valueLocked, decimals }) => {
+    const [offerResult, payout] = await Promise.all([
+      E(voteSeat).getOfferResult(),
+      E(voteSeat).getPayout('POP'),
+    ]);
+
+    const effectiveDecimals = decimals ? decimals : govDecimals;
+    const amountLocked = AmountMath.make(govBrand, valueLocked * 10n ** BigInt(effectiveDecimals));
+
+    const { value: [popContent] } = await E(popIssuer).getAmountOf(payout);
+
+    t.is(offerResult,
+      'Successfully voted. Do not forget to redeem your governance tokens once the voting is ended.');
+    t.deepEqual(popContent, {
+      govLocked: amountLocked,
+      status: 'success',
+      role: 'voter',
+      questionHandle,
+    });
+  };
+
+  const checkVotingEndedProperly = async ({ questionHandle }) => {
+    const { outcomeOfUpdate } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+
+
+  };
+
   return {
     checkGovFetchedCorrectly,
-    checkQuestionAskedCorrectly
+    checkQuestionAskedCorrectly,
+    checkVotedSuccessfully,
+    checkVotingEndedProperly,
   }
 };
 

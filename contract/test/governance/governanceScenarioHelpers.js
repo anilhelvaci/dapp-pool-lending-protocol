@@ -19,10 +19,14 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
   ]);
 
   /**
-   * @param {BigInt} unitsWanted
+   * @param {{
+   *   unitsWanted: BigInt,
+   *   decimals: BigInt
+   * }}
    */
-  const fetchGovFromFaucet = async (unitsWanted) => {
-    const amountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(govDecimals));
+  const fetchGovFromFaucet = async ({ unitsWanted, decimals }) => {
+    const effectiveDecimals = decimals ? decimals : govDecimals;
+    const amountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(effectiveDecimals));
 
     return await E(zoe).offer(
       E(governedPF).makeFaucetInvitation(),
@@ -55,9 +59,22 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     );
   };
 
+  const voteOnQuestion = async (votePayment, position, questionHandle) => {
+    const voteAmount = await E(govIssuer).getAmountOf(votePayment);
+
+    return E(zoe).offer(
+      E(electionManagerPublicFacet).makeVoteOnQuestionInvitation(),
+      harden({give: { [govKeyword]: voteAmount },
+        want: {POP: AmountMath.makeEmpty(popBrand, AssetKind.SET)}}),
+      harden({[govKeyword]: votePayment}),
+      harden({ questionHandle, positions: [position] })
+    )
+  };
+
   return {
     fetchGovFromFaucet,
     addQuestion,
+    voteOnQuestion,
   };
 };
 
