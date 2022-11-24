@@ -3,6 +3,14 @@ import { E } from '@endo/far';
 import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
 
+/**
+ *
+ * @param t
+ * @param {ZoeService} zoe
+ * @param governedPF
+ * @param electionManagerPublicFacet
+ * @param electoratePublicFacet
+ */
 const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet) => {
 
   const govBrandP = E(governedPF).getGovernanceBrand();
@@ -97,9 +105,57 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     });
   };
 
-  const checkVotingEndedProperly = async ({ questionHandle }) => {
-    const { outcomeOfUpdate } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+  /**
+   *
+   * @param {Array<UserSeat>} seats
+   */
+  const calculateTotalAmountLockedFromPop = async (seats) => {
 
+    let totalAmount = AmountMath.makeEmpty(govBrand);
+
+    const currentAllocations = await Promise.all(
+      [...seats].map( seat => E(seat).getCurrentAllocationJig() )
+    );
+
+    currentAllocations.forEach(allocation => {
+      const { POP: { value: [{ govLocked }] } } = allocation;
+      totalAmount = AmountMath.add(totalAmount, govLocked);
+    })
+
+    return totalAmount;
+  }
+
+  /**
+   *
+   * @param questionHandle
+   * @param result
+   * @param {Array<UserSeat>} seats
+   * @param {{
+   *   resultPromise: Promise,
+   *   expectedResolveValue
+   * }} executionOutcome
+   * @returns {Promise<void>}
+   */
+  const checkVotingEndedProperly = async ({ questionHandle, result, seats, executionOutcome = undefined }) => {
+
+    const { outcomeOfUpdate, instance} = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+    const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
+    const [actualResult, isOpen, totalAmountFromSeats, questionSeatGovAllocated] = await Promise.all([
+      outcomeOfUpdate,
+      E(voteCounterPublicFacetP).isOpen(),
+      calculateTotalAmountLockedFromPop(seats),
+      E(electionManagerPublicFacet).getAmountLockedInQuestion(questionHandle),
+    ]);
+
+
+    t.deepEqual(actualResult, result);
+    t.is(isOpen, false);
+    t.deepEqual(totalAmountFromSeats, questionSeatGovAllocated);
+
+    if (executionOutcome) {
+      const actualResolveValue = await (executionOutcome.resultPromise);
+      t.deepEqual(executionOutcome.expectedResolveValue, actualResolveValue);
+    }
 
   };
 

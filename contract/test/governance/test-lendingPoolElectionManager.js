@@ -304,8 +304,18 @@ test('voteOnQuestion', async t => {
     installs
   } = await setupServices(t);
 
-  const { fetchGovFromFaucet, addQuestion, voteOnQuestion } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
-  const { checkGovFetchedCorrectly, checkQuestionAskedCorrectly, checkVotedSuccessfully } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+  const {
+    fetchGovFromFaucet,
+    addQuestion,
+    voteOnQuestion,
+  } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+
+  const {
+    checkGovFetchedCorrectly,
+    checkQuestionAskedCorrectly,
+    checkVotedSuccessfully,
+    checkVotingEndedProperly,
+  } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
 
   const aliceGovSeat = await fetchGovFromFaucet({ unitsWanted: 5n });
   const aliceGovPayout = await checkGovFetchedCorrectly(aliceGovSeat, { unitsWanted: 5n});
@@ -323,7 +333,7 @@ test('voteOnQuestion', async t => {
     apiMethodName: 'resolveArgument',
     methodArgs: ['Alice'],
     voteCounterInstallation: installs.counter,
-    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n),
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
     vote: false,
   });
 
@@ -346,7 +356,15 @@ test('voteOnQuestion', async t => {
   const peterVoteSeat = await voteOnQuestion(peterGovPayout, positive, aliceQuestionHandle);
   await checkVotedSuccessfully(peterVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 15n, decimals: 5n });
 
-  // await E(timer).tickN(10n);
-
+  await E(timer).tickN(11n);
+  await checkVotingEndedProperly({
+    questionHandle: aliceQuestionHandle,
+    result: positive,
+    seats: [aliceQuestionSeat, bobVoteSeat, maggieVoteSeat, peterVoteSeat],
+    executionOutcome: {
+      resultPromise: E(governedPF).getTestPromise(),
+      expectedResolveValue: 'Hello Alice!!!'
+    },
+  });
 
 });

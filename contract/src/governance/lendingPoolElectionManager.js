@@ -124,6 +124,11 @@ const start = async (zcf, privateArgs) => {
     return { details, outcomeOfUpdate, instance };
   };
 
+  const getAmountLockedInQuestion = (questionHandle) => {
+    const { questionSeat } = questions.get(questionHandle);
+    return questionSeat.getAmountAllocated(governanceKeyword);
+   };
+
   const { voteOnApiInvocation, createdQuestion: createdApiQuestion } =
     await initApiGovernance();
 
@@ -245,6 +250,7 @@ const start = async (zcf, privateArgs) => {
     getGovernedContract: () => governedInstance,
     getPopInfo: () => harden({ popBrand, popIssuer }),
     getQuestionData,
+    getAmountLockedInQuestion,
   });
 
   const creatorFacet = Far('CreatorFacet', {
