@@ -1,0 +1,80 @@
+import { assert, details as X } from '@agoric/assert';
+import { E } from '@endo/far';
+import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
+import { AmountMath } from '@agoric/ertp';
+
+const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet) => {
+
+  const govBrandP = E(governedPF).getGovernanceBrand();
+  const [govBrand, { decimalPlaces: govDecimals }, govIssuer, govKeyword, { popBrand, popIssuer }, electorateSubscriber] = await Promise.all([
+    govBrandP,
+    E(govBrandP).getDisplayInfo(),
+    E(governedPF).getGovernanceIssuer(),
+    E(governedPF).getGovernanceKeyword(),
+    E(electionManagerPublicFacet).getPopInfo(),
+    E(electoratePublicFacet).getQuestionSubscriber(),
+  ]);
+
+  const checkGovFetchedCorrectly = async (fetchSeat, { unitsWanted }) => {
+    const [offerResult, govPayout, propTreshold] = await Promise.all([
+      E(fetchSeat).getOfferResult(),
+      E(fetchSeat).getPayout(govKeyword),
+      E(governedPF).getProposalTreshold(),
+    ]);
+
+    const govAmountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(govDecimals));
+    const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
+    t.deepEqual(offerResult, 'Sucess! Check your payouts.')
+    t.deepEqual(govAmountReceived, govAmountWanted);
+    t.deepEqual(propTreshold, ceilMultiplyBy(
+      govAmountReceived,
+      makeRatio(2n, govBrand)
+    ));
+
+    return govPayout;
+  };
+
+  /**
+   * @param {UserSeat} questionSeat
+   */
+  const checkQuestionAskedCorrectly = async questionSeat => {
+
+    const questionOfferResult = await E(questionSeat).getOfferResult();
+    const popPayoutP = E(questionSeat).getPayout('POP');
+
+    const [openQuestions, popAmountReceived, publication] = await Promise.all([
+      E(electoratePublicFacet).getOpenQuestions(),
+      E(popIssuer).getAmountOf(popPayoutP),
+      E(electorateSubscriber).subscribeAfter()
+    ]);
+
+    const { value: [{ questionHandle } ] } = popAmountReceived;
+    const questionFromElectorateP = E(electoratePublicFacet).getQuestion(openQuestions[0]);
+    const voteCounterFromElectorate = await E(questionFromElectorateP).getVoteCounter();
+    const { instance } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+
+    t.log(popAmountReceived);
+    t.log(publication);
+
+    const { head: { value: { questionHandle: handleFromSubscriber } } } = publication;
+
+    t.deepEqual(questionOfferResult,
+      'The questison has been successfuly asked. Please redeem your tokens after the voting is ended.');
+    t.truthy(openQuestions.length === 1);
+    t.deepEqual(openQuestions[0], questionHandle);
+    t.deepEqual(handleFromSubscriber, questionHandle);
+    t.deepEqual(openQuestions[0], handleFromSubscriber);
+    t.deepEqual(voteCounterFromElectorate, instance);
+
+    return questionHandle;
+  };
+
+  return {
+    checkGovFetchedCorrectly,
+    checkQuestionAskedCorrectly
+  }
+};
+
+harden(makeGovernanceAssertionHelpers);
+export { makeGovernanceAssertionHelpers };
+

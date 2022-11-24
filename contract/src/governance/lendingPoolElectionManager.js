@@ -143,6 +143,9 @@ const start = async (zcf, privateArgs) => {
         vote
       } = offerArgs;
 
+      const effectiveTotalSupply = vote ? totalSupply : AmountMath.subtract(totalSupply, amountToLock);
+      assert(!AmountMath.isEmpty(effectiveTotalSupply), X`Can't pose questions when the effectiveTotalSuplly is zero.`);
+
       const { zcfSeat: questionSeat } = zcf.makeEmptySeatKit();
 
       questionSeat.incrementBy(
@@ -153,7 +156,7 @@ const start = async (zcf, privateArgs) => {
 
       zcf.reallocate(poserSeat, questionSeat);
 
-      await E(electorateFacet).updateTotalSupply(AmountMath.getValue(govBrand, totalSupply));
+      await E(electorateFacet).updateTotalSupply(AmountMath.getValue(govBrand, effectiveTotalSupply));
 
       const {
         details,
@@ -188,8 +191,39 @@ const start = async (zcf, privateArgs) => {
 
   const makeVoteOnQuestionInvitation = () => {
     /** @type OfferHandler */
-    const voteOnQuestion = (voterSeat) => {
+    const voteOnQuestion = async (voterSeat, offerArgs) => {
+      // TODO: assertOfferArgs - check positions valid
+      const { questionHandle, positions } = offerArgs;
+      assert(questions.has(questionHandle), X`There is no such question.`);
 
+      const { questionSeat, instance } = questions.get(questionHandle);
+      const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
+      const isQuestionOpen = await E(voteCounterPublicFacetP).isOpen();
+      assert(isQuestionOpen, X`Voting is closed.`);
+
+      const {
+        give: { [governanceKeyword]: amountToLock }
+      } = voterSeat.getProposal();
+
+      questionSeat.incrementBy(
+        voterSeat.decrementBy(harden({ [governanceKeyword]: amountToLock }))
+      );
+      zcf.reallocate();
+
+      const popAmount = AmountMath.make(popBrand, harden([{
+        govLocked: amountToLock,
+        status: 'success',
+        role: 'voter',
+        questionHandle,
+      }]));
+
+      popMint.mintGains({ POP: popAmount }, voterSeat);
+      voterSeat.exit();
+
+      const voteWeight = AmountMath.getValue(govBrand, amountToLock);
+      await E(electorateFacet).voteOnQuestion(questionHandle, positions, voteWeight);
+
+      return 'Successfully voted. Do not forget to redeem your governance tokens once the voting is ended.';
     };
 
     return zcf.makeInvitation(voteOnQuestion, 'VoteOnQuestionInvitation');

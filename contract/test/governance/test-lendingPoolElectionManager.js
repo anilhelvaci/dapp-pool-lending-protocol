@@ -18,6 +18,8 @@ import { makeMockChainStorageRoot } from '@agoric/vats/tools/storage-test-utils.
 import { makeStorageNodeChild } from '@agoric/vats/src/lib-chainStorage.js';
 import { makeBoard } from '@agoric/vats/src/lib-board.js';
 import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/ratio.js';
+import { makeGovernanceScenarioHeplpers } from './governanceScenarioHelpers.js';
+import { makeGovernanceAssertionHelpers } from './governanceAssertions.js';
 
 // Paths are given according to ../lendingPool/setup.js
 const CONTRACT_ROOTS = {
@@ -184,7 +186,7 @@ test('addQuestion', async t => {
     methodArgs: ['Alice'],
     voteCounterInstallation: installs.counter,
     deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n),
-    vote: false,
+    vote: true,
   });
 
   const propsal = harden({
@@ -289,5 +291,36 @@ test('addQuestion-lower-than-treshold', async t => {
     harden({}),
   );
 
-  await t.throwsAsync(async () => await E(aliceBadQuestionSeat).getOfferResult());
+  await t.throwsAsync(async () => E(aliceBadQuestionSeat).getOfferResult());
+});
+
+test('voteOnQuestion', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerCreatorFacet, electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs
+  } = await setupServices(t);
+
+  const { fetchGovFromFaucet, addQuestion } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+  const { checkGovFetchedCorrectly, checkQuestionAskedCorrectly } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+
+  const aliceGovSeat = await fetchGovFromFaucet(5n);
+  const aliceGovPayout = await checkGovFetchedCorrectly(aliceGovSeat, { unitsWanted: 5n});
+
+  const offerArgs = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 10n),
+    vote: true,
+  });
+
+  const aliceQuestionSeat = await addQuestion(aliceGovPayout, offerArgs);
+  const aliceQuestionHandle = await checkQuestionAskedCorrectly(aliceQuestionSeat);
+
+  // Work in progress
+
 });

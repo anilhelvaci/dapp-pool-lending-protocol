@@ -61,7 +61,6 @@ const start = (zcf) => {
     getQuestionSubscriber: () => questionsSubscriber,
     getOpenQuestions: () => getOpenQuestions(allQuestions),
     getQuestion: handleP => getQuestion(handleP, allQuestions),
-    getGovernedBrand: () => governedContext.brand,
   });
 
   const creatorFacet = Far('CreatorFacet', {
