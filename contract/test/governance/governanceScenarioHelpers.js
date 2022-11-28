@@ -71,10 +71,26 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     )
   };
 
+  const redeem = async (popPayment, { redeemValue, decimals }) => {
+    const popAmount = await E(popIssuer).getAmountOf(popPayment);
+    const effectiveDecimals = decimals ? decimals : govDecimals;
+    const amountWanted = AmountMath.make(govBrand, redeemValue * 10n ** BigInt(effectiveDecimals));
+
+    return E(zoe).offer(
+      E(electionManagerPublicFacet).makeRedeemAssetInvitation(),
+      harden({
+        give: { POP: popAmount },
+        want: { [govKeyword]: amountWanted }
+      }),
+      harden({ POP: popPayment })
+    );
+  };
+
   return {
     fetchGovFromFaucet,
     addQuestion,
     voteOnQuestion,
+    redeem,
   };
 };
 

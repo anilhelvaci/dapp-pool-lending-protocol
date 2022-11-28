@@ -1,5 +1,5 @@
 import { assert, details as X } from '@agoric/assert';
-import { E } from '@endo/far';
+import { E, Far } from '@endo/far';
 import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
 
@@ -32,9 +32,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
       E(governedPF).getProposalTreshold(),
     ]);
 
-    const effectiveDecimals = decimals ? decimals : govDecimals;
-
-    const govAmountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(effectiveDecimals));
+    const govAmountWanted = calculateGovAmountFromValue({ value: unitsWanted, decimals })
     const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
     t.deepEqual(offerResult, 'Sucess! Check your payouts.')
     t.deepEqual(govAmountReceived, govAmountWanted);
@@ -57,8 +55,9 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     const questionOfferResult = await E(questionSeat).getOfferResult();
     const popPayoutP = E(questionSeat).getPayout('POP');
 
-    const [openQuestions, popAmountReceived, publication] = await Promise.all([
+    const [openQuestions, popPayout, popAmountReceived, publication] = await Promise.all([
       E(electoratePublicFacet).getOpenQuestions(),
+      popPayoutP,
       E(popIssuer).getAmountOf(popPayoutP),
       E(electorateSubscriber).subscribeAfter()
     ]);
@@ -81,7 +80,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     t.deepEqual(openQuestions[0], handleFromSubscriber);
     t.deepEqual(voteCounterFromElectorate, instance);
 
-    return questionHandle;
+    return harden({ questionHandle, popPayment: popPayout });
   };
 
   const checkVotedSuccessfully = async (voteSeat, { questionHandle, valueLocked, decimals }) => {
@@ -90,8 +89,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
       E(voteSeat).getPayout('POP'),
     ]);
 
-    const effectiveDecimals = decimals ? decimals : govDecimals;
-    const amountLocked = AmountMath.make(govBrand, valueLocked * 10n ** BigInt(effectiveDecimals));
+    const amountLocked = calculateGovAmountFromValue({ value: valueLocked, decimals })
 
     const { value: [popContent] } = await E(popIssuer).getAmountOf(payout);
 
@@ -103,6 +101,8 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
       role: 'voter',
       questionHandle,
     });
+
+    return harden({ popPayment: payout });
   };
 
   /**
@@ -159,11 +159,52 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
 
   };
 
+  /**
+   *
+   * @param {UserSeat} redeemSeat
+   * @param {BigInt} unitsWanted
+   * @param {BigInt} decimals
+   */
+  const checkRedeemedProperly = async (redeemSeat, { unitsWanted, decimals }) => {
+    const govAmountExpected = calculateGovAmountFromValue({ value: unitsWanted, decimals });
+    const payoutP = E(redeemSeat).getPayout(govKeyword);
+
+    const [offerResult, receivedAmount] = await Promise.all([
+      E(redeemSeat).getOfferResult(),
+      E(govIssuer).getAmountOf(payoutP),
+    ]);
+
+    t.is(offerResult, 'Thanks for participating in protocol governance.');
+    t.deepEqual(govAmountExpected, receivedAmount);
+  };
+
+  /**
+   *
+   * @param {Handle} questionHandle
+   * @param {{
+   *   value: bigint,
+   *   decimals: bigint
+   * }} expected
+   */
+  const checkQuestionBalance = async ({ questionHandle, expected }) => {
+    const expectedAmount = calculateGovAmountFromValue(expected);
+    const actualBalance = await E(electionManagerPublicFacet).getAmountLockedInQuestion(questionHandle);
+
+    t.deepEqual(expectedAmount, actualBalance);
+  };
+
+  const calculateGovAmountFromValue = ( { value, decimals } ) => {
+    const effectiveDecimals = decimals ? decimals : govDecimals;
+    return AmountMath.make(govBrand, value * 10n ** BigInt(effectiveDecimals));
+  };
+
   return {
     checkGovFetchedCorrectly,
     checkQuestionAskedCorrectly,
     checkVotedSuccessfully,
     checkVotingEndedProperly,
+    checkRedeemedProperly,
+    checkQuestionBalance,
   }
 };
 

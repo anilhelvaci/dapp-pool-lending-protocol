@@ -368,3 +368,121 @@ test('voteOnQuestion', async t => {
   });
 
 });
+
+/**
+ * Scenario - 1
+ * - Alice asks a question
+ * - Alice chooses not to vote with the tokens she used to ask the question
+ * - Bob chosses to vote 'For' with the weight 1000000 GOV tokens
+ * - Maggie chooses to vote 'Against' with the weight 2000000 GOV tokens
+ * - Peter chooses to vote 'For' with the weight 1500000 GOV tokens
+ * - Outcome position is 'positive'
+ * - Everybody redeems
+ * - Question balance is zero
+ *
+ */
+test('scenario-1', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs
+  } = await setupServices(t);
+
+  const {
+    fetchGovFromFaucet,
+    addQuestion,
+    voteOnQuestion,
+    redeem,
+  } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+
+  const {
+    checkGovFetchedCorrectly,
+    checkQuestionAskedCorrectly,
+    checkVotedSuccessfully,
+    checkVotingEndedProperly,
+    checkRedeemedProperly,
+    checkQuestionBalance,
+  } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+
+  const aliceGovSeat = await fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayout = await checkGovFetchedCorrectly(aliceGovSeat, { unitsWanted: 5n});
+
+  const bobGovSeat = await fetchGovFromFaucet({ unitsWanted: 1n });
+  const bobGovPayout = await checkGovFetchedCorrectly(bobGovSeat, { unitsWanted: 1n });
+
+  const maggieGovSeat = await fetchGovFromFaucet({ unitsWanted: 2n });
+  const maggieGovPayout = await checkGovFetchedCorrectly(maggieGovSeat, { unitsWanted: 2n })
+
+  const peterGovSeat = await fetchGovFromFaucet({ unitsWanted: 15n, decimals: 5n });
+  const peterGovPayout = await checkGovFetchedCorrectly(peterGovSeat, { unitsWanted: 15n, decimals: 5n })
+
+  const offerArgs = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  // Alice adds a new question
+  const aliceQuestionSeat = await addQuestion(aliceGovPayout, offerArgs);
+  const {
+    questionHandle: aliceQuestionHandle,
+    popPayment: alicePopPayment
+  } = await checkQuestionAskedCorrectly(aliceQuestionSeat);
+
+  // Prepare Positions
+  const { positive, negative } = makeApiInvocationPositions(offerArgs.apiMethodName, offerArgs.methodArgs);
+
+  // Bob votes `For`
+  const bobVoteSeat = await voteOnQuestion(bobGovPayout, positive, aliceQuestionHandle);
+  const { popPayment: bobPopPayment } = await checkVotedSuccessfully(bobVoteSeat, {
+    questionHandle: aliceQuestionHandle,
+    valueLocked: 1n,
+  });
+
+  // Maggie votes `Against`
+  const maggieVoteSeat = await voteOnQuestion(maggieGovPayout, negative, aliceQuestionHandle);
+  const { popPayment: maggiePopPayment } = await checkVotedSuccessfully(maggieVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 2n });
+
+  // Petet votes `For`
+  const peterVoteSeat = await voteOnQuestion(peterGovPayout, positive, aliceQuestionHandle);
+  const { popPayment: peterPopPayment } = await checkVotedSuccessfully(peterVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 15n, decimals: 5n });
+
+  await E(timer).tickN(11n);
+  await checkVotingEndedProperly({
+    questionHandle: aliceQuestionHandle,
+    result: positive,
+    seats: [aliceQuestionSeat, bobVoteSeat, maggieVoteSeat, peterVoteSeat],
+    executionOutcome: {
+      resultPromise: E(governedPF).getTestPromise(),
+      expectedResolveValue: 'Hello Alice!!!'
+    },
+  });
+
+  // Bob redeems
+  const bobRedeemSeat = await redeem(bobPopPayment, { redeemValue: 1n });
+  await checkRedeemedProperly(bobRedeemSeat, { unitsWanted: 1n });
+
+  // Maggie redeems
+  const maggieRedeemSeat = await redeem(maggiePopPayment, { redeemValue: 2n });
+  await checkRedeemedProperly(maggieRedeemSeat, { unitsWanted: 2n });
+
+  // Peter redeems
+  const peterRedeemSeat = await redeem(peterPopPayment, { redeemValue: 15n, decimals: 5n });
+  await checkRedeemedProperly(peterRedeemSeat, { unitsWanted: 15n, decimals: 5n });
+
+  // Alice redeems
+  const aliceRedeemSeat = await redeem(alicePopPayment, { redeemValue: 5n });
+  await checkRedeemedProperly(aliceRedeemSeat, { unitsWanted: 5n });
+
+  // Question balance should be empty
+  await checkQuestionBalance({
+    questionHandle: aliceQuestionHandle, expected: {
+      value: 0n,
+    },
+  });
+});

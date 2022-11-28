@@ -237,7 +237,27 @@ const start = async (zcf, privateArgs) => {
   const makeRedeemAssetInvitation = () => {
     /** @type OfferHandler */
     const redeem = (voterSeat) => {
+      const {
+        give: { POP: amountToRedeem }
+      } = voterSeat.getProposal();
 
+      console.log({ amountToRedeem });
+      const [{ questionHandle, govLocked }] = AmountMath.getValue(popBrand, amountToRedeem);
+      // TODO: question should be closed
+      assert(questions.has(questionHandle), X`No such question.`);
+      const { questionSeat } = questions.get(questionHandle);
+
+      questionSeat.incrementBy(
+        voterSeat.decrementBy(harden({ POP: amountToRedeem }))
+      );
+      questionSeat.decrementBy(
+        voterSeat.incrementBy({ [governanceKeyword]: govLocked }),
+      );
+      zcf.reallocate(questionSeat, voterSeat);
+      popMint.burnLosses({ POP: amountToRedeem }, questionSeat);
+      voterSeat.exit();
+
+    return 'Thanks for participating in protocol governance.';
     };
 
     return zcf.makeInvitation(redeem, 'VoteOnQuestionInvitation');
