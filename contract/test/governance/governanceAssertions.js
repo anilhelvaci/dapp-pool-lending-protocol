@@ -2,6 +2,7 @@ import { assert, details as X } from '@agoric/assert';
 import { E, Far } from '@endo/far';
 import { ceilMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
+import { calculateGovAmountFromValue } from '../../src/governance/tools.js';
 
 /**
  *
@@ -14,7 +15,10 @@ import { AmountMath } from '@agoric/ertp';
 const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet) => {
 
   const govBrandP = E(governedPF).getGovernanceBrand();
-  const [govBrand, { decimalPlaces: govDecimals }, govIssuer, govKeyword, { popBrand, popIssuer }, electorateSubscriber] = await Promise.all([
+  const [govBrand, { decimalPlaces: govDecimals }, govIssuer, govKeyword, {
+    popBrand,
+    popIssuer,
+  }, electorateSubscriber] = await Promise.all([
     govBrandP,
     E(govBrandP).getDisplayInfo(),
     E(governedPF).getGovernanceIssuer(),
@@ -26,22 +30,24 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
   let totalGovFetched = AmountMath.makeEmpty(govBrand);
 
   const checkGovFetchedCorrectly = async (fetchSeat, { unitsWanted, decimals }) => {
-    const [offerResult, govPayout, propTreshold] = await Promise.all([
+    const [offerResult, govPayout] = await Promise.all([
       E(fetchSeat).getOfferResult(),
       E(fetchSeat).getPayout(govKeyword),
-      E(governedPF).getProposalTreshold(),
     ]);
 
-    const govAmountWanted = calculateGovAmountFromValue({ value: unitsWanted, decimals })
-    const govAmountReceived = await E(govIssuer).getAmountOf(govPayout);
-    t.deepEqual(offerResult, 'Sucess! Check your payouts.')
+    const govAmountWanted = calculateGovAmountFromValue({ govBrand, govDecimals }, { value: unitsWanted, decimals });
+    const [govAmountReceived, propTreshold] = await Promise.all([
+      E(govIssuer).getAmountOf(govPayout),
+      E(governedPF).getProposalTreshold(),
+    ]);
+    t.deepEqual(offerResult, 'Sucess! Check your payouts.');
     t.deepEqual(govAmountReceived, govAmountWanted);
 
     totalGovFetched = AmountMath.add(totalGovFetched, govAmountReceived);
-
+    console.log({propTreshold})
     t.deepEqual(propTreshold, ceilMultiplyBy(
       totalGovFetched,
-      makeRatio(2n, govBrand)
+      makeRatio(2n, govBrand),
     ));
 
     return govPayout;
@@ -49,8 +55,11 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
 
   /**
    * @param {UserSeat} questionSeat
+   * @param {{
+   *   questionIndex: number
+   * }} expected
    */
-  const checkQuestionAskedCorrectly = async questionSeat => {
+  const checkQuestionAskedCorrectly = async (questionSeat, { questionIndex }) => {
 
     const questionOfferResult = await E(questionSeat).getOfferResult();
     const popPayoutP = E(questionSeat).getPayout('POP');
@@ -59,11 +68,11 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
       E(electoratePublicFacet).getOpenQuestions(),
       popPayoutP,
       E(popIssuer).getAmountOf(popPayoutP),
-      E(electorateSubscriber).subscribeAfter()
+      E(electorateSubscriber).subscribeAfter(),
     ]);
 
-    const { value: [{ questionHandle } ] } = popAmountReceived;
-    const questionFromElectorateP = E(electoratePublicFacet).getQuestion(openQuestions[0]);
+    const { value: [{ questionHandle }] } = popAmountReceived;
+    const questionFromElectorateP = E(electoratePublicFacet).getQuestion(openQuestions[questionIndex]);
     const voteCounterFromElectorate = await E(questionFromElectorateP).getVoteCounter();
     const { instance } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
 
@@ -74,10 +83,10 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
 
     t.deepEqual(questionOfferResult,
       'The questison has been successfuly asked. Please redeem your tokens after the voting is ended.');
-    t.truthy(openQuestions.length === 1);
-    t.deepEqual(openQuestions[0], questionHandle);
+    t.truthy(openQuestions.length === (questionIndex + 1));
+    t.deepEqual(openQuestions[questionIndex], questionHandle);
     t.deepEqual(handleFromSubscriber, questionHandle);
-    t.deepEqual(openQuestions[0], handleFromSubscriber);
+    t.deepEqual(openQuestions[questionIndex], handleFromSubscriber);
     t.deepEqual(voteCounterFromElectorate, instance);
 
     return harden({ questionHandle, popPayment: popPayout });
@@ -89,7 +98,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
       E(voteSeat).getPayout('POP'),
     ]);
 
-    const amountLocked = calculateGovAmountFromValue({ value: valueLocked, decimals })
+    const amountLocked = calculateGovAmountFromValue({ govBrand, govDecimals }, { value: valueLocked, decimals });
 
     const { value: [popContent] } = await E(popIssuer).getAmountOf(payout);
 
@@ -114,16 +123,16 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     let totalAmount = AmountMath.makeEmpty(govBrand);
 
     const currentAllocations = await Promise.all(
-      [...seats].map( seat => E(seat).getCurrentAllocationJig() )
+      [...seats].map(seat => E(seat).getCurrentAllocationJig()),
     );
 
     currentAllocations.forEach(allocation => {
       const { POP: { value: [{ govLocked }] } } = allocation;
       totalAmount = AmountMath.add(totalAmount, govLocked);
-    })
+    });
 
     return totalAmount;
-  }
+  };
 
   /**
    *
@@ -138,7 +147,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
    */
   const checkVotingEndedProperly = async ({ questionHandle, result, seats, executionOutcome = undefined }) => {
 
-    const { outcomeOfUpdate, instance} = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+    const { outcomeOfUpdate, instance } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
     const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
     const [actualResult, isOpen, totalAmountFromSeats, questionSeatGovAllocated] = await Promise.all([
       outcomeOfUpdate,
@@ -166,7 +175,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
    * @param {BigInt} decimals
    */
   const checkRedeemedProperly = async (redeemSeat, { unitsWanted, decimals }) => {
-    const govAmountExpected = calculateGovAmountFromValue({ value: unitsWanted, decimals });
+    const govAmountExpected = calculateGovAmountFromValue({ govBrand, govDecimals }, { value: unitsWanted, decimals });
     const payoutP = E(redeemSeat).getPayout(govKeyword);
 
     const [offerResult, receivedAmount] = await Promise.all([
@@ -187,15 +196,10 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
    * }} expected
    */
   const checkQuestionBalance = async ({ questionHandle, expected }) => {
-    const expectedAmount = calculateGovAmountFromValue(expected);
+    const expectedAmount = calculateGovAmountFromValue({ govBrand, govDecimals }, expected);
     const actualBalance = await E(electionManagerPublicFacet).getAmountLockedInQuestion(questionHandle);
 
     t.deepEqual(expectedAmount, actualBalance);
-  };
-
-  const calculateGovAmountFromValue = ( { value, decimals } ) => {
-    const effectiveDecimals = decimals ? decimals : govDecimals;
-    return AmountMath.make(govBrand, value * 10n ** BigInt(effectiveDecimals));
   };
 
   return {
@@ -205,7 +209,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     checkVotingEndedProperly,
     checkRedeemedProperly,
     checkQuestionBalance,
-  }
+  };
 };
 
 harden(makeGovernanceAssertionHelpers);

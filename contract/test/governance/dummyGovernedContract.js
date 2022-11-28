@@ -31,7 +31,7 @@ const start = async (zcf, privateArgs) => {
   /**
    * @type {Amount<K>}
    */
-  const limit = AmountMath.make(govBrand, 5n * 10n ** 6n + 1n); // 5 units of GOV at a time at max.
+  const limit = AmountMath.make(govBrand, 10n * 10n ** 6n + 1n); // 5 units of GOV at a time at max.
   /**
    * @type {Ratio}
    */

@@ -236,7 +236,7 @@ const start = async (zcf, privateArgs) => {
 
   const makeRedeemAssetInvitation = () => {
     /** @type OfferHandler */
-    const redeem = (voterSeat) => {
+    const redeem = async voterSeat => {
       const {
         give: { POP: amountToRedeem }
       } = voterSeat.getProposal();
@@ -245,7 +245,11 @@ const start = async (zcf, privateArgs) => {
       const [{ questionHandle, govLocked }] = AmountMath.getValue(popBrand, amountToRedeem);
       // TODO: question should be closed
       assert(questions.has(questionHandle), X`No such question.`);
-      const { questionSeat } = questions.get(questionHandle);
+      const { questionSeat, instance } = questions.get(questionHandle);
+
+      const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
+      const isQuestionOpen = await E(voteCounterPublicFacetP).isOpen();
+      assert(!isQuestionOpen, X`Wait until the voting ends.`);
 
       questionSeat.incrementBy(
         voterSeat.decrementBy(harden({ POP: amountToRedeem }))

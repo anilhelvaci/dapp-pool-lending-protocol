@@ -1,5 +1,6 @@
 import { AmountMath, AssetKind } from '@agoric/ertp';
 import { E } from '@endo/far';
+import { calculateGovAmountFromValue } from '../../src/governance/tools.js';
 
 /**
  *
@@ -22,13 +23,12 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
    * @param {{
    *   unitsWanted: BigInt,
    *   decimals: BigInt
-   * }}
+   * }} expected
    */
   const fetchGovFromFaucet = async ({ unitsWanted, decimals }) => {
-    const effectiveDecimals = decimals ? decimals : govDecimals;
-    const amountWanted = AmountMath.make(govBrand, unitsWanted * 10n ** BigInt(effectiveDecimals));
+    const amountWanted = calculateGovAmountFromValue({ govBrand, govDecimals }, { value: unitsWanted, decimals });
 
-    return await E(zoe).offer(
+    return E(zoe).offer(
       E(governedPF).makeFaucetInvitation(),
       harden({ want: { [govKeyword]: amountWanted } }),
     );
@@ -64,17 +64,30 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
 
     return E(zoe).offer(
       E(electionManagerPublicFacet).makeVoteOnQuestionInvitation(),
-      harden({give: { [govKeyword]: voteAmount },
-        want: {POP: AmountMath.makeEmpty(popBrand, AssetKind.SET)}}),
-      harden({[govKeyword]: votePayment}),
-      harden({ questionHandle, positions: [position] })
+      harden({
+        give: { [govKeyword]: voteAmount },
+        want: { POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) },
+      }),
+      harden({ [govKeyword]: votePayment }),
+      harden({ questionHandle, positions: [position] }),
+    );
+  };
+
+  const voteWithMaliciousToken = async (payment, amount, position, questionHandle) => {
+    return E(zoe).offer(
+      E(electionManagerPublicFacet).makeVoteOnQuestionInvitation(),
+      harden({
+        give: { [govKeyword]: amount },
+        want: { POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) }
+      }),
+      harden({ [govKeyword]: payment }),
+      harden({ questionHandle, positions: [position] }),
     )
   };
 
   const redeem = async (popPayment, { redeemValue, decimals }) => {
     const popAmount = await E(popIssuer).getAmountOf(popPayment);
-    const effectiveDecimals = decimals ? decimals : govDecimals;
-    const amountWanted = AmountMath.make(govBrand, redeemValue * 10n ** BigInt(effectiveDecimals));
+    const amountWanted = calculateGovAmountFromValue({ govBrand, govDecimals }, { value: redeemValue, decimals })
 
     return E(zoe).offer(
       E(electionManagerPublicFacet).makeRedeemAssetInvitation(),
@@ -86,11 +99,27 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     );
   };
 
+  /**
+   *
+   * @param {Payment} govPayout
+   * @param {{
+   *   value: BigInt,
+   *   decimals: BigInt
+   * }} expected
+   * @returns {Promise<*>}
+   */
+  const splitGovPayout = async (govPayout, expected) => {
+    const wantedAmount = calculateGovAmountFromValue({govBrand, govDecimals}, expected);
+    return await E(govIssuer).split(govPayout, wantedAmount);
+  };
+
   return {
     fetchGovFromFaucet,
     addQuestion,
     voteOnQuestion,
+    voteWithMaliciousToken,
     redeem,
+    splitGovPayout
   };
 };
 
