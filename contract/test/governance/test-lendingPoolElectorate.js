@@ -19,7 +19,6 @@ import { makePromiseKit } from '@endo/promise-kit';
 // Paths are given according to ../lendingPool/setup.js
 const CONTRACT_ROOTS = {
   lendingPoolElectorate: '../../src/governance/lendingPoolElectorate.js',
-  dummyElectionManager: '../governance/dummyElectionManager.js',
   counter: '@agoric/governance/src/binaryVoteCounter.js',
 };
 
@@ -37,7 +36,6 @@ const setupServices = async (t) => {
 
   const installs = await Collect.allValues({
     lendingPoolElectorate: installations.lendingPoolElectorate,
-    dummyElectionManager: installations.dummyElectionManager,
     counter: installations.counter,
   });
 
@@ -46,17 +44,10 @@ const setupServices = async (t) => {
     publicFacet: electoratePublicFacet,
   } = await E(zoe).startInstance(installs.lendingPoolElectorate, {}, {});
 
-  const { creatorFacet: electionManagerCreatorFacet, } = await E(zoe).startInstance(
-    installs.dummyElectionManager,
-    { GOV: govIssuer },
-    {},
-    { electorateFacetInvitation: E(electorateCreatorFacet).getElectorateFacetInvitation() });
-
   return harden({
     zoe,
     electorateCreatorFacet,
     electoratePublicFacet,
-    electionManagerCreatorFacet,
     govKit: {
       govBrand,
       govIssuer,
@@ -75,13 +66,11 @@ test.before(async t => {
 
   const paths = await Promise.all([
     getPath(CONTRACT_ROOTS.lendingPoolElectorate),
-    getPath(CONTRACT_ROOTS.dummyElectionManager),
     getPath(CONTRACT_ROOTS.counter),
   ])
   // note that the liquidation might be a different bundle name
   const bundles = await Collect.allValues({
     lendingPoolElectorate: bundleCache.load(paths[0], 'lendingPoolElectorate'),
-    dummyElectionManager: bundleCache.load(paths[1], 'dummyElectionManager'),
     counter: bundleCache.load(paths[2], 'binaryVoteCounter'),
   });
   const installations = objectMap(bundles, bundle => E(farZoeKit.zoe).install(bundle));
@@ -175,7 +164,6 @@ test('addQuestion-successful-negative-outcome', async t => {
 
   /** @type PromiseKit */
   const testPromiseKit = makePromiseKit();
-  const testPromise = testPromiseKit.promise;
 
   const electorateFacet = Far('ElectorateFacet - Test', {
     addQuestion: E(electorateCreatorFacet).addQuestion,
