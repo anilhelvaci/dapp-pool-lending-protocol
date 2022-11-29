@@ -163,6 +163,12 @@
  * @property {Installation} liquidationInstall
  * @property {Object} loanTimingParams
  * @property {Brand} compareCurrencyBrand
+ * @property {{
+ *   keyword: String,
+ *   units: BigInt,
+ *   decimals: BigInt,
+ *   committeeSize: BigInt
+ * }} governance
  */
 
 // Loan
