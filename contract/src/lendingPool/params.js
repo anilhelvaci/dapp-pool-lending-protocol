@@ -115,7 +115,12 @@ const makeElectorateParamManager = async (zoe, storageNode, marshaller, electora
  * @param {Rates} rates
  * @param {XYKAMMPublicFacet} ammPublicFacet
  * @param {Brand} compareCurrencyBrand
- * @param {bigint=} bootstrapPaymentValue
+ * @param {{
+ *   keyword: String,
+ *   units: BigInt,
+ *   decimals: Number,
+ *   committeeSize: Number
+ * }} governance
  */
 const makeGovernedTerms = (
   { storageNode, marshaller },
@@ -127,7 +132,7 @@ const makeGovernedTerms = (
   rates,
   ammPublicFacet,
   compareCurrencyBrand,
-  bootstrapPaymentValue = 0n,
+  governance
 ) => {
   const timingParamMgr = makeLoanTimingManager(storageNode, marshaller, loanTiming);
 
@@ -141,7 +146,7 @@ const makeGovernedTerms = (
     timerService,
     liquidationInstall,
     governedParams: makeElectorateParams(invitationAmount),
-    bootstrapPaymentValue,
+    governance,
     compareCurrencyBrand
   });
 };

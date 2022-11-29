@@ -115,10 +115,12 @@ export const setupServices = async (
     governorInstance,
     lendingPoolCreatorFacet,
     lendingPoolPublicFacet,
+    lendingPoolInstance
   ] = await Promise.all([
     instance.consume.lendingPoolGovernor,
     lendingPoolCreatorFacetP,
     E(governorCreatorFacet).getPublicFacet(),
+    instance.consume.lendingPool,
   ]);
 
   const { g, l } = {
@@ -130,6 +132,7 @@ export const setupServices = async (
     l: {
       lendingPoolCreatorFacet,
       lendingPoolPublicFacet,
+      lendingPoolInstance,
     },
   };
 
@@ -235,7 +238,7 @@ export const startLendingPool = async (
   const marshaller = await E(board).getReadonlyMarshaller();
 
   const loanFactoryTerms = makeGovernedTerms(
-    {storageNode, marshaller},
+    { storageNode, marshaller },
     priceManager, // priceMan here
     loanParams,
     installations.liquidate,
@@ -244,7 +247,12 @@ export const startLendingPool = async (
     poolManagerParams,
     ammPublicFacet,
     compareBrand,
-    undefined
+    {
+      keyword: 'LPT',
+      units: 100_000n,
+      decimals: 6,
+      committeeSize: 5,
+    },
   );
 
   const governorTerms = harden({

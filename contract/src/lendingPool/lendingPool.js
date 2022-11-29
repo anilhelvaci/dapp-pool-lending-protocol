@@ -112,22 +112,24 @@ export const start = async (zcf, privateArgs) => {
 
   const { brand: govBrand, issuer: govIssuer } = govMint.getIssuerRecord();
   const { zcfSeat: govSeat } = zcf.makeEmptySeatKit();
-  const totalSupply = AmountMath.make(govBrand, units * 10n ** decimals);
+  const totalSupply = AmountMath.make(govBrand, units * 10n ** BigInt(decimals));
   const proposalThreshold = ceilMultiplyBy(totalSupply, makeRatio(2n, govBrand));
   govMint.mintGains({ [keyword]: totalSupply }, govSeat);
-  const supplyRatio = makeRatio(1n, govBrand, committeeSize, govBrand);
+  const supplyRatio = makeRatio(1n, govBrand, BigInt(committeeSize), govBrand);
+  const memberSupplyAmount = floorMultiplyBy(totalSupply, supplyRatio);
 
   const makeFetchGovInvitation = () => {
     /** @type OfferHandler */
     const govFaucet = (committeeMemberSeat) => {
-      const memberShareAmount = floorMultiplyBy(totalSupply, supplyRatio);
       committeeMemberSeat.incrementBy(
         govSeat.decrementBy(
-          harden({ [keyword]: memberShareAmount })
+          harden({ [keyword]: memberSupplyAmount })
         )
       );
       zcf.reallocate(committeeMemberSeat, govSeat);
       committeeMemberSeat.exit();
+
+      return 'Thanks for participating in the protocol governance';
     };
 
     return zcf.makeInvitation(govFaucet, 'Governance Faucet');
@@ -360,6 +362,8 @@ export const start = async (zcf, privateArgs) => {
     getGovernanceKeyword: () => keyword,
     getTotalSupply: () => totalSupply,
     getProposalTreshold: () => proposalThreshold,
+    getGovBalance: () => govSeat.getAmountAllocated(keyword, govBrand),
+    getMemberSupplyAmount: () => memberSupplyAmount,
   });
 
   const getParamMgrRetriever = () =>

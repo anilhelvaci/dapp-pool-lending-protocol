@@ -411,6 +411,15 @@ export const makeLendingPoolScenarioHelpers = (
     else if (poolType === POOL_TYPES.DEBT) debtPoolProtocolFaucet = newFaucet;
     else throw new Error('Invalid PoolType');
   }
+
+  const fetchGovTokens = index => {
+    const invitationP = E(lendingPoolCreatorFacet).getGovernanceInvitation(index);
+
+    return E(zoe).offer(
+      invitationP,
+    )
+  };
+
   return harden({
     addPool,
     depositMoney,
@@ -418,5 +427,6 @@ export const makeLendingPoolScenarioHelpers = (
     adjust,
     closeLoan,
     redeem,
+    fetchGovTokens
   })
 };

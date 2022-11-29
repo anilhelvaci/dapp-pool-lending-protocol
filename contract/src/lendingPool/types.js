@@ -141,6 +141,7 @@
  * underlyingKeyword: string,
  * rates: Object, priceAuthority:
  * PriceAuthority) => ERef<PoolManager>} addPoolType
+ * @property {(index: Number) => Invitation} getGovernanceInvitation
  */
 
 /**
@@ -166,8 +167,8 @@
  * @property {{
  *   keyword: String,
  *   units: BigInt,
- *   decimals: BigInt,
- *   committeeSize: BigInt
+ *   decimals: Number,
+ *   committeeSize: Number
  * }} governance
  */
 
