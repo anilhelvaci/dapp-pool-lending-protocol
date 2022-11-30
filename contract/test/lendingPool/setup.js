@@ -43,6 +43,7 @@ export const CONTRACT_ROOTS = {
   reserve: '@agoric/inter-protocol/src/reserve/assetReserve.js',
   lendingPoolElectorate: '../../src/governance/lendingPoolElectorate.js',
   lendingPoolElectionManager: '../../src/governance/lendingPoolElectionManager.js',
+  counter: '@agoric/governance/src/binaryVoteCounter.js',
 };
 
 /**
@@ -112,6 +113,10 @@ export const setupServices = async (
   await startLendingPool(space, { loanParams: loanTiming });
 
   const governorCreatorFacet = consume.lendingPoolGovernorCreator;
+  const governorPublicFacet = consume.lendingPoolGovernorPublic;
+  const lendingPoolElectoratePF = consume.lendingPoolElectoratePublicFacet;
+  const lendingPoolElectorateCF = consume.lendingPoolElectorateCreatorFacet;
+
   /** @type {Promise<LendingPoolCreatorFacet>} */
   const lendingPoolCreatorFacetP = (
     E(governorCreatorFacet).getCreatorFacet()
@@ -130,10 +135,10 @@ export const setupServices = async (
     instance.consume.lendingPool,
   ]);
 
-  const { g, l } = {
+  const { g, l, e } = {
     g: {
       governorInstance,
-      governorPublicFacet: E(zoe).getPublicFacet(governorInstance),
+      governorPublicFacet,
       governorCreatorFacet,
     },
     l: {
@@ -141,6 +146,10 @@ export const setupServices = async (
       lendingPoolPublicFacet,
       lendingPoolInstance,
     },
+    e: {
+      lendingPoolElectoratePF,
+      lendingPoolElectorateCF,
+    }
   };
 
   /** @type LendingPoolScenarioHelpers */
@@ -158,6 +167,7 @@ export const setupServices = async (
     zoe,
     governor: g,
     lendingPool: l,
+    electorate: e,
     ammFacets,
     timer,
     assertions,
@@ -271,7 +281,11 @@ export const startLendingPool = async (
       issuerKeywordRecord: {},
     },
   });
-  const { creatorFacet: lendingPoolElectionMgrCreatorFacet, instance: lendingPoolElectionMgrInstance } =
+  const {
+    creatorFacet: lendingPoolElectionMgrCreatorFacet,
+    publicFacet: lendingPoolElectionMgrPublicFacet,
+    instance: lendingPoolElectionMgrInstance,
+  } =
     await E(zoe).startInstance(
       lendingPoolElectionManagerInstall,
       undefined,
@@ -290,6 +304,7 @@ export const startLendingPool = async (
 
   produce.lendingPoolCreator.resolve(lendingPoolCreator);
   produce.lendingPoolGovernorCreator.resolve(lendingPoolElectionMgrCreatorFacet);
+  produce.lendingPoolGovernorPublic.resolve(lendingPoolElectionMgrPublicFacet);
 
   // Advertise the installations, instances in agoricNames.
   instance.produce.lendingPool.resolve(lendingPoolInstance);
@@ -408,12 +423,13 @@ const setupLendinPoolElectorate = async (
 
   const {
     creatorFacet: lendingPoolElectorateCreatorFacet,
+    publicFacet: lendingPoolElectoratePublicFacet,
     instance: lendingPoolElectorateInstance
   } = await E(zoe).startInstance(lendingPoolElectorate);
 
   instanceProduce.lendingPoolElectorate.resolve(lendingPoolElectorateInstance);
   produce.lendingPoolElectorateCreatorFacet.resolve(lendingPoolElectorateCreatorFacet);
-
+  produce.lendingPoolElectoratePublicFacet.resolve(lendingPoolElectoratePublicFacet);
 
 };
 
