@@ -55,6 +55,8 @@ test.before(async t => {
     LendingPool: bundleCache.load(await getPath(CONTRACT_ROOTS.LendingPool), 'lendingPool'),
     amm: bundleCache.load(await getPath(CONTRACT_ROOTS.amm), 'amm'),
     reserve: bundleCache.load(await getPath(CONTRACT_ROOTS.reserve), 'reserve'),
+    lendingPoolElectorate: bundleCache.load(await getPath(CONTRACT_ROOTS.lendingPoolElectorate), 'lendingPoolElectorate'),
+    lendingPoolElectionManager: bundleCache.load(await getPath(CONTRACT_ROOTS.lendingPoolElectionManager), 'lendingPoolElectionManager'),
   });
   const installations = objectMap(bundles, bundle => E(farZoeKit.zoe).install(bundle));
 
@@ -100,7 +102,7 @@ test('initial', async t => {
 });
 
 /**
- * Scenario - 1
+ * Governance Token
  * - Start the contract with the contract with the gov token data in the terms
  * - Check govSeat allocations
  * - Alice uses inv 0 to fetch some gov tokens. Assert;
@@ -112,7 +114,7 @@ test('initial', async t => {
  * Try to get an invitation with an index greater than the committee size. Assert;
  *     - Should throw
  */
-test('scenario-1', async t => {
+test('governance-token', async t => {
   const {
     lendingPool: {
       lendingPoolPublicFacet,
@@ -175,5 +177,11 @@ test('scenario-1', async t => {
   const usedInvIndexFetchGovSeatP = fetchGovTokens(0);
   await t.throwsAsync(() => E(usedInvIndexFetchGovSeatP).getOfferResult());
 
+});
+
+test('add-new-pool-with-governance-voting', async t => {
+  const services = await setupServices(t);
+  console.log('services', services);
+  t.is('is', 'is');
 });
 
