@@ -89,6 +89,7 @@ const start = async (zcf, privateArgs) => {
     makeFaucetInvitation,
     getTestPromise: () => testPromiseKit.promise,
     getProposalTreshold,
+    getCommitteeSize: () => 5,
   });
 
   const limitedCreatorFacet = Far('Limited Creator Facet', {

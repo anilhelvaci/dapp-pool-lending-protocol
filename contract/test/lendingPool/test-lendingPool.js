@@ -64,6 +64,9 @@ test.before(async t => {
     LendingPool: bundleCache.load(await getPath(CONTRACT_ROOTS.LendingPool), 'lendingPool'),
     amm: bundleCache.load(await getPath(CONTRACT_ROOTS.amm), 'amm'),
     reserve: bundleCache.load(await getPath(CONTRACT_ROOTS.reserve), 'reserve'),
+    lendingPoolElectorate: bundleCache.load(await getPath(CONTRACT_ROOTS.lendingPoolElectorate), 'lendingPoolElectorate'),
+    lendingPoolElectionManager: bundleCache.load(await getPath(CONTRACT_ROOTS.lendingPoolElectionManager), 'lendingPoolElectionManager'),
+    counter: bundleCache.load(await getPath(CONTRACT_ROOTS.counter), 'binaryVoteCounter'),
   });
   const installations = objectMap(bundles, bundle => E(farZoeKit.zoe).install(bundle));
 

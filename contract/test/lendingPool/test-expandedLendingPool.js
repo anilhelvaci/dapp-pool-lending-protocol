@@ -121,22 +121,26 @@ test('initial', async t => {
  */
 test('governance-token', async t => {
   const {
+    zoe,
     lendingPool: {
       lendingPoolPublicFacet,
+      lendingPoolCreatorFacet,
       lendingPoolInstance
+    },
+    governor: {
+      governorPublicFacet,
     },
     assertions: {
       assertGovTokenInitializedCorrectly,
       assertGovFetchedCorrectly,
     },
-    scenarioHelpers: {
-      fetchGovTokens,
-    },
   } = await setupServices(t);
 
   await assertGovTokenInitializedCorrectly({ lendingPoolPublicFacet, lendingPoolInstance });
 
-  const aliceFetchGovSeatP = fetchGovTokens(0);
+  const { fetchGovTokenSingleMember } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolCreatorFacet);
+
+  const aliceFetchGovSeatP = fetchGovTokenSingleMember(0);
   await assertGovFetchedCorrectly(aliceFetchGovSeatP, {
     lendingPoolPublicFacet,
     keyword: 'LPT',
@@ -144,7 +148,7 @@ test('governance-token', async t => {
     expectedSupplyValue: 20_000n * 10n ** 6n,
   });
 
-  const bobFetchGovSeatP = fetchGovTokens(1);
+  const bobFetchGovSeatP = fetchGovTokenSingleMember(1);
   await assertGovFetchedCorrectly(bobFetchGovSeatP, {
     lendingPoolPublicFacet,
     keyword: 'LPT',
@@ -152,7 +156,7 @@ test('governance-token', async t => {
     expectedSupplyValue: 20_000n * 10n ** 6n,
   });
 
-  const maggieFetchGovSeatP = fetchGovTokens(2);
+  const maggieFetchGovSeatP = fetchGovTokenSingleMember(2);
   await assertGovFetchedCorrectly(maggieFetchGovSeatP, {
     lendingPoolPublicFacet,
     keyword: 'LPT',
@@ -160,7 +164,7 @@ test('governance-token', async t => {
     expectedSupplyValue: 20_000n * 10n ** 6n,
   });
 
-  const peterFetchGovSeatP = fetchGovTokens(3);
+  const peterFetchGovSeatP = fetchGovTokenSingleMember(3);
   await assertGovFetchedCorrectly(peterFetchGovSeatP, {
     lendingPoolPublicFacet,
     keyword: 'LPT',
@@ -168,7 +172,7 @@ test('governance-token', async t => {
     expectedSupplyValue: 20_000n * 10n ** 6n,
   });
 
-  const chrisFetchGovSeatP = fetchGovTokens(4);
+  const chrisFetchGovSeatP = fetchGovTokenSingleMember(4);
   await assertGovFetchedCorrectly(chrisFetchGovSeatP, {
     lendingPoolPublicFacet,
     keyword: 'LPT',
@@ -176,10 +180,10 @@ test('governance-token', async t => {
     expectedSupplyValue: 20_000n * 10n ** 6n,
   });
 
-  const invalidInvIndexFetchGovSeatP = fetchGovTokens(5);
+  const invalidInvIndexFetchGovSeatP = fetchGovTokenSingleMember(5);
   await t.throwsAsync(() => E(invalidInvIndexFetchGovSeatP).getOfferResult());
 
-  const usedInvIndexFetchGovSeatP = fetchGovTokens(0);
+  const usedInvIndexFetchGovSeatP = fetchGovTokenSingleMember(0);
   await t.throwsAsync(() => E(usedInvIndexFetchGovSeatP).getOfferResult());
 
 });
