@@ -92,6 +92,20 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     );
   };
 
+  const voteOnQuestionBadOfferArgs = async (votePayment, offerArgs) => {
+    const voteAmount = await E(govIssuer).getAmountOf(votePayment);
+
+    return E(zoe).offer(
+      E(electionManagerPublicFacet).makeVoteOnQuestionInvitation(),
+      harden({
+        give: { [govKeyword]: voteAmount },
+        want: { POP: AmountMath.makeEmpty(popBrand, AssetKind.SET) },
+      }),
+      harden({ [govKeyword]: votePayment }),
+      harden(offerArgs),
+    );
+  };
+
   const voteWithMaliciousToken = async (payment, amount, position, questionHandle) => {
     return E(zoe).offer(
       E(electionManagerPublicFacet).makeVoteOnQuestionInvitation(),
@@ -141,6 +155,7 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     splitGovPayout,
     fetchGovTokenSingleMember,
     fetchGovTokensAllCommittee,
+    voteOnQuestionBadOfferArgs
   };
 };
 

@@ -2,10 +2,10 @@ import { E, Far } from '@endo/far';
 import { makeStore } from '@agoric/store';
 import { CONTRACT_ELECTORATE } from '@agoric/governance';
 import { makeApiInvocationPositions, setupApiGovernance } from '@agoric/governance/src/contractGovernance/governApi.js';
-import { PROPOSAL_TRESHOLD_KEY } from '../lendingPool/params.js';
 import { assertCanPoseQuestions } from './tools.js';
-import { AssetKind, AmountMath } from '@agoric/ertp';
+import { AmountMath, AssetKind } from '@agoric/ertp';
 import { assert, details as X } from '@agoric/assert';
+import { assertPoseQuestionOfferArgs, assertVoteOnQuestionOfferArgs } from './assertionHelper.js';
 
 /**
  *
@@ -128,24 +128,21 @@ const start = async (zcf, privateArgs) => {
     return questionSeat.getAmountAllocated(governanceKeyword);
    };
 
-  const { voteOnApiInvocation, createdQuestion: createdApiQuestion } =
-    await initApiGovernance();
+  const { voteOnApiInvocation } = await initApiGovernance();
 
   const makePoseQuestionsInvitation = () => {
     /** @type OfferHandler */
     const poseQuestion = async (poserSeat, offerArgs) => {
       const { totalSupply, proposalTreshold } = await getGovernanceMetadata();
-      assert(!AmountMath.isEmpty(totalSupply), X`Can't pose questions when there's no governance token supply`);
-      const amountToLock = assertCanPoseQuestions(poserSeat, governanceKeyword, proposalTreshold);
 
-      // TODO: Implement some method like `assertOfferArgs`
+      const amountToLock = assertCanPoseQuestions(poserSeat, governanceKeyword, proposalTreshold, totalSupply);
       const {
         apiMethodName,
         methodArgs,
         voteCounterInstallation,
         deadline,
         vote
-      } = offerArgs;
+      } = assertPoseQuestionOfferArgs(offerArgs);
 
       const effectiveTotalSupply = vote ? totalSupply : AmountMath.subtract(totalSupply, amountToLock);
       assert(!AmountMath.isEmpty(effectiveTotalSupply), X`Can't pose questions when the effectiveTotalSuplly is zero.`);
@@ -196,14 +193,9 @@ const start = async (zcf, privateArgs) => {
   const makeVoteOnQuestionInvitation = () => {
     /** @type OfferHandler */
     const voteOnQuestion = async (voterSeat, offerArgs) => {
-      // TODO: assertOfferArgs - check positions valid
-      const { questionHandle, positions } = offerArgs;
-      assert(questions.has(questionHandle), X`There is no such question.`);
-
+      const { questionHandle, positions } = assertVoteOnQuestionOfferArgs(offerArgs, questions);
       const { questionSeat, instance } = questions.get(questionHandle);
-      const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
-      const isQuestionOpen = await E(voteCounterPublicFacetP).isOpen();
-      assert(isQuestionOpen, X`Voting is closed.`);
+      assert((await isQuestionOpen(instance)), X`Voting is closed.`);
 
       const {
         give: { [governanceKeyword]: amountToLock }
@@ -242,13 +234,10 @@ const start = async (zcf, privateArgs) => {
 
       console.log({ amountToRedeem });
       const [{ questionHandle, govLocked }] = AmountMath.getValue(popBrand, amountToRedeem);
-      // TODO: question should be closed
       assert(questions.has(questionHandle), X`No such question.`);
       const { questionSeat, instance } = questions.get(questionHandle);
 
-      const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
-      const isQuestionOpen = await E(voteCounterPublicFacetP).isOpen();
-      assert(!isQuestionOpen, X`Wait until the voting ends.`);
+      assert(!(await isQuestionOpen(instance)), X`Wait until the voting ends.`);
 
       questionSeat.incrementBy(
         voterSeat.decrementBy(harden({ POP: amountToRedeem }))
@@ -263,7 +252,16 @@ const start = async (zcf, privateArgs) => {
     return 'Thanks for participating in protocol governance.';
     };
 
-    return zcf.makeInvitation(redeem, 'VoteOnQuestionInvitation');
+    return zcf.makeInvitation(redeem, 'RedeemInvitation');
+  };
+
+  /**
+   * @param {Instance} instance
+   * @return Promise<Boolean>
+   */
+  const isQuestionOpen = async (instance) => {
+    const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
+    return await E(voteCounterPublicFacetP).isOpen();
   };
 
   const publicFacet = Far('PublicFacet', {

@@ -450,6 +450,161 @@ test('try-to-redeem-when-question-open', async t => {
   await t.throwsAsync(() => E(bobRedeemSeatP).getOfferResult());
 });
 
+test('add-question-bad-offer-args', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs,
+  } = await setupServices(t);
+
+  const {
+    fetchGovFromFaucet,
+    addQuestion,
+  } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+
+  const {
+    checkGovFetchedCorrectly,
+  } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+
+  const aliceGovSeatOne = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayoutOne = await checkGovFetchedCorrectly(aliceGovSeatOne, { unitsWanted: 5n });
+
+
+  const offerArgsMissingApiMethodName = harden({
+    // Property 'apiMethodName' should exist
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  const aliceQSeatMissingApiMethodName = addQuestion(aliceGovPayoutOne, offerArgsMissingApiMethodName);
+  await t.throwsAsync(() => E(aliceQSeatMissingApiMethodName).getOfferResult(), { message: 'Bad apiMethodName' });
+
+  const aliceGovSeatTwo = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayoutTwo = await checkGovFetchedCorrectly(aliceGovSeatTwo, { unitsWanted: 5n });
+
+  const offerArgsBadMethodArgs = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: 'Alice', // Should be an array
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  const aliceQSeatBadMethodArgs = addQuestion(aliceGovPayoutTwo, offerArgsBadMethodArgs);
+  await t.throwsAsync(() => E(aliceQSeatBadMethodArgs).getOfferResult(), { message: 'Bad methodArgs' });
+
+  const aliceGovSeatThree = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayoutThree = await checkGovFetchedCorrectly(aliceGovSeatThree, { unitsWanted: 5n });
+
+  const offerArgsMissingCounter = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    // Property 'voteCounterInstallation' should exist
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  const aliceQSeatMissingCounter = addQuestion(aliceGovPayoutThree, offerArgsMissingCounter);
+  await t.throwsAsync(() => E(aliceQSeatMissingCounter).getOfferResult(), { message: 'Bad voteCounterInstallation' });
+
+  const aliceGovSeatFour = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayoutFour = await checkGovFetchedCorrectly(aliceGovSeatFour, { unitsWanted: 5n });
+
+  const offerArgsMissingDeadline = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    // Property 'deadline' should exist
+    vote: false,
+  });
+
+  const aliceQSeatMissingDeadline = addQuestion(aliceGovPayoutFour, offerArgsMissingDeadline);
+  await t.throwsAsync(() => E(aliceQSeatMissingDeadline).getOfferResult(), { message: 'Bad deadline' });
+
+  const aliceGovSeatFive = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayoutFive = await checkGovFetchedCorrectly(aliceGovSeatFive, { unitsWanted: 5n });
+
+  const offerArgsMissingVote = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    // Property 'vote' should exist
+  });
+
+  const aliceQSeatMissingVote = addQuestion(aliceGovPayoutFive, offerArgsMissingVote);
+  await t.throwsAsync(() => E(aliceQSeatMissingVote).getOfferResult(), { message: 'Bad vote' });
+});
+
+test('vote-on-question-bad-offer-args', async t => {
+  const {
+    zoe,
+    timer,
+    electionManager: { electionManagerPublicFacet },
+    electorate: { electoratePublicFacet },
+    governed: { governedPF },
+    installs,
+  } = await setupServices(t);
+
+  const {
+    fetchGovFromFaucet,
+    addQuestion,
+    voteOnQuestionBadOfferArgs,
+  } = await makeGovernanceScenarioHeplpers(zoe, governedPF, electionManagerPublicFacet);
+
+  const {
+    checkGovFetchedCorrectly,
+    checkQuestionAskedCorrectly,
+  } = await makeGovernanceAssertionHelpers(t, zoe, governedPF, electionManagerPublicFacet, electoratePublicFacet);
+
+  const aliceGovSeat = fetchGovFromFaucet({ unitsWanted: 5n });
+  const aliceGovPayout = await checkGovFetchedCorrectly(aliceGovSeat, { unitsWanted: 5n });
+
+  const bobGovSeat = fetchGovFromFaucet({ unitsWanted: 1n });
+  const bobGovPayout = await checkGovFetchedCorrectly(bobGovSeat, { unitsWanted: 1n });
+
+  const maggieGovSeat = fetchGovFromFaucet({ unitsWanted: 2n });
+  const maggieGovPayout = await checkGovFetchedCorrectly(maggieGovSeat, { unitsWanted: 2n });
+
+  const peterGovSeat = fetchGovFromFaucet({ unitsWanted: 15n, decimals: 5n });
+  const peterGovPayout = await checkGovFetchedCorrectly(peterGovSeat, { unitsWanted: 15n, decimals: 5n });
+
+  const offerArgs = harden({
+    apiMethodName: 'resolveArgument',
+    methodArgs: ['Alice'],
+    voteCounterInstallation: installs.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  // Alice adds a new question
+  const aliceQuestionSeat = addQuestion(aliceGovPayout, offerArgs);
+  const {
+    questionHandle: aliceQuestionHandle,
+  } = await checkQuestionAskedCorrectly(aliceQuestionSeat, { questionIndex: 0 });
+
+  // Prepare Positions
+  const { positive, negative } = makeApiInvocationPositions(offerArgs.apiMethodName, offerArgs.methodArgs);
+
+  // Bob tries to vote without a 'questionHandle'
+  const bobVoteSeat = voteOnQuestionBadOfferArgs(bobGovPayout, { positions: [positive] });
+  await t.throwsAsync(() => E(bobVoteSeat).getOfferResult(), { message: 'Bad questionHandle' });
+
+  // Maggie tries to vote without 'positions'
+  const maggieVoteSeat = voteOnQuestionBadOfferArgs(maggieGovPayout, { questionHandle: aliceQuestionHandle });
+  await t.throwsAsync(() => E(maggieVoteSeat).getOfferResult(), { message: 'Bad positions' })
+
+  // Petet tries to with an invalid 'positions' format
+  const peterVoteSeat = voteOnQuestionBadOfferArgs(peterGovPayout, { questionHandle: aliceQuestionHandle, positions: true });
+  await t.throwsAsync(() => E(peterVoteSeat).getOfferResult(), { message: 'Bad positions' })
+});
+
+
 /**
  * Scenario - 1
  * - Alice asks a question

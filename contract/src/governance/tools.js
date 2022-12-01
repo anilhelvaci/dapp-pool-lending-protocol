@@ -26,11 +26,13 @@ harden(quorumThreshold);
  * @param {ZCFSeat} poserSeat
  * @param {String} keyword
  * @param {Amount} treshold
+ * @param {Amount} totalSupply
  */
-const assertCanPoseQuestions = (poserSeat, keyword, treshold) => {
+const assertCanPoseQuestions = (poserSeat, keyword, treshold, totalSupply) => {
   const { give: { [keyword]: amountToLock } } = poserSeat.getProposal();
   assert(AmountMath.isGTE(amountToLock, treshold),
     X`The amount ${amountToLock} should be greater than or equal to the treshold amount ${treshold}`);
+  assert(!AmountMath.isEmpty(totalSupply), X`Can't pose questions when there's no governance token supply`);
 
   return amountToLock;
 };
