@@ -364,6 +364,7 @@ export const start = async (zcf, privateArgs) => {
     getProposalTreshold: () => proposalThreshold,
     getGovBalance: () => govSeat.getAmountAllocated(keyword, govBrand),
     getMemberSupplyAmount: () => memberSupplyAmount,
+    getCommitteeSize: () => committeeSize,
   });
 
   const getParamMgrRetriever = () =>

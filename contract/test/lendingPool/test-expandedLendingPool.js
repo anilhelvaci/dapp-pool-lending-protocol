@@ -184,7 +184,17 @@ test('governance-token', async t => {
 
 });
 
-test('add-new-pool-with-governance-voting', async t => {
+/**
+ * Succeessfully invoke 'addPoolType' with governance voting
+ * - Committee get their GOV tokens
+ * - Alice asks a question
+ * - Alice, Bob and Maggie votes positive with all their tokens
+ * - Peter and Chris votes negative
+ * - Outcome is positive
+ * - Everybody redeems
+ * - Question balance is zero
+ */
+test('add-new-pool-with-governance-voting-positive', async t => {
   const {
     vanKit: { brand: vanBrand, issuer: vanIssuer },
     compareCurrencyKit: { brand: usdBrand },
@@ -195,6 +205,7 @@ test('add-new-pool-with-governance-voting', async t => {
     zoe,
     lendingPool: {
       lendingPoolPublicFacet,
+      lendingPoolCreatorFacet,
     },
     governor: {
       governorPublicFacet,
@@ -205,9 +216,6 @@ test('add-new-pool-with-governance-voting', async t => {
     assertions: {
       assertPoolAddedCorrectly,
     },
-    scenarioHelpers: {
-      fetchGovTokens,
-    },
     timer,
   } = await setupServices(t);
 
@@ -215,7 +223,8 @@ test('add-new-pool-with-governance-voting', async t => {
     addQuestion,
     voteOnQuestion,
     redeem,
-  } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet);
+    fetchGovTokensAllCommittee,
+  } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolCreatorFacet);
 
   const {
     checkQuestionAskedCorrectly,
@@ -225,25 +234,12 @@ test('add-new-pool-with-governance-voting', async t => {
     checkQuestionBalance,
   } = await makeGovernanceAssertionHelpers(t, zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolElectoratePF)
 
-  // Committee size is 5
-  const aliceGovSeatP = fetchGovTokens(0);
-  const bobGovSeatP = fetchGovTokens(1);
-  const maggieGovSeatP = fetchGovTokens(2);
-  const peterGovSeatP = fetchGovTokens(3);
-  const chrisGovSeatP = fetchGovTokens(4);
-
   const [
     aliceGovPayment,
     bobGovPayment,
     maggieGovPayment,
     peterGovPayment,
-    chrisGovpayment] = await Promise.all([
-    E(aliceGovSeatP).getPayout('LPT'),
-    E(bobGovSeatP).getPayout('LPT'),
-    E(maggieGovSeatP).getPayout('LPT'),
-    E(peterGovSeatP).getPayout('LPT'),
-    E(chrisGovSeatP).getPayout('LPT'),
-  ]);
+    chrisGovpayment] = await fetchGovTokensAllCommittee();
 
   const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
 
@@ -333,5 +329,258 @@ test('add-new-pool-with-governance-voting', async t => {
     },
   });
 
+});
+
+/**
+ * Try to invoke 'addPoolType' with governance voting but the community says no
+ * - Committee get their GOV tokens
+ * - Alice asks a question
+ * - Alice, Bob votes positive with all their tokens
+ * - Maggie, Peter and Chris votes negative
+ * - Outcome is negative
+ * - Everybody redeems
+ * - Question balance is zero
+ */
+test('add-new-pool-with-governance-voting-negative', async t => {
+  const {
+    vanKit: { brand: vanBrand, issuer: vanIssuer },
+    compareCurrencyKit: { brand: usdBrand },
+    vanRates,
+  } = t.context;
+
+  const {
+    zoe,
+    lendingPool: {
+      lendingPoolPublicFacet,
+      lendingPoolCreatorFacet,
+    },
+    governor: {
+      governorPublicFacet,
+    },
+    electorate: {
+      lendingPoolElectoratePF,
+    },
+    timer,
+  } = await setupServices(t);
+
+  const {
+    addQuestion,
+    voteOnQuestion,
+    redeem,
+    fetchGovTokensAllCommittee,
+  } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolCreatorFacet);
+
+  const {
+    checkQuestionAskedCorrectly,
+    checkVotedSuccessfully,
+    checkVotingEndedProperly,
+    checkRedeemedProperly,
+    checkQuestionBalance,
+  } = await makeGovernanceAssertionHelpers(t, zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolElectoratePF)
+
+  const [
+    aliceGovPayment,
+    bobGovPayment,
+    maggieGovPayment,
+    peterGovPayment,
+    chrisGovpayment] = await fetchGovTokensAllCommittee();
+
+  const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
+
+  const underlyingPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    initialPrice: price,
+    timer,
+  });
+
+  const offerArgs = harden({
+    apiMethodName: 'addPoolType',
+    methodArgs: [vanIssuer, 'VAN', vanRates, underlyingPriceAuthority],
+    voteCounterInstallation: t.context.installations.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: true,
+  });
+
+  // Alice adds a new question
+  const aliceQuestionSeat = addQuestion(aliceGovPayment, offerArgs);
+  const {
+    questionHandle: aliceQuestionHandle,
+    popPayment: alicePopPayment,
+  } = await checkQuestionAskedCorrectly(aliceQuestionSeat, { questionIndex: 0 });
+
+  // Prepare Positions
+  const { positive, negative } = makeApiInvocationPositions(offerArgs.apiMethodName, offerArgs.methodArgs);
+
+  // Bob votes `For`
+  const bobVoteSeat = voteOnQuestion(bobGovPayment, positive, aliceQuestionHandle);
+  const {
+    popPayment: bobPopPayment
+  } = await checkVotedSuccessfully(bobVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 20_000n });
+
+  // Maggie votes `Against`
+  const maggieVoteSeat = voteOnQuestion(maggieGovPayment, negative, aliceQuestionHandle);
+  const {
+    popPayment: maggiePopPayment,
+  } = await checkVotedSuccessfully(maggieVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 20_000n });
+
+  // Peter votes `Against`
+  const peterVoteSeat = voteOnQuestion(peterGovPayment, negative, aliceQuestionHandle);
+  const {
+    popPayment: peterPopPayment,
+  } = await checkVotedSuccessfully(peterVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 20_000n });
+
+  // Peter votes `Against`
+  const chrisVoteSeat = voteOnQuestion(chrisGovpayment, negative, aliceQuestionHandle);
+  const {
+    popPayment: chrisPopPayment,
+  } = await checkVotedSuccessfully(chrisVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 20_000n });
+
+  await E(timer).tickN(11n);
+  await checkVotingEndedProperly({
+    questionHandle: aliceQuestionHandle,
+    result: negative, // Outcome should be nagative
+    seats: [aliceQuestionSeat, bobVoteSeat, maggieVoteSeat, peterVoteSeat, chrisVoteSeat],
+  });
+
+  const poolManagerExists = await E(lendingPoolPublicFacet).hasPool(vanBrand);
+  t.is(poolManagerExists, false);
+
+  // Alice redeems
+  const aliceRedeemSeat = redeem(alicePopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(aliceRedeemSeat, { unitsWanted: 20_000n });
+
+  // Bob redeems
+  const bobRedeemSeat = redeem(bobPopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(bobRedeemSeat, { unitsWanted: 20_000n });
+
+  // Maggie redeems
+  const maggieRedeemSeat = redeem(maggiePopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(maggieRedeemSeat, { unitsWanted: 20_000n });
+
+  // Peter redeems
+  const peterRedeemSeat = redeem(peterPopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(peterRedeemSeat, { unitsWanted: 20_000n });
+
+  // Chris redeems
+  const chrisRedeemSeat = redeem(chrisPopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(chrisRedeemSeat, { unitsWanted: 20_000n });
+
+  // Question balance should be empty
+  await checkQuestionBalance({
+    questionHandle: aliceQuestionHandle, expected: {
+      value: 0n,
+    },
+  });
+});
+
+/**
+ * Try to invoke 'addPoolType' with governance voting but cannot reach quorum
+ * - Committee get their GOV tokens
+ * - Alice asks a question
+ * - Alice chooses not to vote with her tokens
+ * - Bob votes positive with all his tokens
+ * - Nobody else votes
+ * - Outcome is 'No quorum'
+ * - Everybody redeems
+ * - Question balance is zero
+ */
+test('add-new-pool-with-governance-voting-no-quorum', async t => {
+  const {
+    vanKit: { brand: vanBrand, issuer: vanIssuer },
+    compareCurrencyKit: { brand: usdBrand },
+    vanRates,
+  } = t.context;
+
+  const {
+    zoe,
+    lendingPool: {
+      lendingPoolPublicFacet,
+      lendingPoolCreatorFacet,
+    },
+    governor: {
+      governorPublicFacet,
+    },
+    electorate: {
+      lendingPoolElectoratePF,
+    },
+    timer,
+  } = await setupServices(t);
+
+  const {
+    addQuestion,
+    voteOnQuestion,
+    redeem,
+    fetchGovTokensAllCommittee,
+  } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolCreatorFacet);
+
+  const {
+    checkQuestionAskedCorrectly,
+    checkVotedSuccessfully,
+    checkVotingEndedWithNoQuorum,
+    checkRedeemedProperly,
+    checkQuestionBalance,
+  } = await makeGovernanceAssertionHelpers(t, zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolElectoratePF)
+
+  const [
+    aliceGovPayment,
+    bobGovPayment] = await fetchGovTokensAllCommittee();
+
+  const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
+
+  const underlyingPriceAuthority = makeManualPriceAuthority({
+    actualBrandIn: vanBrand,
+    actualBrandOut: usdBrand,
+    initialPrice: price,
+    timer,
+  });
+
+  const offerArgs = harden({
+    apiMethodName: 'addPoolType',
+    methodArgs: [vanIssuer, 'VAN', vanRates, underlyingPriceAuthority],
+    voteCounterInstallation: t.context.installations.counter,
+    deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
+    vote: false,
+  });
+
+  // Alice adds a new question
+  const aliceQuestionSeat = addQuestion(aliceGovPayment, offerArgs);
+  const {
+    questionHandle: aliceQuestionHandle,
+    popPayment: alicePopPayment,
+  } = await checkQuestionAskedCorrectly(aliceQuestionSeat, { questionIndex: 0 });
+
+  // Prepare Positions
+  const { positive } = makeApiInvocationPositions(offerArgs.apiMethodName, offerArgs.methodArgs);
+
+  // Bob votes `For`
+  const bobVoteSeat = voteOnQuestion(bobGovPayment, positive, aliceQuestionHandle);
+  const {
+    popPayment: bobPopPayment
+  } = await checkVotedSuccessfully(bobVoteSeat, { questionHandle: aliceQuestionHandle, valueLocked: 20_000n });
+
+  await E(timer).tickN(11n);
+  await checkVotingEndedWithNoQuorum({
+    questionHandle: aliceQuestionHandle,
+    seats: [aliceQuestionSeat, bobVoteSeat],
+  });
+
+  const poolManagerExists = await E(lendingPoolPublicFacet).hasPool(vanBrand);
+  t.is(poolManagerExists, false);
+
+  // Alice redeems
+  const aliceRedeemSeat = redeem(alicePopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(aliceRedeemSeat, { unitsWanted: 20_000n });
+
+  // Bob redeems
+  const bobRedeemSeat = redeem(bobPopPayment, { redeemValue: 20_000n });
+  await checkRedeemedProperly(bobRedeemSeat, { unitsWanted: 20_000n });
+
+  // Question balance should be empty
+  await checkQuestionBalance({
+    questionHandle: aliceQuestionHandle, expected: {
+      value: 0n,
+    },
+  });
 });
 

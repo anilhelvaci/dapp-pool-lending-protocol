@@ -202,6 +202,23 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     t.deepEqual(expectedAmount, actualBalance);
   };
 
+  const checkVotingEndedWithNoQuorum = async ({ questionHandle, seats }) => {
+    const { outcomeOfUpdate, instance } = await E(electionManagerPublicFacet).getQuestionData(questionHandle);
+    const voteCounterPublicFacetP = E(zoe).getPublicFacet(instance);
+    const [isOpen, totalAmountFromSeats, questionSeatGovAllocated] = await Promise.all([
+      E(voteCounterPublicFacetP).isOpen(),
+      calculateTotalAmountLockedFromPop(seats),
+      E(electionManagerPublicFacet).getAmountLockedInQuestion(questionHandle),
+    ]);
+
+
+    t.is(isOpen, false);
+    t.deepEqual(totalAmountFromSeats, questionSeatGovAllocated);
+    await E.when(outcomeOfUpdate, outcome => t.fail(`${outcome}`)).catch(e =>
+      t.is(e, 'No quorum'),
+    );
+  };
+
   return {
     checkGovFetchedCorrectly,
     checkQuestionAskedCorrectly,
@@ -209,6 +226,7 @@ const makeGovernanceAssertionHelpers = async (t, zoe, governedPF, electionManage
     checkVotingEndedProperly,
     checkRedeemedProperly,
     checkQuestionBalance,
+    checkVotingEndedWithNoQuorum,
   };
 };
 

@@ -7,16 +7,21 @@ import { calculateGovAmountFromValue } from '../../src/governance/tools.js';
  * @param {ZoeService} zoe
  * @param governedPF
  * @param electionManagerPublicFacet
+ * @param governedCF
  */
-const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPublicFacet) => {
+const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPublicFacet, governedCF) => {
 
   const govBrandP = E(governedPF).getGovernanceBrand();
-  const [govBrand, { decimalPlaces: govDecimals }, govIssuer, govKeyword, { popBrand, popIssuer }] = await Promise.all([
+  const [govBrand, { decimalPlaces: govDecimals }, govIssuer, govKeyword, {
+    popBrand,
+    popIssuer,
+  }, govCommiteeSize] = await Promise.all([
     govBrandP,
     E(govBrandP).getDisplayInfo(),
     E(governedPF).getGovernanceIssuer(),
     E(governedPF).getGovernanceKeyword(),
     E(electionManagerPublicFacet).getPopInfo(),
+    E(governedPF).getCommitteeSize(),
   ]);
 
   /**
@@ -32,6 +37,20 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
       E(governedPF).makeFaucetInvitation(),
       harden({ want: { [govKeyword]: amountWanted } }),
     );
+  };
+
+  const fetchGovTokenSingleMember = index => {
+    const invitationP = E(governedCF).getGovernanceInvitation(index);
+
+    return E(zoe).offer(
+      invitationP,
+    )
+  };
+
+  const fetchGovTokensAllCommittee = () => {
+    const seatsP = [...Array(govCommiteeSize)].map((_, index) => fetchGovTokenSingleMember(index));
+    const payoutsP = seatsP.map(seatp => E(seatp).getPayout(govKeyword));
+    return Promise.all(payoutsP);
   };
 
   /**
@@ -119,7 +138,9 @@ const makeGovernanceScenarioHeplpers = async (zoe, governedPF, electionManagerPu
     voteOnQuestion,
     voteWithMaliciousToken,
     redeem,
-    splitGovPayout
+    splitGovPayout,
+    fetchGovTokenSingleMember,
+    fetchGovTokensAllCommittee,
   };
 };
 
