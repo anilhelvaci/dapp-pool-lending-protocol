@@ -41,6 +41,9 @@ export const CONTRACT_ROOTS = {
   LendingPool: '../../src/lendingPool/lendingPool.js',
   amm: '@agoric/inter-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
   reserve: '@agoric/inter-protocol/src/reserve/assetReserve.js',
+  lendingPoolElectorate: '../../src/governance/lendingPoolElectorate.js',
+  lendingPoolElectionManager: '../../src/governance/lendingPoolElectionManager.js',
+  counter: '@agoric/governance/src/binaryVoteCounter.js',
 };
 
 /**
@@ -98,6 +101,11 @@ export const setupServices = async (
   } = space;
   iProduce.LendingPool.resolve(t.context.installations.LendingPool);
   iProduce.liquidate.resolve(t.context.installations.liquidate);
+  iProduce.lendingPoolElectorate.resolve(t.context.installations.lendingPoolElectorate);
+  iProduce.lendingPoolElectionManager.resolve(t.context.installations.lendingPoolElectionManager);
+
+  await setupLendinPoolElectorate(space);
+
   /** @type PriceManager*/
   const priceManager = makePriceManager({});
   produce.priceManager.resolve(priceManager);
@@ -105,6 +113,10 @@ export const setupServices = async (
   await startLendingPool(space, { loanParams: loanTiming });
 
   const governorCreatorFacet = consume.lendingPoolGovernorCreator;
+  const governorPublicFacet = consume.lendingPoolGovernorPublic;
+  const lendingPoolElectoratePF = consume.lendingPoolElectoratePublicFacet;
+  const lendingPoolElectorateCF = consume.lendingPoolElectorateCreatorFacet;
+
   /** @type {Promise<LendingPoolCreatorFacet>} */
   const lendingPoolCreatorFacetP = (
     E(governorCreatorFacet).getCreatorFacet()
@@ -115,22 +127,29 @@ export const setupServices = async (
     governorInstance,
     lendingPoolCreatorFacet,
     lendingPoolPublicFacet,
+    lendingPoolInstance
   ] = await Promise.all([
     instance.consume.lendingPoolGovernor,
     lendingPoolCreatorFacetP,
     E(governorCreatorFacet).getPublicFacet(),
+    instance.consume.lendingPool,
   ]);
 
-  const { g, l } = {
+  const { g, l, e } = {
     g: {
       governorInstance,
-      governorPublicFacet: E(zoe).getPublicFacet(governorInstance),
+      governorPublicFacet,
       governorCreatorFacet,
     },
     l: {
       lendingPoolCreatorFacet,
       lendingPoolPublicFacet,
+      lendingPoolInstance,
     },
+    e: {
+      lendingPoolElectoratePF,
+      lendingPoolElectorateCF,
+    }
   };
 
   /** @type LendingPoolScenarioHelpers */
@@ -148,6 +167,7 @@ export const setupServices = async (
     zoe,
     governor: g,
     lendingPool: l,
+    electorate: e,
     ammFacets,
     timer,
     assertions,
@@ -168,7 +188,7 @@ export const startLendingPool = async (
       chainTimerService,
       priceManager: priceManagerP,
       zoe,
-      economicCommitteeCreatorFacet: electorateCreatorFacet,
+      lendingPoolElectorateCreatorFacet, // lendingPoolElectorate
     },
     produce, // {  loanFactoryCreator }
     brand: {
@@ -176,7 +196,7 @@ export const startLendingPool = async (
     },
     instance,
     installation: {
-      consume: { LendingPool, liquidate, contractGovernor },
+      consume: { LendingPool, liquidate, lendingPoolElectionManager },
     },
   },
   {
@@ -195,7 +215,7 @@ export const startLendingPool = async (
     liquidate,
   });
 
-  const poserInvitationP = E(electorateCreatorFacet).getPoserInvitation();
+  const poserInvitationP = E(lendingPoolElectorateCreatorFacet).getElectorateFacetInvitation();
   const [initialPoserInvitation, invitationAmount] = await Promise.all([
     poserInvitationP,
     E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
@@ -220,12 +240,12 @@ export const startLendingPool = async (
 
   const [
     ammInstance,
-    electorateInstance,
-    contractGovernorInstall,
+    lendingPoolElectorateInstance,
+    lendingPoolElectionManagerInstall,
   ] = await Promise.all([
     instance.consume.amm,
-    instance.consume.economicCommittee,
-    contractGovernor,
+    instance.consume.lendingPoolElectorate, // lendingPoolElectorate
+    lendingPoolElectionManager, // lendingPoolElectionManager
   ]);
 
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
@@ -235,7 +255,7 @@ export const startLendingPool = async (
   const marshaller = await E(board).getReadonlyMarshaller();
 
   const loanFactoryTerms = makeGovernedTerms(
-    {storageNode, marshaller},
+    { storageNode, marshaller },
     priceManager, // priceMan here
     loanParams,
     installations.liquidate,
@@ -244,46 +264,51 @@ export const startLendingPool = async (
     poolManagerParams,
     ammPublicFacet,
     compareBrand,
-    undefined
+    {
+      keyword: 'LPT',
+      units: 100_000n,
+      decimals: 6,
+      committeeSize: 5,
+    },
   );
 
   const governorTerms = harden({
     timer,
-    electorateInstance,
+    lendingPoolElectorateInstance,
     governedContractInstallation: installations.LendingPool,
     governed: {
       terms: loanFactoryTerms,
       issuerKeywordRecord: {},
     },
   });
-  const { creatorFacet: governorCreatorFacet, instance: governorInstance } =
+  const {
+    creatorFacet: lendingPoolElectionMgrCreatorFacet,
+    publicFacet: lendingPoolElectionMgrPublicFacet,
+    instance: lendingPoolElectionMgrInstance,
+  } =
     await E(zoe).startInstance(
-      contractGovernorInstall,
+      lendingPoolElectionManagerInstall,
       undefined,
       governorTerms,
       harden({
-        electorateCreatorFacet, governed: {
+        governed: {
           initialPoserInvitation, storageNode, marshaller,
         },
       }),
     );
 
   const [lendingPoolInstance, lendingPoolCreator] = await Promise.all([
-    E(governorCreatorFacet).getInstance(),
-    E(governorCreatorFacet).getCreatorFacet(),
+    E(lendingPoolElectionMgrCreatorFacet).getInstance(),
+    E(lendingPoolElectionMgrCreatorFacet).getCreatorFacet(),
   ]);
 
-  const voteCreator = Far('lendingPool vote creator', {
-    voteOnParamChanges: E(governorCreatorFacet).voteOnParamChanges,
-  });
-
   produce.lendingPoolCreator.resolve(lendingPoolCreator);
-  produce.lendingPoolGovernorCreator.resolve(governorCreatorFacet);
-  produce.lendingPoolVoteCreator.resolve(voteCreator);
+  produce.lendingPoolGovernorCreator.resolve(lendingPoolElectionMgrCreatorFacet);
+  produce.lendingPoolGovernorPublic.resolve(lendingPoolElectionMgrPublicFacet);
 
   // Advertise the installations, instances in agoricNames.
   instance.produce.lendingPool.resolve(lendingPoolInstance);
-  instance.produce.lendingPoolGovernor.resolve(governorInstance);
+  instance.produce.lendingPoolGovernor.resolve(lendingPoolElectionMgrInstance);
 };
 
 harden(startLendingPool)
@@ -381,6 +406,32 @@ export const setupAmmAndElectorate = async (
 };
 
 harden(setupAmmAndElectorate);
+
+const setupLendinPoolElectorate = async (
+  {
+    consume: {
+      zoe,
+    },
+    produce,
+    installation: {
+      consume: { lendingPoolElectorate },
+    },
+    instance: {
+      produce: instanceProduce
+    }
+  }) => {
+
+  const {
+    creatorFacet: lendingPoolElectorateCreatorFacet,
+    publicFacet: lendingPoolElectoratePublicFacet,
+    instance: lendingPoolElectorateInstance
+  } = await E(zoe).startInstance(lendingPoolElectorate);
+
+  instanceProduce.lendingPoolElectorate.resolve(lendingPoolElectorateInstance);
+  produce.lendingPoolElectorateCreatorFacet.resolve(lendingPoolElectorateCreatorFacet);
+  produce.lendingPoolElectoratePublicFacet.resolve(lendingPoolElectoratePublicFacet);
+
+};
 
 /**
  *

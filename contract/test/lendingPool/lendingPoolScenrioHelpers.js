@@ -411,6 +411,7 @@ export const makeLendingPoolScenarioHelpers = (
     else if (poolType === POOL_TYPES.DEBT) debtPoolProtocolFaucet = newFaucet;
     else throw new Error('Invalid PoolType');
   }
+
   return harden({
     addPool,
     depositMoney,

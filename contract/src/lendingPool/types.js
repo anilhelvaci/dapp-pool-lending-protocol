@@ -141,6 +141,7 @@
  * underlyingKeyword: string,
  * rates: Object, priceAuthority:
  * PriceAuthority) => ERef<PoolManager>} addPoolType
+ * @property {(index: Number) => Invitation} getGovernanceInvitation
  */
 
 /**
@@ -163,6 +164,12 @@
  * @property {Installation} liquidationInstall
  * @property {Object} loanTimingParams
  * @property {Brand} compareCurrencyBrand
+ * @property {{
+ *   keyword: String,
+ *   units: BigInt,
+ *   decimals: Number,
+ *   committeeSize: Number
+ * }} governance
  */
 
 // Loan

@@ -325,6 +325,52 @@ export const makeLendingPoolAssertions = t => {
     t.truthy(AmountMath.isEmpty(loanColUnderlying));
   };
 
+  /**
+   *
+   * @param {LendingPoolPublicFacet} lendingPoolPublicFacet
+   * @param {Instance} lendingPoolInstance
+   * @returns {Promise<void>}
+   */
+  const assertGovTokenInitializedCorrectly = async ({ lendingPoolPublicFacet, lendingPoolInstance }) => {
+    const { farZoeKit: { /** @type ZoeService */ zoe } } = t.context;
+    const [{
+      governance: {
+        units,
+        decimals,
+      },
+    }, govBrand, govBalance, actualTotalSupply] = await Promise.all([
+      E(zoe).getTerms(lendingPoolInstance),
+      E(lendingPoolPublicFacet).getGovernanceBrand(),
+      E(lendingPoolPublicFacet).getGovBalance(),
+      E(lendingPoolPublicFacet).getTotalSupply(),
+
+    ]);
+
+    const expectedTotalSupply = AmountMath.make(govBrand, units * 10n ** BigInt(decimals));
+
+    t.deepEqual(expectedTotalSupply, govBalance);
+    t.deepEqual(expectedTotalSupply, actualTotalSupply);
+  };
+  
+  const assertGovFetchedCorrectly = async (userSeatP, { lendingPoolPublicFacet, keyword, expectedBalanceValue, expectedSupplyValue }) => {
+    const govIssuerP = E(lendingPoolPublicFacet).getGovernanceIssuer();
+    const offerResult = await E(userSeatP).getOfferResult();
+
+    const [govBalance, payout, govBrand] = await Promise.all([
+      E(lendingPoolPublicFacet).getGovBalance(),
+      E(userSeatP).getPayout(keyword),
+      E(lendingPoolPublicFacet).getGovernanceBrand(),
+    ]);
+
+    const receivedAmount = await E(govIssuerP).getAmountOf(payout);
+    const expectedBalanceAmount = AmountMath.make(govBrand, expectedBalanceValue);
+    const expectedSupplyAmount = AmountMath.make(govBrand, expectedSupplyValue);
+
+    t.deepEqual(offerResult, 'Thanks for participating in the protocol governance');
+    t.deepEqual(expectedBalanceAmount, govBalance);
+    t.deepEqual(expectedSupplyAmount, receivedAmount);
+  }
+
   return harden({
     assertPoolAddedCorrectly,
     assertDepositedCorrectly,
@@ -336,5 +382,7 @@ export const makeLendingPoolAssertions = t => {
     assertRedeemSuccessful,
     assertLiquidation,
     assertActiveLoan,
+    assertGovTokenInitializedCorrectly,
+    assertGovFetchedCorrectly,
   })
 }

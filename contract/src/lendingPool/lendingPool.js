@@ -9,7 +9,12 @@ import { AmountMath, AssetKind } from '@agoric/ertp';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { makeScalarMap } from '@agoric/store';
 import { assertProposalShape } from '@agoric/zoe/src/contractSupport/index.js';
-import { makeRatioFromAmounts } from '@agoric/zoe/src/contractSupport/ratio.js';
+import {
+  ceilMultiplyBy,
+  floorMultiplyBy,
+  makeRatio,
+  makeRatioFromAmounts,
+} from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
 import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
@@ -86,15 +91,51 @@ export const start = async (zcf, privateArgs) => {
     liquidationInstall,
     loanTimingParams,
     compareCurrencyBrand,
+    governance: {
+      keyword,
+      units,
+      decimals,
+      committeeSize
+    },
   } = terms;
 
   const { initialPoserInvitation, storageNode, marshaller } = privateArgs;
-  const electorateParamManager = await makeElectorateParamManager(
-    E(zcf).getZoeService(),
-    storageNode,
-    marshaller,
-    initialPoserInvitation,
-  );
+  const [govMint, electorateParamManager] = await Promise.all([
+    zcf.makeZCFMint(keyword, AssetKind.NAT, { decimalPlaces: decimals }),
+    makeElectorateParamManager(
+      E(zcf).getZoeService(),
+      storageNode,
+      marshaller,
+      initialPoserInvitation,
+    )
+  ]);
+
+  const { brand: govBrand, issuer: govIssuer } = govMint.getIssuerRecord();
+  const { zcfSeat: govSeat } = zcf.makeEmptySeatKit();
+  const totalSupply = AmountMath.make(govBrand, units * 10n ** BigInt(decimals));
+  const proposalThreshold = ceilMultiplyBy(totalSupply, makeRatio(2n, govBrand));
+  govMint.mintGains({ [keyword]: totalSupply }, govSeat);
+  const supplyRatio = makeRatio(1n, govBrand, BigInt(committeeSize), govBrand);
+  const memberSupplyAmount = floorMultiplyBy(totalSupply, supplyRatio);
+
+  const makeFetchGovInvitation = () => {
+    /** @type OfferHandler */
+    const govFaucet = (committeeMemberSeat) => {
+      committeeMemberSeat.incrementBy(
+        govSeat.decrementBy(
+          harden({ [keyword]: memberSupplyAmount })
+        )
+      );
+      zcf.reallocate(committeeMemberSeat, govSeat);
+      committeeMemberSeat.exit();
+
+      return 'Thanks for participating in the protocol governance';
+    };
+
+    return zcf.makeInvitation(govFaucet, 'Governance Faucet');
+  };
+
+  const governanceInvitations = harden([...Array(committeeSize)].map(makeFetchGovInvitation));
 
   trace('Bootstrap', {
     priceManager,
@@ -316,6 +357,14 @@ export const start = async (zcf, privateArgs) => {
     makeDepositInvitation,
     getMarkets,
     getPoolNotifier: () => poolNotifier,
+    getGovernanceBrand: () => govBrand,
+    getGovernanceIssuer: () => govIssuer,
+    getGovernanceKeyword: () => keyword,
+    getTotalSupply: () => totalSupply,
+    getProposalTreshold: () => proposalThreshold,
+    getGovBalance: () => govSeat.getAmountAllocated(keyword, govBrand),
+    getMemberSupplyAmount: () => memberSupplyAmount,
+    getCommitteeSize: () => committeeSize,
   });
 
   const getParamMgrRetriever = () =>
@@ -333,13 +382,14 @@ export const start = async (zcf, privateArgs) => {
   const lendingPool = Far('lendingPool machine', {
     helloFromCreator: () => 'Hello From the creator',
     addPoolType,
+    getGovernanceInvitation: index => governanceInvitations[index],
   });
 
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {
     getParamMgrRetriever,
     getLimitedCreatorFacet: () => lendingPool,
-    getGovernedApis: () => harden({}),
-    getGovernedApiNames: () => harden({}),
+    getGovernedApis: () => harden({ addPoolType }),
+    getGovernedApiNames: () => harden(['addPoolType']),
   });
 
   return harden({
