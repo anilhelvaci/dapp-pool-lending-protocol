@@ -20,6 +20,7 @@ Please make sure you install the agoric-sdk first.
      # Attempt to run a binary that was installed there.
      ag-cosmos-helper version --long
     ```
+    
 ### Lending Protocol
 
 1. Clone this repository `git clone https://github.com/anilhelvaci/dapp-pool-lending-protocol/`
