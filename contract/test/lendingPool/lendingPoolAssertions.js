@@ -9,8 +9,10 @@ import { LoanPhase } from '../../src/lendingPool/loan.js';
  * This module brings together necessary assertions that are
  * conceptually related to make the tests more readable and maintainable.
  * @param t
+ * @param {LendingPoolPublicFacet} lendingPoolPublicFacet
+ * @param {Instance} lendingPoolInstance
  */
-export const makeLendingPoolAssertions = t => {
+export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPoolInstance ) => {
   /**
    *
    * @param {PoolManager} poolManager
@@ -199,7 +201,7 @@ export const makeLendingPoolAssertions = t => {
       E(closeSeat).getOfferResult(),
       E(closeSeat).getPayout('Collateral'),
       E(E(loan).getNotifier()).getUpdateSince(),
-      E(debtPoolManager).getTotalDebt()
+      E(debtPoolManager).getTotalDebt(),
     ]);
 
     const closePayoutAmount = await E(protocolIssuer).getAmountOf(closePayout);
@@ -325,13 +327,7 @@ export const makeLendingPoolAssertions = t => {
     t.truthy(AmountMath.isEmpty(loanColUnderlying));
   };
 
-  /**
-   *
-   * @param {LendingPoolPublicFacet} lendingPoolPublicFacet
-   * @param {Instance} lendingPoolInstance
-   * @returns {Promise<void>}
-   */
-  const assertGovTokenInitializedCorrectly = async ({ lendingPoolPublicFacet, lendingPoolInstance }) => {
+  const assertGovTokenInitializedCorrectly = async () => {
     const { farZoeKit: { /** @type ZoeService */ zoe } } = t.context;
     const [{
       governance: {
@@ -352,7 +348,7 @@ export const makeLendingPoolAssertions = t => {
     t.deepEqual(expectedTotalSupply, actualTotalSupply);
   };
   
-  const assertGovFetchedCorrectly = async (userSeatP, { lendingPoolPublicFacet, keyword, expectedBalanceValue, expectedSupplyValue }) => {
+  const assertGovFetchedCorrectly = async (userSeatP, { keyword, expectedBalanceValue, expectedSupplyValue }) => {
     const govIssuerP = E(lendingPoolPublicFacet).getGovernanceIssuer();
     const offerResult = await E(userSeatP).getOfferResult();
 

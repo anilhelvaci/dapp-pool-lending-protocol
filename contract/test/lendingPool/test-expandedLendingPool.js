@@ -129,16 +129,16 @@ test('governance-token', async t => {
     },
     governor: {
       governorPublicFacet,
-    },
-    assertions: {
-      assertGovTokenInitializedCorrectly,
-      assertGovFetchedCorrectly,
-    },
+    }
   } = await setupServices(t);
 
-  await assertGovTokenInitializedCorrectly({ lendingPoolPublicFacet, lendingPoolInstance });
-
   const { fetchGovTokenSingleMember } = await makeGovernanceScenarioHeplpers(zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolCreatorFacet);
+  const {
+    assertGovTokenInitializedCorrectly,
+    assertGovFetchedCorrectly,
+  } = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  await assertGovTokenInitializedCorrectly({ lendingPoolPublicFacet, lendingPoolInstance });
 
   const aliceFetchGovSeatP = fetchGovTokenSingleMember(0);
   await assertGovFetchedCorrectly(aliceFetchGovSeatP, {
@@ -217,9 +217,6 @@ test('add-new-pool-with-governance-voting-positive', async t => {
     electorate: {
       lendingPoolElectoratePF,
     },
-    assertions: {
-      assertPoolAddedCorrectly,
-    },
     timer,
   } = await setupServices(t);
 
@@ -236,7 +233,9 @@ test('add-new-pool-with-governance-voting-positive', async t => {
     checkVotingEndedProperly,
     checkRedeemedProperly,
     checkQuestionBalance,
-  } = await makeGovernanceAssertionHelpers(t, zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolElectoratePF)
+  } = await makeGovernanceAssertionHelpers(t, zoe, lendingPoolPublicFacet, governorPublicFacet, lendingPoolElectoratePF);
+
+  const { assertPoolAddedCorrectly } = makeLendingPoolAssertions(t, lendingPoolPublicFacet);
 
   const [
     aliceGovPayment,
@@ -586,5 +585,25 @@ test('add-new-pool-with-governance-voting-no-quorum', async t => {
       value: 0n,
     },
   });
+});
+
+test('borrow-borrowable-pool', async t => {
+  const {
+    zoe,
+    lendingPool,
+    timer,
+  } = await setupServices(t);
+
+  const {
+    compareCurrencyKit: { brand: compCurrencyBrand },
+    vanKit: { mint: vanMint },
+    panKit: { mint: panMint },
+  } = t.context;
+
+  const {
+    addPool,
+  } = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
+
+  t.is('is', 'is');
 });
 

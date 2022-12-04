@@ -263,29 +263,20 @@ export const start = async (zcf, privateArgs) => {
   };
 
   const makeBorrowInvitation = () => {
-    /** @param {ZCFSeat} borrowerSeat
-     * @param {Object} offerArgs
+    /**
+     * @type OfferHandler
      * */
     const borrowHook = async (borrowerSeat, offerArgs) => {
       assertProposalShape(borrowerSeat, {
         give: { Collateral: null },
         want: { Debt: null },
       });
-      assertBorrowOfferArgs(offerArgs);
 
-      const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
-      assertBorrowCollateralUnderlyingBrand(
-        poolTypes,
-        collateralUnderlyingBrand,
-      );
-
+      const collateralUnderlyingBrand = assertBorrowOfferArgs(offerArgs, poolTypes);
       /** @type PoolManager */
       const collateralUnderlyingPool = poolTypes.get(collateralUnderlyingBrand);
 
       const {
-        give: {
-          Collateral: { brand: collateralBrand },
-        },
         want: {
           Debt: { brand: borrowBrand },
         },

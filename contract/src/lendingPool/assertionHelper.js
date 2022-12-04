@@ -4,7 +4,13 @@ import { AmountMath } from '@agoric/ertp';
 
 const trace = makeTracer('LendingPool');
 
-export const assertBorrowOfferArgs = offerArgs => {
+/**
+ *
+ * @param offerArgs
+ * @param poolTypes
+ * @return {Brand}
+ */
+const assertBorrowOfferArgs = (offerArgs, poolTypes) => {
   trace('borrowHook: OfferArgs', offerArgs);
 
   assert(typeof offerArgs == 'object', '[NO_OFFER_ARGS]');
@@ -12,9 +18,18 @@ export const assertBorrowOfferArgs = offerArgs => {
     offerArgs.hasOwnProperty('collateralUnderlyingBrand'),
     '[NO_OFFER_ARGS]',
   );
-};
 
-export const assertBalancesHookArgs = offerArgs => {
+  const collateralUnderlyingBrand = offerArgs.collateralUnderlyingBrand;
+  assertBorrowCollateralUnderlyingBrand(
+    poolTypes,
+    collateralUnderlyingBrand,
+  );
+
+  return collateralUnderlyingBrand;
+};
+harden(assertBorrowOfferArgs);
+
+const assertBalancesHookArgs = offerArgs => {
   trace('BalancesHook: OfferArgs', offerArgs);
 
   assert(typeof offerArgs == 'object');
@@ -23,8 +38,9 @@ export const assertBalancesHookArgs = offerArgs => {
     'OfferArgs should contain a collateralUnderlyingBrand object',
   );
 };
+harden(assertBalancesHookArgs);
 
-export const assertBorrowCollateralUnderlyingBrand = (
+const assertBorrowCollateralUnderlyingBrand = (
   poolTypes,
   collateralUnderlyingBrand,
 ) => {
@@ -35,8 +51,9 @@ export const assertBorrowCollateralUnderlyingBrand = (
     X`Collateral pool does not exist: ${collateralUnderlyingBrand}`,
   );
 };
+harden(assertBorrowCollateralUnderlyingBrand);
 
-export const assertBorrowProposal = (
+const assertBorrowProposal = (
   poolTypes,
   borrowerSeat,
   collateralUnderlyingPool,
@@ -59,20 +76,24 @@ export const assertBorrowProposal = (
     X`Not a supported pool type ${borrowBrand}`,
   );
 };
+harden(assertBorrowProposal);
 
-export const assertUnderlyingBrand = (poolTypes, underlyingBrand) => {
+const assertUnderlyingBrand = (poolTypes, underlyingBrand) => {
   assert(
     poolTypes.has(underlyingBrand),
     X`Not a supported pool type ${underlyingBrand}`,
   );
 };
+harden(assertUnderlyingBrand);
 
 /**
  * Checks if there is enough liquidity for the hand out the proposed debt
  * and throws an error if the liquidity is not enough.
  * @param {Amount} proposedDebtAmount
+ * @param {ZCFSeat} underlyingAssetSeat
+ * @param {Brand} underlyingBrand
  */
-export const assertEnoughLiquidtyExists = (
+const assertEnoughLiquidtyExists = (
   proposedDebtAmount,
   underlyingAssetSeat,
   underlyingBrand,
@@ -89,21 +110,24 @@ export const assertEnoughLiquidtyExists = (
   );
   console.log('assertEnoughLiquidtyExists: Enough!');
 };
+harden(assertEnoughLiquidtyExists);
 
-export const assertDebtDeltaNotZero = (oldDebt, newDebt) => {
+const assertDebtDeltaNotZero = (oldDebt, newDebt) => {
   assert(oldDebt != newDebt, X`Debt delta equal to zero`);
 };
+harden(assertDebtDeltaNotZero);
 
-export const assertLiquidityFunds = loanAllocations => {
+const assertLiquidityFunds = loanAllocations => {
   assert(
     loanAllocations.Debt && loanAllocations.Debt !== undefined,
     'The loan has no liquidated funds',
   );
 };
+harden(assertLiquidityFunds);
 
 // The proposal is not allowed to include any keys other than these,
 // usually 'Collateral' and 'RUN'.
-export const assertOnlyKeys = (proposal, keys) => {
+const assertOnlyKeys = (proposal, keys) => {
   const onlyKeys = clause =>
     Object.getOwnPropertyNames(clause).every(c => keys.includes(c));
 
@@ -115,4 +139,17 @@ export const assertOnlyKeys = (proposal, keys) => {
     onlyKeys(proposal.want),
     X`extraneous terms in want: ${proposal.want}`,
   );
+};
+harden(assertOnlyKeys);
+
+export {
+  assertBorrowOfferArgs,
+  assertBalancesHookArgs,
+  assertBorrowCollateralUnderlyingBrand,
+  assertBorrowProposal,
+  assertUnderlyingBrand,
+  assertEnoughLiquidtyExists,
+  assertDebtDeltaNotZero,
+  assertLiquidityFunds,
+  assertOnlyKeys,
 };
