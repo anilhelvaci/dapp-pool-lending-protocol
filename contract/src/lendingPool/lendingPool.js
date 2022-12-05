@@ -337,6 +337,24 @@ export const start = async (zcf, privateArgs) => {
     );
   };
 
+  const makeUpdateRiskControlsInvitation = () => {
+    /**
+     * @type OfferHandler
+     */``
+    const updateRiskControls = async (creatorSeat, offerArgs) => {
+      const {
+        underlyingBrand,
+        changes
+      } = offerArgs;
+      creatorSeat.exit();
+
+      const paramManager = poolParamManagers.get(underlyingBrand);
+      await E(paramManager).updateParams(changes);
+    };
+
+     return zcf.makeInvitation(updateRiskControls, 'UpdateRiskControls');
+  };
+
   /** @type {LendingPoolPublicFacet}*/
   const publicFacet = Far('lending pool public facet', {
     helloWorld: () => 'Hello World',
@@ -356,6 +374,7 @@ export const start = async (zcf, privateArgs) => {
     getGovBalance: () => govSeat.getAmountAllocated(keyword, govBrand),
     getMemberSupplyAmount: () => memberSupplyAmount,
     getCommitteeSize: () => committeeSize,
+    getParamsSubscription: underlyingBrand => E(poolParamManagers.get(underlyingBrand)).getSubscription(),
   });
 
   const getParamMgrRetriever = () =>
@@ -370,10 +389,11 @@ export const start = async (zcf, privateArgs) => {
     });
 
   /** @type {LendingPoolCreatorFacet} */
-  const lendingPool = Far('lendingPool machine', {
+  const lendingPool = Far('Lending Pool Creator Facet', {
     helloFromCreator: () => 'Hello From the creator',
     addPoolType,
     getGovernanceInvitation: index => governanceInvitations[index],
+    makeUpdateRiskControlsInvitation,
   });
 
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {

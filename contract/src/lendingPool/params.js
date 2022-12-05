@@ -72,8 +72,13 @@ const makeLoanParamManager = (storageNode, marshaller, rates) => {
  * @param {ERef<StorageNode>} storageNode
  * @param {ERef<Marshaller>} marshaller
  * @param {Rates} rates
+ * @param {{
+ *   borrawable: Boolean,
+ *   usableAsCol: Boolean,
+ *   limit?: Amount
+ * }} riskFactors
  */
-const makePoolParamManager = (storageNode, marshaller, rates) => {
+const makePoolParamManager = (storageNode, marshaller, { rates, riskFactors }) => {
   return makeParamManagerSync(makeStoredPublisherKit(storageNode, marshaller), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
