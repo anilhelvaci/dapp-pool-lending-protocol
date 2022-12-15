@@ -408,6 +408,7 @@ export const start = async (zcf, privateArgs) => {
     getMemberSupplyAmount: () => memberSupplyAmount,
     getCommitteeSize: () => committeeSize,
     getParamsSubscription: underlyingBrand => E(poolParamManagers.get(underlyingBrand)).getSubscription(),
+    getCollateralBalance: brand => balanceTracer.getBalance(brand),
   });
 
   const getParamMgrRetriever = () =>

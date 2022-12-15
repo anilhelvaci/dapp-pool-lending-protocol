@@ -32,6 +32,7 @@ const trace = makeTracer("DebtsPerCollateral");
  * and once the closest loan is underwater it executes the liquidation.
  *
  * @param {ZCF} zcf
+ * @param {Brand} collateralBrand
  * @param {Brand} collateralUnderlyingBrand
  * @param {Brand} debtBrand
  * @param {Notifier<AssetState>} assetNotifier
@@ -45,6 +46,7 @@ const trace = makeTracer("DebtsPerCollateral");
  */
 export const makeDebtsPerCollateral = async (
   zcf,
+  collateralBrand,
   collateralUnderlyingBrand,
   debtBrand,
   assetNotifier,
@@ -60,12 +62,12 @@ export const makeDebtsPerCollateral = async (
   const debtIssuer = zcf.getIssuerForBrand(debtBrand);
   const collateralIssuer = zcf.getIssuerForBrand(collateralUnderlyingBrand);
 
-  const [debtDisplayInfo, collateralDisplayInfo] = await Promise.all([
+  const [debtDisplayInfo, collateralUnderlyingDisplayInfo] = await Promise.all([
     E(manager.getUnderlyingBrand()).getDisplayInfo(),
     E(collateralUnderlyingBrand).getDisplayInfo()
   ]);
 
-  const collateralDecimalPlaces = collateralDisplayInfo?.decimalPlaces || 0;
+  const collateralUnderlyingDecimals = collateralUnderlyingDisplayInfo?.decimalPlaces || 0;
   const debtDecimalPlaces = debtDisplayInfo?.decimalPlaces || 0;
 
   let loanCounter = 0;
@@ -87,7 +89,7 @@ export const makeDebtsPerCollateral = async (
     wrappedDebtPriceAuthority: { priceAuthority: underlyingPriceAuthority, notifier: underlyingPriceNotifier },
     liquidationMargin: manager.getLiquidationMargin(),
     loanData: {
-      collateralUnderlyingDecimals: collateralDecimalPlaces,
+      collateralUnderlyingDecimals,
       debtDecimals: debtDecimalPlaces,
       debtBrand,
       collateralUnderlyingBrand,
@@ -118,6 +120,7 @@ export const makeDebtsPerCollateral = async (
       assetNotifier,
       loanId,
       debtBrand,
+      collateralBrand,
       collateralUnderlyingBrand,
       underlyingPriceAuthority,
       wrappedCollateralPriceAuthority.priceAuthority,
@@ -148,7 +151,7 @@ export const makeDebtsPerCollateral = async (
       ([key, loan]) => {
 
         const collateralValInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCollateralAmount(),
-          colLatestQuote, collateralUnderlyingBrand, collateralDecimalPlaces, manager.getExchangeRateForPool(collateralUnderlyingBrand));
+          colLatestQuote, collateralUnderlyingBrand, collateralUnderlyingDecimals, manager.getExchangeRateForPool(collateralUnderlyingBrand));
 
         const debtValueInCompareCurrency = liquidationObserver.getValInCompareCurrency(loan.getCurrentDebt(),
           debtLatestQuote, manager.getUnderlyingBrand(), debtDecimalPlaces);

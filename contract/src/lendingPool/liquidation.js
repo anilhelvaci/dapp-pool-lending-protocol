@@ -93,7 +93,7 @@ const liquidate = async (
   transferLiquidatedFund(loanZcfSeat);
 
   // Update loan state
-  loan.liquidated(AmountMath.makeEmpty(debt.brand));
+  loan.liquidated(AmountMath.makeEmpty(debt.brand), collateralToSell);
   return loan;
 };
 

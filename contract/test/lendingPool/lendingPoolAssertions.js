@@ -369,6 +369,15 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     t.deepEqual(expectedSupplyAmount, receivedAmount);
   }
 
+  const assertCollateralBalance = async (colPoolMan, balanceValueExpected) => {
+    const protocolBrand = await E(colPoolMan).getProtocolBrand();
+    const balanceAmountExpected = AmountMath.make(protocolBrand, balanceValueExpected);
+
+    const actualBalance = await E(lendingPoolPublicFacet).getCollateralBalance(protocolBrand);
+
+    t.deepEqual(actualBalance, balanceAmountExpected);
+  };
+
   return harden({
     assertPoolAddedCorrectly,
     assertDepositedCorrectly,
@@ -382,5 +391,6 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     assertActiveLoan,
     assertGovTokenInitializedCorrectly,
     assertGovFetchedCorrectly,
+    assertCollateralBalance,
   })
 }

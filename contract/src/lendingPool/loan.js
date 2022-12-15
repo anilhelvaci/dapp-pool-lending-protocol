@@ -72,6 +72,7 @@ const validTransitions = {
  * @param {Notifier<AssetState>} assetNotifier
  * @param {string} idInManager
  * @param {Brand} debtBrand
+ * @param {Brand} collateralBrand
  * @param {Brand} collateralUnderlyingBrand
  * @param {ERef<PriceAuthority>} debtPriceAuthority
  * @param {ERef<PriceAuthority>} collateralPriceAuthority
@@ -82,11 +83,11 @@ export const makeInnerLoan = (
   assetNotifier,
   idInManager,
   debtBrand,
+  collateralBrand,
   collateralUnderlyingBrand,
   debtPriceAuthority,
   collateralPriceAuthority,
 ) => {
-  const collateralBrand = manager.getCollateralBrand();
   console.log('makeInnerLoan');
   /**
    * State object to support virtualization when available
@@ -351,10 +352,11 @@ export const makeInnerLoan = (
    * Call must check for and remember shortfall
    *
    * @param {Amount} newDebt
+   * @param {Amount} liquidatedAmount
    */
-  const liquidated = newDebt => {
+  const liquidated = (newDebt, liquidatedAmount) => {
     updateDebtSnapshot(newDebt);
-
+    updateRootCollateralBalance(undefined, liquidatedAmount);
     assignPhase(LoanPhase.LIQUIDATED);
     updateUiState();
   };
@@ -413,6 +415,7 @@ export const makeInnerLoan = (
     seat.exit();
     assignPhase(LoanPhase.CLOSED);
     updateDebtAccounting(currentDebt, AmountMath.makeEmpty(debtBrand));
+    updateRootCollateralBalance(seat);
     updateUiState();
 
     assertLoanHoldsNoRun();
@@ -659,7 +662,7 @@ export const makeInnerLoan = (
     manager.reallocateBetweenSeats(loanSeat, clientSeat);
 
     updateDebtAccounting(oldDebt, newDebt);
-
+    updateRootCollateralBalance(clientSeat);
     updateUiState();
     clientSeat.exit();
 
@@ -730,10 +733,32 @@ export const makeInnerLoan = (
     state.outerUpdater = loanKit.loanUpdater;
     state.loanKey = loanKey;
     updateDebtAccounting(oldDebt, proposedDebtAmount);
-    manager.balanceTracer.updateBalance(collateralAmount.brand, collateralAmount, ARITHMETIC_OPERATION.ADD);
+    updateRootCollateralBalance(borrowerSeat);
     updateUiState();
 
     return loanKit;
+  };
+
+  /**
+   * @param {UserSeat} seat
+   * @param {Amount} liquidatedColAmount
+   */
+  const updateRootCollateralBalance = (seat, liquidatedColAmount = undefined) => {
+    if (liquidatedColAmount) {
+      manager.balanceTracer.updateBalance(collateralBrand, liquidatedColAmount, ARITHMETIC_OPERATION.SUBSTRACT);
+      return;
+    }
+
+    const {
+      give: { Collateral: colAmountIfGiven },
+      want: { Collateral: colAmountIfWanted }
+    } = seat.getProposal();
+
+    if (colAmountIfGiven) {
+      manager.balanceTracer.updateBalance(collateralBrand, colAmountIfGiven, ARITHMETIC_OPERATION.ADD);
+    } else if (colAmountIfWanted) {
+      manager.balanceTracer.updateBalance(collateralBrand, colAmountIfWanted, ARITHMETIC_OPERATION.SUBSTRACT);
+    }
   };
 
   /** @type Loan */

@@ -1,41 +1,30 @@
 // @ts-check
 import { E } from '@endo/far';
-import {
-  assertProposalShape,
-  ceilDivideBy,
-  makeRatio,
-} from '@agoric/zoe/src/contractSupport/index.js';
-import { assert, details as X, q } from '@agoric/assert';
+import { assertProposalShape, ceilDivideBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
+import { assert, details as X } from '@agoric/assert';
 import { makeNotifierKit, observeNotifier } from '@agoric/notifier';
 import { AmountMath } from '@agoric/ertp';
 import { Far } from '@endo/marshal';
 import { makeScalarMap } from '@agoric/store';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import {
-  RECORDING_PERIOD_KEY,
-  LIQUIDATION_MARGIN_KEY,
-  INITIAL_EXCHANGE_RATE_KEY,
-  CHARGING_PERIOD_KEY,
-  MULTIPILIER_RATE_KEY,
   BASE_RATE_KEY,
-  PENALTY_RATE_KEY, BORROWABLE, USABLE_AS_COLLATERAL, COLLATERAL_LIMIT,
+  BORROWABLE,
+  CHARGING_PERIOD_KEY,
+  COLLATERAL_LIMIT,
+  INITIAL_EXCHANGE_RATE_KEY,
+  LIQUIDATION_MARGIN_KEY,
+  MULTIPILIER_RATE_KEY,
+  PENALTY_RATE_KEY,
+  RECORDING_PERIOD_KEY,
+  USABLE_AS_COLLATERAL,
 } from './params.js';
 import { chargeInterest } from '../interest.js';
-import {
-  calculateExchangeRate,
-  calculateUtilizationRate,
-  calculateBorrowingRate,
-} from '../protocolMath.js';
+import { calculateBorrowingRate, calculateExchangeRate, calculateUtilizationRate } from '../protocolMath.js';
 import { makeDebtsPerCollateral } from './debtsPerCollateral.js';
-import {
-  ceilMultiplyBy,
-  floorMultiplyBy,
-} from '@agoric/zoe/src/contractSupport/ratio.js';
+import { ceilMultiplyBy, floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { UPDATE_ASSET_STATE_OPERATION } from './constants.js';
-import {
-  assertEnoughLiquidtyExists,
-  assertLiquidityFunds,
-} from './assertionHelper.js';
+import { assertEnoughLiquidtyExists, assertLiquidityFunds } from './assertionHelper.js';
 
 const trace = makeTracer('PM');
 
@@ -370,12 +359,11 @@ export const makePoolManager = (
   };
 
   const addIfHasStagedAllocation = tempSeatList => {
-    const seatList = tempSeatList.filter(function(seat) {
+    return tempSeatList.filter(seat => {
       if (seat.hasStagedAllocation()) {
         return seat;
       }
     });
-    return seatList;
   };
 
   // Set up the notifier for interest period
@@ -429,17 +417,27 @@ export const makePoolManager = (
     getColLimit,
   });
 
-  const checkDebtsPerCollateralStore = async collateralBrand => {
-    if (!debtsPerCollateralStore.has(collateralBrand)) {
+  /**
+   * @param {Ratio} exchangeRate
+   */
+  const checkDebtsPerCollateralStore = async exchangeRate => {
+
+    const {
+      numerator: { brand: collateralUnderlyingBrand },
+      denominator: { brand: collateralBrand },
+    } = exchangeRate;
+
+    if (!debtsPerCollateralStore.has(collateralUnderlyingBrand)) {
       /** @type {WrappedPriceAuthority} */
       const wrappedCollateralPriceAuthority = await E(
         priceManager,
-      ).getWrappedPriceAuthority(collateralBrand);
+      ).getWrappedPriceAuthority(collateralUnderlyingBrand);
       debtsPerCollateralStore.init(
-        collateralBrand,
+        collateralUnderlyingBrand,
         await makeDebtsPerCollateral(
           zcf,
           collateralBrand,
+          collateralUnderlyingBrand,
           underlyingBrand,
           assetNotifer,
           wrappedCollateralPriceAuthority,
@@ -451,6 +449,8 @@ export const makePoolManager = (
         ),
       );
     }
+
+    return { collateralUnderlyingBrand };
   };
 
   /**
@@ -476,10 +476,9 @@ export const makePoolManager = (
       underlyingBrand,
     );
 
-    const collateralBrand = exchangeRate.numerator.brand;
-    await checkDebtsPerCollateralStore(collateralBrand);
+    const { collateralUnderlyingBrand } = await checkDebtsPerCollateralStore(exchangeRate);
 
-    const debtsPerCollateral = debtsPerCollateralStore.get(collateralBrand);
+    const debtsPerCollateral = debtsPerCollateralStore.get(collateralUnderlyingBrand);
     console.log('debtsPerCollateral: ', debtsPerCollateral);
     const [loanKit] = await Promise.all([
       debtsPerCollateral.addNewLoan(seat, underlyingAssetSeat, exchangeRate),
