@@ -22,8 +22,9 @@ import { makeLoanKit } from './loanKit.js';
 import {
   assertDebtDeltaNotZero,
   assertOnlyKeys,
-  assertBalancesHookArgs,
+  assertBalancesHookArgs, assertColLimitNotExceeded,
 } from './assertionHelper.js';
+import { ARITHMETIC_OPERATION } from './constants.js';
 
 const { details: X, quote: q } = assert;
 
@@ -597,6 +598,7 @@ export const makeInnerLoan = (
 
     trace('adjustBalancesHook: proposal', proposal);
     assertOnlyKeys(proposal, ['Collateral', 'Debt']);
+    assertColLimitNotExceeded(manager.balanceTracer, manager.getColLimit, proposal, collateralUnderlyingBrand);
 
     const targetCollateralAmount = targetCollateralLevels(clientSeat).loan;
     const targetDebtAmount = targetDebtLevels(clientSeat).client;
@@ -728,6 +730,7 @@ export const makeInnerLoan = (
     state.outerUpdater = loanKit.loanUpdater;
     state.loanKey = loanKey;
     updateDebtAccounting(oldDebt, proposedDebtAmount);
+    manager.balanceTracer.updateBalance(collateralAmount.brand, collateralAmount, ARITHMETIC_OPERATION.ADD);
     updateUiState();
 
     return loanKit;

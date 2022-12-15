@@ -16,17 +16,18 @@ import {
   makeRatioFromAmounts,
 } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { Far } from '@endo/marshal';
-import { LARGE_DENOMINATOR } from '../interest.js';
 import { makePoolManager } from './poolManager.js';
-import { makePoolParamManager, makeElectorateParamManager } from './params.js';
+import { makePoolParamManager, makeElectorateParamManager, COLLATERAL_LIMIT } from './params.js';
 import { assert } from '@agoric/assert';
 import { makeNotifierKit } from '@agoric/notifier';
 import {
   assertBorrowCollateralUnderlyingBrand,
   assertBorrowOfferArgs,
-  assertBorrowProposal,
+  assertBorrowProposal, assertColLimitNotExceeded,
   assertUnderlyingBrand,
 } from './assertionHelper.js';
+import { NUMERIC_PARAMETERS } from './constants.js';
+import { makeBalanceTracer } from './balanceTracer.js';
 
 const { details: X } = assert;
 
@@ -118,6 +119,8 @@ export const start = async (zcf, privateArgs) => {
   const supplyRatio = makeRatio(1n, govBrand, BigInt(committeeSize), govBrand);
   const memberSupplyAmount = floorMultiplyBy(totalSupply, supplyRatio);
 
+  const balanceTracer = makeBalanceTracer();
+
   const makeFetchGovInvitation = () => {
     /** @type OfferHandler */
     const govFaucet = (committeeMemberSeat) => {
@@ -178,41 +181,24 @@ export const start = async (zcf, privateArgs) => {
    *
    * @param underlyingIssuer
    * @param underlyingKeyword
-   * @param rates
+   * @param {{
+   *   rates: Rates,
+   *   riskControls,
+   * }} params
    * @param priceAuthority
    * @returns ERef<PoolManager>
    */
   const addPoolType = async (
     underlyingIssuer,
     underlyingKeyword,
-    rates,
+    params,
     priceAuthority,
   ) => {
-    const [_, protocolMint] = await Promise.all([
-      zcf.saveIssuer(underlyingIssuer, underlyingKeyword),
-      zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, {
-        decimalPlaces: 6,
-      }),
-    ]);
-
-    const { brand: protocolBrand } = protocolMint.getIssuerRecord();
-    const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
-
-    assert(
-      !poolTypes.has(underlyingBrand),
-      `Collateral brand ${underlyingBrand} has already been added`,
-    );
-
-    const initialExchangeRate = makeRatioFromAmounts(
-      AmountMath.make(underlyingBrand, 2000000n),
-      AmountMath.make(protocolBrand, BigInt(LARGE_DENOMINATOR)),
-    );
-    const ratesUpdated = harden({
-      ...rates,
-      initialExchangeRate,
-    });
-
-    const poolParamManager = makePoolParamManager(storageNode, marshaller, ratesUpdated);
+    const {
+      poolParamManager,
+      underlyingBrand,
+      protocolMint
+    } = await setUpPoolParams(underlyingIssuer, underlyingKeyword, params);
     poolParamManagers.init(underlyingBrand, poolParamManager);
 
     const [startTimeStamp, priceAuthNotifier] = await Promise.all([
@@ -243,10 +229,61 @@ export const start = async (zcf, privateArgs) => {
       makeRedeemInvitation,
       liquidationInstall,
       ammPublicFacet,
+      balanceTracer,
+      getCollateralLimit,
     );
     poolTypes.init(underlyingBrand, pm);
     updatePoolState();
     return pm;
+  };
+
+  /**
+   *
+   * @param {Issuer} underlyingIssuer
+   * @param {String} underlyingKeyword
+   * @param {Object} params
+   */
+  const setUpPoolParams = async (underlyingIssuer, underlyingKeyword, params) => {
+    const [_, protocolMint] = await Promise.all([
+      zcf.saveIssuer(underlyingIssuer, underlyingKeyword),
+      zcf.makeZCFMint(`Ag${underlyingKeyword}`, AssetKind.NAT, {
+        decimalPlaces: NUMERIC_PARAMETERS.PROTOCOL_TOKEN_DECIMALS,
+      }),
+    ]);
+
+    const { brand: protocolBrand } = protocolMint.getIssuerRecord();
+    const underlyingBrand = zcf.getBrandForIssuer(underlyingIssuer);
+
+    assert(
+      !poolTypes.has(underlyingBrand),
+      `Collateral brand ${underlyingBrand} has already been added`,
+    );
+
+    const { rates, riskControls } = params;
+
+    const initialExchangeRate = makeRatioFromAmounts(
+      AmountMath.make(underlyingBrand, NUMERIC_PARAMETERS.INITIAL_EXCHANGE_RATE_NUMERATOR),
+      AmountMath.make(protocolBrand, BigInt(NUMERIC_PARAMETERS.LARGE_DENOMINATOR)),
+    );
+    const ratesUpdated = harden({
+      ...rates,
+      initialExchangeRate,
+    });
+
+    const riskControlsUpdated = harden({
+        ...riskControls,
+      colLimit: AmountMath.make(protocolBrand, riskControls.limitValue * 10n ** BigInt(NUMERIC_PARAMETERS.PROTOCOL_TOKEN_DECIMALS)),
+      });
+
+    const poolParamManager = makePoolParamManager(storageNode, marshaller, { rates: ratesUpdated, riskControls: riskControlsUpdated });
+    balanceTracer.addNewBalanceType(protocolBrand);
+
+    return harden({ poolParamManager, protocolMint, underlyingBrand });
+  };
+
+  const getCollateralLimit = brand => {
+    const paramManager = poolParamManagers.get(brand);
+    return paramManager.getParams()[COLLATERAL_LIMIT].value;
   };
 
   /**
@@ -276,12 +313,8 @@ export const start = async (zcf, privateArgs) => {
       /** @type PoolManager */
       const collateralUnderlyingPool = poolTypes.get(collateralUnderlyingBrand);
 
-      const {
-        want: {
-          Debt: { brand: borrowBrand },
-        },
-      } = borrowerSeat.getProposal();
-      assertBorrowProposal(poolTypes, borrowerSeat, collateralUnderlyingPool);
+      const borrowBrand = assertBorrowProposal(poolTypes, borrowerSeat, collateralUnderlyingPool);
+      assertColLimitNotExceeded(balanceTracer, getCollateralLimit, borrowerSeat.getProposal(), collateralUnderlyingBrand);
 
       const currentCollateralExchangeRate = collateralUnderlyingPool.getExchangeRate();
       const pool = poolTypes.get(borrowBrand);

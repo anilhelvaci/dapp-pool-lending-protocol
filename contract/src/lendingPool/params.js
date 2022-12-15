@@ -10,16 +10,18 @@ import {
 } from '@agoric/governance';
 import { makeStoredPublisherKit } from '@agoric/notifier';
 
-export const CHARGING_PERIOD_KEY = 'ChargingPeriod';
-export const RECORDING_PERIOD_KEY = 'RecordingPeriod';
-export const PRICE_CHECK_PERIOD_KEY = 'PriceCheckPeriod'
+export const CHARGING_PERIOD_KEY = harden('ChargingPeriod');
+export const RECORDING_PERIOD_KEY = harden('RecordingPeriod');
+export const PRICE_CHECK_PERIOD_KEY = harden('PriceCheckPeriod');
 
-export const LIQUIDATION_MARGIN_KEY = 'LiquidationMargin';
-export const INITIAL_EXCHANGE_RATE_KEY = 'InitialExchangeRateFee';
-export const BASE_RATE_KEY = 'BaseRate';
-export const MULTIPILIER_RATE_KEY = 'MultipilierRate';
-export const PENALTY_RATE_KEY = 'PenaltyRate';
-export const PROPOSAL_TRESHOLD_KEY = 'ProposalTreshold';
+export const LIQUIDATION_MARGIN_KEY = harden('LiquidationMargin');
+export const INITIAL_EXCHANGE_RATE_KEY = harden('InitialExchangeRateFee');
+export const BASE_RATE_KEY = harden('BaseRate');
+export const MULTIPILIER_RATE_KEY = harden('MultipilierRate');
+export const PENALTY_RATE_KEY = harden('PenaltyRate');
+export const USABLE_AS_COLLATERAL = harden('UsableAsCollateral');
+export const COLLATERAL_LIMIT = harden('CollateralLimit');
+export const BORROWABLE = harden('Borrowable');
 
 /**
  * @param {Amount} electorateInvitationAmount
@@ -75,16 +77,19 @@ const makeLoanParamManager = (storageNode, marshaller, rates) => {
  * @param {{
  *   borrawable: Boolean,
  *   usableAsCol: Boolean,
- *   limit?: Amount
+ *   colLimit: Amount
  * }} riskFactors
  */
-const makePoolParamManager = (storageNode, marshaller, { rates, riskFactors }) => {
+const makePoolParamManager = (storageNode, marshaller, { rates, riskControls }) => {
   return makeParamManagerSync(makeStoredPublisherKit(storageNode, marshaller), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
     [MULTIPILIER_RATE_KEY]: [ParamTypes.RATIO, rates.multipilierRate],
     [PENALTY_RATE_KEY]: [ParamTypes.RATIO, rates.penaltyRate],
+    [BORROWABLE]: [ParamTypes.UNKNOWN, riskControls.borrowable],
+    [USABLE_AS_COLLATERAL]: [ParamTypes.UNKNOWN, riskControls.usableAsCol],
+    [COLLATERAL_LIMIT]: [ParamTypes.AMOUNT, riskControls.colLimit],
   })
 };
 

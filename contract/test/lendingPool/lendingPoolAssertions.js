@@ -84,8 +84,9 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
    */
   const assertBorrowSuccessfulNoInterest = async (poolManager, loan, expected) => {
 
-    const [loanCurrentDebt, totalDebtFromPool, underlyingBalanceAfter, borrowingRate] = await Promise.all([
+    const [loanCurrentDebt, collateralAmount, totalDebtFromPool, underlyingBalanceAfter, borrowingRate] = await Promise.all([
       E(loan).getCurrentDebt(),
+      E(loan).getCollateralAmount(),
       E(poolManager).getTotalDebt(),
       E(poolManager).getUnderlyingLiquidity(),
       E(poolManager).getCurrentBorrowingRate(),
@@ -95,6 +96,7 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     t.deepEqual(totalDebtFromPool, expected.totalDebt);
     t.deepEqual(underlyingBalanceAfter, AmountMath.subtract(expected.underlyingBalanceBefore, loanCurrentDebt));
     t.deepEqual(borrowingRate, expected.borrowingRate);
+    t.log(collateralAmount);
   };
 
   /**

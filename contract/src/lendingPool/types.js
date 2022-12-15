@@ -110,6 +110,8 @@
  * @property {(underlyingBrand: Brand) => Invitation} makeRedeemInvitation
  * @property {TransferLiquidatedFund} transferLiquidatedFund
  * @property {(originalDebt: Amount) => Amount} debtPaid
+ * @property {BalanceTracer} balanceTracer
+ * @property {(collateralBrand: Brand) => Amount} getColLimit
  */
 
 /**
@@ -297,4 +299,11 @@
  * @property {(loan: WrappedLoan, collateralConfig: AdjustConfig, debtConfig: AdjustConfig) => void} adjust
  * @property {(loan: WrappedLoan, debtConfig) => void} closeLoan
  * @property {(poolType: String, protocolRedeemValue: BigInt) => void} redeem
+ */
+
+/**
+ * @typedef {Object} BalanceTracer
+ * @property {(brand: Brand) => void} addNewBalanceType
+ * @property {(brand: Brand, amountToAdd: Amount, operationCode: String) => void} updateBalance
+ * @property {(brand: Brand) => Amount} getBalance
  */

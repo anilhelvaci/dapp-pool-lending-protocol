@@ -35,7 +35,7 @@ import {
 } from './setup.js';
 import { setUpZoeForTest } from '@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup.js';
 import { objectMap } from '@agoric/internal';
-import { SECONDS_PER_YEAR } from '../../src/interest.js';
+import { SECONDS_PER_YEAR, BASIS_POINTS } from '../../src/interest.js';
 import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
@@ -96,6 +96,11 @@ test.before(async t => {
     agVanKit,
     vanRates: makeRates(vanKit.brand, usdKit.brand),
     panRates: makeRates(panKit.brand, usdKit.brand),
+    riskControls: {
+      borrowable: true,
+      usableAsCol: true,
+      limitValue: 10_000n, // 10k units protocolToken
+    }
   };
   // trace(t, 'CONTEXT');
 });
@@ -587,7 +592,9 @@ test('add-new-pool-with-governance-voting-no-quorum', async t => {
   });
 });
 
-test('borrow-borrowable-pool', async t => {
+test('adjust-exceed-limit', async t => {
+  // Uncomment this when you decide to use the debugger
+  // await new Promise(resolve => setTimeout(resolve, 5000));
   const {
     zoe,
     lendingPool,
@@ -596,14 +603,168 @@ test('borrow-borrowable-pool', async t => {
 
   const {
     compareCurrencyKit: { brand: compCurrencyBrand },
-    vanKit: { mint: vanMint },
-    panKit: { mint: panMint },
+    vanKit: { mint: vanMint, brand: vanBrand },
+    panKit: { mint: panMint, brand: panBrand },
+    vanRates,
+    panRates,
+    riskControls,
   } = t.context;
+
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
 
   const {
     addPool,
+    depositMoney,
+    borrow,
+    adjust,
   } = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
 
-  t.is('is', 'is');
+  const {
+    assertBorrowSuccessfulNoInterest,
+    assertEnoughLiquidityInPool,
+  } = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const vanUsdPrice = makeRatio(110n * 10n ** 6n, compCurrencyBrand, 10n ** 8n, vanBrand);
+  const panUsdPrice = makeRatio(200n * 10n ** 6n, compCurrencyBrand, 10n ** 8n, panBrand);
+
+  const [{ poolManager: vanPoolMan }, { poolManager: panPoolMan }] = await Promise.all([
+    addPool(vanRates, riskControls, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL),
+    addPool(panRates, riskControls, panUsdPrice, 'PAN', POOL_TYPES.DEBT)
+  ]);
+
+  // Get market state checkers
+  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }, poolNotifier] = await Promise.all([
+    makeMarketStateChecker(t, vanPoolMan),
+    makeMarketStateChecker(t, panPoolMan),
+    E(lendingPoolPublicFacet).getPoolNotifier(),
+  ]);
+
+  // Put money inside the pools
+  await Promise.all([
+    depositMoney(POOL_TYPES.COLLATERAL, 5n),
+    depositMoney(POOL_TYPES.DEBT, 10n)
+  ]);
+
+  // Check market state after deposit
+  await Promise.all([
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
+  ]);
+
+  // Check if the pool has enough liquidty
+  const panPoolInitialliquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
+  await assertEnoughLiquidityInPool(panPoolMan, panPoolInitialliquidity);
+
+  const { loanKit: { loan: aliceLoan } }  =
+    await borrow(10n ** 8n, 4n * 10n ** 6n);
+
+  await Promise.all([
+    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+      requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      totalDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      underlyingBalanceBefore: panPoolInitialliquidity,
+      borrowingRate: makeRatio(258n, panBrand, BASIS_POINTS),
+    }),
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
+  ]);
+
+  /** @type AdjustConfig */
+  const collateralConfig = {
+    type: ADJUST_PROPOSAL_TYPE.GIVE,
+    value: 3n * 10n ** 8n / 2n,
+  };
+
+  /** @type AdjustConfig */
+  const debtConfig = {
+    type: ADJUST_PROPOSAL_TYPE.WANT,
+    value: 7n * 10n ** 8n / 100n,
+  };
+
+  // Send the offer to adjust the loan
+  /** @type UserSeat */
+  const aliceUpdatedLoanSeat = adjust(aliceLoan, collateralConfig, debtConfig);
+  await t.throwsAsync(() => E(aliceUpdatedLoanSeat).getOfferResult(), { message: 'Proposed operation exceeds the allowed collateral limit.' });
+
+});
+
+test('second-borrow-exceed-limit', async t => {
+  // Uncommment this when you decide to use the debugger
+  // await new Promise(resolve => setTimeout(resolve, 5000));
+  const {
+    zoe,
+    lendingPool,
+    timer,
+  } = await setupServices(t);
+
+  const {
+    compareCurrencyKit: { brand: compCurrencyBrand },
+    vanKit: { mint: vanMint, brand: vanBrand },
+    panKit: { mint: panMint, brand: panBrand },
+    vanRates,
+    panRates,
+    riskControls,
+  } = t.context;
+
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const {
+    addPool,
+    depositMoney,
+    borrow,
+  } = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
+
+  const {
+    assertBorrowSuccessfulNoInterest,
+    assertEnoughLiquidityInPool,
+  } = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const vanUsdPrice = makeRatio(110n * 10n ** 6n, compCurrencyBrand, 10n ** 8n, vanBrand);
+  const panUsdPrice = makeRatio(200n * 10n ** 6n, compCurrencyBrand, 10n ** 8n, panBrand);
+
+  const [{ poolManager: vanPoolMan }, { poolManager: panPoolMan }] = await Promise.all([
+    addPool(vanRates, riskControls, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL),
+    addPool(panRates, riskControls, panUsdPrice, 'PAN', POOL_TYPES.DEBT)
+  ]);
+
+  // Get market state checkers
+  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }, poolNotifier] = await Promise.all([
+    makeMarketStateChecker(t, vanPoolMan),
+    makeMarketStateChecker(t, panPoolMan),
+    E(lendingPoolPublicFacet).getPoolNotifier(),
+  ]);
+
+  // Put money inside the pools
+  await Promise.all([
+    depositMoney(POOL_TYPES.COLLATERAL, 5n),
+    depositMoney(POOL_TYPES.DEBT, 10n)
+  ]);
+
+  // Check market state after deposit
+  await Promise.all([
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
+  ]);
+
+  // Check if the pool has enough liquidty
+  const panPoolInitialliquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
+  await assertEnoughLiquidityInPool(panPoolMan, panPoolInitialliquidity);
+
+  const { loanKit: { loan: aliceLoan } }  =
+    await borrow(10n ** 8n, 4n * 10n ** 6n);
+
+  await Promise.all([
+    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+      requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      totalDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      underlyingBalanceBefore: panPoolInitialliquidity,
+      borrowingRate: makeRatio(258n, panBrand, BASIS_POINTS),
+    }),
+    checkVanPoolStateInSync(),
+    checkPanPoolStateInSync(),
+  ]);
+
+  const { seat: bobBorrowSeat } = await borrow(3n * 10n ** 8n / 2n, 4n * 10n ** 6n, true);
+  await t.throwsAsync(() => E(bobBorrowSeat).getOfferResult(), { message: 'Proposed operation exceeds the allowed collateral limit.' });
 });
 

@@ -18,7 +18,7 @@ import {
   CHARGING_PERIOD_KEY,
   MULTIPILIER_RATE_KEY,
   BASE_RATE_KEY,
-  PENALTY_RATE_KEY,
+  PENALTY_RATE_KEY, BORROWABLE, USABLE_AS_COLLATERAL, COLLATERAL_LIMIT,
 } from './params.js';
 import { chargeInterest } from '../interest.js';
 import {
@@ -75,6 +75,8 @@ const trace = makeTracer('PM');
  * @param {(underlyingBrand: Brand) => Promise<Invitation>} makeRedeemInvitation
  * @param {Installation} liquidationInstall
  * @param {XYKAMMPublicFacet} ammPublicFacet
+ * @param {BalanceTracer} balanceTracer
+ * @param {(collateralBrand: Brand) => Amount} getColLimit
  * @returns {ERef<PoolManager>}
  */
 export const makePoolManager = (
@@ -95,6 +97,8 @@ export const makePoolManager = (
   makeRedeemInvitation,
   liquidationInstall,
   ammPublicFacet,
+  balanceTracer,
+  getColLimit,
 ) => {
   const {
     brand: protocolBrand,
@@ -125,6 +129,9 @@ export const makePoolManager = (
       E(priceManager).getWrappedPriceAuthority(brand),
     getChargingPeriod: () => timingParams[CHARGING_PERIOD_KEY].value,
     getRecordingPeriod: () => timingParams[RECORDING_PERIOD_KEY].value,
+    isBorrowable: () => getLoanParams()[BORROWABLE].value,
+    isUsableAsCol: () => getLoanParams()[USABLE_AS_COLLATERAL].value,
+    getCollateralLimit: () => getLoanParams()[COLLATERAL_LIMIT].value,
     getProtocolBrand: () => protocolBrand,
     getProtocolIssuer: () => protocolIssuer,
     getProtocolLiquidity: () => totalProtocolSupply,
@@ -418,6 +425,8 @@ export const makePoolManager = (
     transferLiquidatedFund,
     debtPaid: originalDebt =>
       (totalDebt = AmountMath.subtract(totalDebt, originalDebt)), // Update debt after payment
+    balanceTracer,
+    getColLimit,
   });
 
   const checkDebtsPerCollateralStore = async collateralBrand => {

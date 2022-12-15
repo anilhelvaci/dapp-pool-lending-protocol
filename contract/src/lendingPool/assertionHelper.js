@@ -1,8 +1,10 @@
-import { assert, details as X, q } from '@agoric/assert';
+// import { assert, details as X, q } from '@agoric/assert';
 import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { AmountMath } from '@agoric/ertp';
 
 const trace = makeTracer('LendingPool');
+
+const { details: X, quote: q } = assert;
 
 /**
  *
@@ -75,6 +77,7 @@ const assertBorrowProposal = (
     poolTypes.has(borrowBrand),
     X`Not a supported pool type ${borrowBrand}`,
   );
+  return borrowBrand;
 };
 harden(assertBorrowProposal);
 
@@ -125,8 +128,6 @@ const assertLiquidityFunds = loanAllocations => {
 };
 harden(assertLiquidityFunds);
 
-// The proposal is not allowed to include any keys other than these,
-// usually 'Collateral' and 'RUN'.
 const assertOnlyKeys = (proposal, keys) => {
   const onlyKeys = clause =>
     Object.getOwnPropertyNames(clause).every(c => keys.includes(c));
@@ -142,6 +143,20 @@ const assertOnlyKeys = (proposal, keys) => {
 };
 harden(assertOnlyKeys);
 
+const assertColLimitNotExceeded = (balanceTracer, getColLimit, proposal, colUnderlyingBrand) => {
+  const {
+    give: {
+      Collateral: collateralAmount,
+    }
+  } = proposal;
+
+  const currentBalance = balanceTracer.getBalance(collateralAmount.brand);
+  const proposedBalance = AmountMath.add(currentBalance, collateralAmount);
+  const colLimit = getColLimit(colUnderlyingBrand);
+  console.log('@@@@@@@1', {currentBalance, proposedBalance, colLimit});
+  assert(AmountMath.isGTE(colLimit, proposedBalance), X`Proposed operation exceeds the allowed collateral limit.`);
+};
+
 export {
   assertBorrowOfferArgs,
   assertBalancesHookArgs,
@@ -152,4 +167,5 @@ export {
   assertDebtDeltaNotZero,
   assertLiquidityFunds,
   assertOnlyKeys,
+  assertColLimitNotExceeded,
 };

@@ -63,12 +63,13 @@ export const makeLendingPoolScenarioHelpers = (
 
   /**
    * @param rates
+   * @param riskControls
    * @param {Ratio} price
    * @param {String} underlyingKeyword
    * @param {String} type
    * @returns {Promise<*>}
    */
-  const addPool = async (rates, price, underlyingKeyword, type) => {
+  const addPool = async (rates, riskControls, price, underlyingKeyword, type) => {
     assertPriceCorrect(price, type);
 
     const { underlyingBrand, underlyingIssuer } = getPoolConfigFromType(type);
@@ -80,7 +81,7 @@ export const makeLendingPoolScenarioHelpers = (
       timer,
     });
 
-    const pm = await E(lendingPoolCreatorFacet).addPoolType(underlyingIssuer, underlyingKeyword, rates, underlyingPriceAuthority);
+    const pm = await E(lendingPoolCreatorFacet).addPoolType(underlyingIssuer, underlyingKeyword, { rates, riskControls }, underlyingPriceAuthority);
     assignPoolManagerAccordingToType(pm, type);
 
     return { poolManager: pm, priceAuthority: underlyingPriceAuthority };
@@ -133,8 +134,9 @@ export const makeLendingPoolScenarioHelpers = (
    *
    * @param {BigInt} underlyingValue
    * @param {BigInt} debtValue
+   * @param {Boolean} shouldThrow
    */
-  const borrow = async (underlyingValue, debtValue) => {
+  const borrow = async (underlyingValue, debtValue, shouldThrow) => {
     await assertBorrowSetupReady();
 
     const {
@@ -153,12 +155,14 @@ export const makeLendingPoolScenarioHelpers = (
     };
 
     /** @type UserSeat */
-    const borrowSeat = await E(zoe).offer(
+    const borrowSeat = E(zoe).offer(
       E(lendingPoolPublicFacet).makeBorrowInvitation(),
       debtProposal,
       debtPaymentKeywordRecord,
       { collateralUnderlyingBrand: collateralUnderlyingBrand },
     );
+
+    if (shouldThrow) return { seat: borrowSeat };
 
     const borrowLoanKit = await E(borrowSeat).getOfferResult();
     updateFaucet(POOL_TYPES.COLLATERAL, depositedMoneyMinusLoan);
