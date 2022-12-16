@@ -143,6 +143,7 @@ export const makeLendingPoolScenarioHelpers = (
       collateral: { payment: collateralPayment, amount: collateralAmount },
       remaining: { payment: depositedMoneyMinusLoan },
     } = await splitCollateral(collateralPoolManager, collateralPoolProtocolFaucet, underlyingValue);
+    updateFaucet(POOL_TYPES.COLLATERAL, depositedMoneyMinusLoan);
 
     // build the proppsal
     const debtProposal = {
@@ -165,7 +166,6 @@ export const makeLendingPoolScenarioHelpers = (
     if (shouldThrow) return { seat: borrowSeat };
 
     const borrowLoanKit = await E(borrowSeat).getOfferResult();
-    updateFaucet(POOL_TYPES.COLLATERAL, depositedMoneyMinusLoan);
 
     return { moneyLeftInPool: depositedMoneyMinusLoan, loanKit: borrowLoanKit }
   };

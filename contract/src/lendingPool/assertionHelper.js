@@ -146,9 +146,14 @@ harden(assertOnlyKeys);
 const assertColLimitNotExceeded = (balanceTracer, getColLimit, proposal, colUnderlyingBrand) => {
   const {
     give: {
-      Collateral: collateralAmount,
+      Collateral: collateralAmountGiven,
+    },
+    want: {
+      Collateral: collateralAmountWanted
     }
   } = proposal;
+
+  const collateralAmount = collateralAmountGiven ? collateralAmountGiven : collateralAmountWanted;
 
   const currentBalance = balanceTracer.getBalance(collateralAmount.brand);
   const proposedBalance = AmountMath.add(currentBalance, collateralAmount);
