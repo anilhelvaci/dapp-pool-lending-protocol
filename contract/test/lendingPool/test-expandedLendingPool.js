@@ -1003,3 +1003,97 @@ test('bob-can-borrow-after-alice-closes', async t => {
   ]);
 });
 
+test('bob-can-borrow-after-alice-gets-liquidated', async t => {
+  // Uncommment this when you decide to use the debugger
+  // await new Promise(resolve => setTimeout(resolve, 5000));
+  const {
+    zoe,
+    lendingPool,
+    timer,
+  } = await setupServices(t);
+
+  const {
+    compareCurrencyKit: { brand: compCurrencyBrand },
+    vanKit: { mint: vanMint, brand: vanBrand },
+    panKit: { mint: panMint, brand: panBrand },
+    vanRates,
+    panRates,
+    riskControls,
+  } = t.context;
+
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 10n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls : {
+      ...riskControls,
+      limitValue: 5_001n,
+    },
+    compCurrencyBrand,
+  };
+
+  const { checkPoolStates, debtPoolMan: panPoolMan, colPoolMan: vanPoolMan } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
+
+  const { loanKit: { loan: aliceLoan } }  = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
+
+  await Promise.all([
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+      requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
+      totalDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
+      underlyingBalanceBefore: AmountMath.make(panBrand, 10n * 10n ** 8n),
+      borrowingRate: makeRatio(320n, panBrand, BASIS_POINTS),
+    }),
+    assertionHelpers.assertCollateralBalance(vanPoolMan, 5_000n * 10n ** 6n),
+    checkPoolStates(),
+  ]);
+
+  const { seat: bobLoanSeat }  = await scenarioHelpers.borrow( 10n ** 8n, 10n ** 6n, true);
+  await t.throwsAsync(() => E(bobLoanSeat).getOfferResult(), { message: 'Proposed operation exceeds the allowed collateral limit.' });
+
+  // Collateral price goes down, new max amount of debt is 66 USD worth PAN
+  // This means that we're now underwater, so liquidation should be triggerred
+  scenarioHelpers.setCollateralUnderlyingPrice(100n * 10n ** 6n);
+  await eventLoopIteration();
+
+  const expectedValuesAfterLiquidation = {
+    debtAmount: AmountMath.make(panBrand, 35n * 10n ** 6n),
+    initialLiquidityBeforeLoan: AmountMath.make(panBrand, 10n * 10n ** 8n),
+    totalDebt: AmountMath.makeEmpty(panBrand),
+    borrowRate: makeRatio(250n, panBrand, BASIS_POINTS),
+    exchangeRateNumerator: 2000000n,
+  };
+
+  // Check market state after liquidation
+  await Promise.all([
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
+  ]);
+
+  const { loanKit: { loan: bobLoan } } = await scenarioHelpers.borrow(10n ** 8n, 2n * 10n ** 5n);
+  await Promise.all([
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, {
+      requestedDebt: AmountMath.make(panBrand, 2n * 10n ** 5n),
+      totalDebt: AmountMath.make(panBrand, 2n * 10n ** 5n),
+      liquidationOccurredBefore: true,
+    }),
+    assertionHelpers.assertCollateralBalance(vanPoolMan, 5_000n * 10n ** 6n),
+    checkPoolStates(),
+  ]);
+});
+

@@ -78,7 +78,8 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
    *   requestedDebt: Amount,
    *   totalDebt: Amount,
    *   underlyingBalanceBefore: Amount,
-   *   borrowingRate: Ratio
+   *   borrowingRate: Ratio,
+   *   liquidationOccurredBefore: Boolean
    * }} expected
    * @returns {Promise<void>}
    */
@@ -92,11 +93,12 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
       E(poolManager).getCurrentBorrowingRate(),
     ]);
 
+    t.log(collateralAmount);
     t.deepEqual(loanCurrentDebt, expected.requestedDebt);
     t.deepEqual(totalDebtFromPool, expected.totalDebt);
+    if (expected.liquidationOccurredBefore) return;
     t.deepEqual(underlyingBalanceAfter, AmountMath.subtract(expected.underlyingBalanceBefore, loanCurrentDebt));
     t.deepEqual(borrowingRate, expected.borrowingRate);
-    t.log(collateralAmount);
   };
 
   /**

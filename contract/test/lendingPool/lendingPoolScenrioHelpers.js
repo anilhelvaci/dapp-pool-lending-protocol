@@ -59,6 +59,15 @@ export const makeLendingPoolScenarioHelpers = (
   let collateralPoolProtocolFaucet;
   let debtPoolProtocolFaucet;
 
+  /**
+   * @type PriceAuthority
+   */
+  let collateralUnderlyingPriceAuthority;
+  /**
+   * @type PriceAuthority
+   */
+  let debtPriceAuthority;
+
   const actorOperations = makeScalarMap('actorName');
 
   /**
@@ -82,7 +91,7 @@ export const makeLendingPoolScenarioHelpers = (
     });
 
     const pm = await E(lendingPoolCreatorFacet).addPoolType(underlyingIssuer, underlyingKeyword, { rates, riskControls }, underlyingPriceAuthority);
-    assignPoolManagerAccordingToType(pm, type);
+    assignByType(pm, underlyingPriceAuthority, type);
 
     return { poolManager: pm, priceAuthority: underlyingPriceAuthority };
   };
@@ -351,11 +360,18 @@ export const makeLendingPoolScenarioHelpers = (
   /**
    *
    * @param {PoolManager} poolManager
+   * @param {PriceAuthority} priceAuth
    * @param {String} type
    */
-  const assignPoolManagerAccordingToType = (poolManager, type) => {
-    if (type === POOL_TYPES.COLLATERAL) collateralPoolManager = poolManager;
-    else if (type === POOL_TYPES.DEBT) debtPoolManager = poolManager;
+  const assignByType = (poolManager, priceAuth, type) => {
+    if (type === POOL_TYPES.COLLATERAL) {
+      collateralPoolManager = poolManager;
+      collateralUnderlyingPriceAuthority = priceAuth;
+    }
+    else if (type === POOL_TYPES.DEBT) {
+      debtPoolManager = poolManager;
+      debtPriceAuthority = priceAuth;
+    }
   };
 
   const assertBorrowSetupReady = async () => {
@@ -414,7 +430,31 @@ export const makeLendingPoolScenarioHelpers = (
     if (poolType === POOL_TYPES.COLLATERAL) collateralPoolProtocolFaucet = newFaucet;
     else if (poolType === POOL_TYPES.DEBT) debtPoolProtocolFaucet = newFaucet;
     else throw new Error('Invalid PoolType');
-  }
+  };
+
+  const setPrice = (compareValue, type) => {
+    let brand;
+    let priceAuth;
+
+    if (type === POOL_TYPES.COLLATERAL) {
+      brand = collateralUnderlyingBrand;
+      priceAuth = collateralUnderlyingPriceAuthority;
+    } else if (type === POOL_TYPES.DEBT) {
+      brand = debtBrand;
+      priceAuth = debtPriceAuthority;
+    }
+
+    const price = makeRatio(compareValue, compareBrand, 10n ** 8n, brand);
+    priceAuth.setPrice(price);
+  };
+
+  const setCollateralUnderlyingPrice = compareValue => {
+    setPrice(compareValue, POOL_TYPES.COLLATERAL);
+  };
+
+  const setDebtPrice = compareValue => {
+    setPrice(compareValue, POOL_TYPES.DEBT);
+  };
 
   return harden({
     addPool,
@@ -423,5 +463,7 @@ export const makeLendingPoolScenarioHelpers = (
     adjust,
     closeLoan,
     redeem,
+    setCollateralUnderlyingPrice,
+    setDebtPrice,
   })
 };
