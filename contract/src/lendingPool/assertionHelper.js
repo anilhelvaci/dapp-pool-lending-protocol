@@ -161,6 +161,19 @@ const assertColLimitNotExceeded = (balanceTracer, getColLimit, proposal, colUnde
   console.log('@@@@@@@1', {currentBalance, proposedBalance, colLimit});
   assert(AmountMath.isGTE(colLimit, proposedBalance), X`Proposed operation exceeds the allowed collateral limit.`);
 };
+harden(assertColLimitNotExceeded);
+
+/**
+ * Assert borrow brand is marked as usable
+ * Assert collateral brand is marked as usable
+ *
+ * @param {PoolManager} debtPoolMan
+ * @param {PoolManager} colPoolMan
+ */
+const assertAssetsUsableInLoan = (debtPoolMan, colPoolMan) => {
+    assert(debtPoolMan.isBorrowable(), X`The borrow brand is not marked as 'Borrowable'`);
+    assert(colPoolMan.isUsableAsCol(), X`The collateral brand is not marked as 'UsableAsCollateral'`);
+}
 
 export {
   assertBorrowOfferArgs,
@@ -173,4 +186,5 @@ export {
   assertLiquidityFunds,
   assertOnlyKeys,
   assertColLimitNotExceeded,
+  assertAssetsUsableInLoan,
 };

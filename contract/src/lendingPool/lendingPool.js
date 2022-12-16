@@ -21,6 +21,7 @@ import { makePoolParamManager, makeElectorateParamManager, COLLATERAL_LIMIT } fr
 import { assert } from '@agoric/assert';
 import { makeNotifierKit } from '@agoric/notifier';
 import {
+  assertAssetsUsableInLoan,
   assertBorrowCollateralUnderlyingBrand,
   assertBorrowOfferArgs,
   assertBorrowProposal, assertColLimitNotExceeded,
@@ -318,6 +319,7 @@ export const start = async (zcf, privateArgs) => {
 
       const currentCollateralExchangeRate = collateralUnderlyingPool.getExchangeRate();
       const pool = poolTypes.get(borrowBrand);
+      assertAssetsUsableInLoan(pool, collateralUnderlyingPool);
 
       return pool.makeBorrowKit(borrowerSeat, currentCollateralExchangeRate);
     };
@@ -375,6 +377,7 @@ export const start = async (zcf, privateArgs) => {
      * @type OfferHandler
      */``
     const updateRiskControls = async (creatorSeat, offerArgs) => {
+
       const {
         underlyingBrand,
         changes
@@ -383,6 +386,8 @@ export const start = async (zcf, privateArgs) => {
 
       const paramManager = poolParamManagers.get(underlyingBrand);
       await E(paramManager).updateParams(changes);
+
+      return 'Params successfully updated!';
     };
 
      return zcf.makeInvitation(updateRiskControls, 'UpdateRiskControls');

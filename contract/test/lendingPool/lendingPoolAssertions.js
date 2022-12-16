@@ -4,6 +4,7 @@ import { calculateProtocolFromUnderlying, getPoolMetadata } from './helpers.js';
 import { floorMultiplyBy, makeRatio, ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { LARGE_DENOMINATOR, BASIS_POINTS } from '../../src/interest.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
+import { makeSubscription, observeIteration } from '@agoric/notifier';
 
 /**
  * This module brings together necessary assertions that are
@@ -380,6 +381,32 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     t.deepEqual(actualBalance, balanceAmountExpected);
   };
 
+  /**
+   *
+   * @param {UserSeat} userSeat
+   * @param {PoolManager} poolManager
+   */
+  const assertParameterUpdatedCorrectly = async ({ userSeat, poolManager }) => {
+    let test;
+    const { underlyingBrand } = await getPoolMetadata(poolManager);
+    const subscriptionP = E(lendingPoolPublicFacet).getParamsSubscription(underlyingBrand);
+    const [offerResult] = await Promise.all([
+      E(userSeat).getOfferResult(),
+    ]);
+
+    const subP = Promise.resolve(subscriptionP);
+    const subscription = makeSubscription(E(subP).getSharableSubscriptionInternals());
+    const observer = harden({
+      updateState: val => console.log(val),
+      finish: completion => console.log("asşfi"),
+      fail: reason => console.log("asşfi"),
+    });
+    // await observeIteration(subscription, observer);
+
+    // t.log("TEST", test);
+    t.deepEqual(offerResult, 'Params successfully updated!');
+  };
+
   return harden({
     assertPoolAddedCorrectly,
     assertDepositedCorrectly,
@@ -394,5 +421,6 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     assertGovTokenInitializedCorrectly,
     assertGovFetchedCorrectly,
     assertCollateralBalance,
+    assertParameterUpdatedCorrectly,
   })
 }

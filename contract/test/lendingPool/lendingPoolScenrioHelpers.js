@@ -340,6 +340,7 @@ export const makeLendingPoolScenarioHelpers = (
 
     if (poolType === POOL_TYPES.COLLATERAL) poolConfig = {
       poolManager: collateralPoolManager,
+      priceAuthority: collateralUnderlyingPriceAuthority,
       mint: collateralUnderlyingMint,
       underlyingBrand: collateralUnderlyingBrand,
       underlyingIssuer: collateralUnderlyingIssuer,
@@ -347,6 +348,7 @@ export const makeLendingPoolScenarioHelpers = (
     };
     else if (poolType === POOL_TYPES.DEBT) poolConfig = {
       poolManager: debtPoolManager,
+      priceAuthority: debtPriceAuthority,
       mint: debtMint,
       underlyingBrand: debtBrand,
       underlyingIssuer: debtIssuer,
@@ -456,6 +458,29 @@ export const makeLendingPoolScenarioHelpers = (
     setPrice(compareValue, POOL_TYPES.DEBT);
   };
 
+  const updatePoolParams = (changes, type) => {
+
+    const {
+      underlyingBrand
+    } = getPoolConfigFromType(type);
+
+    const invitation = E(lendingPoolCreatorFacet).makeUpdateRiskControlsInvitation();
+    return E(zoe).offer(
+      invitation,
+      undefined,
+      undefined,
+      { underlyingBrand, changes }
+    );
+  };
+
+  const updateCollateralPoolParams = paramSpecs => {
+    return updatePoolParams(paramSpecs, POOL_TYPES.COLLATERAL);
+  };
+
+  const updateDebtPoolParams = paramSpecs => {
+    return updatePoolParams(paramSpecs, POOL_TYPES.DEBT);
+  };
+
   return harden({
     addPool,
     depositMoney,
@@ -465,5 +490,7 @@ export const makeLendingPoolScenarioHelpers = (
     redeem,
     setCollateralUnderlyingPrice,
     setDebtPrice,
+    updateCollateralPoolParams,
+    updateDebtPoolParams,
   })
 };
