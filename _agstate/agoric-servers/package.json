@@ -10,8 +10,5 @@
     "lint-fix": "exit 0"
   },
   "author": "Agoric",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "@agoric/cosmic-swingset": "dev"
-  }
+  "license": "Apache-2.0"
 }
