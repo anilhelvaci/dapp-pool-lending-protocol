@@ -5,9 +5,10 @@
 // import test from 'ava';
 
 
-import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
+// import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
 // import { test } from '@agoric/notifier/test/prepare-test-env-ava.js';
 // import { test } from './prepare-test-env-ava.js';
+import { test } from './agoric-init-test-env-ava.js';
 
 test('ses-ava', async t => {
 	const test = harden({
