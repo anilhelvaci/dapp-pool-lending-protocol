@@ -101,13 +101,11 @@ export const start = async (zcf, privateArgs) => {
     },
   } = terms;
 
-  const { initialPoserInvitation, storageNode, marshaller } = privateArgs;
+  const { initialPoserInvitation } = privateArgs;
   const [govMint, electorateParamManager] = await Promise.all([
     zcf.makeZCFMint(keyword, AssetKind.NAT, { decimalPlaces: decimals }),
     makeElectorateParamManager(
       E(zcf).getZoeService(),
-      storageNode,
-      marshaller,
       initialPoserInvitation,
     )
   ]);
@@ -276,7 +274,7 @@ export const start = async (zcf, privateArgs) => {
       colLimit: AmountMath.make(protocolBrand, riskControls.limitValue * 10n ** BigInt(NUMERIC_PARAMETERS.PROTOCOL_TOKEN_DECIMALS)),
       });
 
-    const poolParamManager = makePoolParamManager(storageNode, marshaller, { rates: ratesUpdated, riskControls: riskControlsUpdated });
+    const poolParamManager = makePoolParamManager({ rates: ratesUpdated, riskControls: riskControlsUpdated });
     balanceTracer.addNewBalanceType(protocolBrand);
 
     return harden({ poolParamManager, protocolMint, underlyingBrand });

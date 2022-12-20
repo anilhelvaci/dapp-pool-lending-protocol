@@ -208,8 +208,6 @@ export const startLendingPool = async (
   },
 ) => {
 
-  const STORAGE_PATH = 'lendingPool';
-
   const installations = await Collect.allValues({
     LendingPool,
     liquidate,
@@ -242,20 +240,19 @@ export const startLendingPool = async (
     ammInstance,
     lendingPoolElectorateInstance,
     lendingPoolElectionManagerInstall,
+    priceManager,
+    timer
   ] = await Promise.all([
     instance.consume.amm,
     instance.consume.lendingPoolElectorate, // lendingPoolElectorate
     lendingPoolElectionManager, // lendingPoolElectionManager
+    priceManagerP,
+    chainTimerService,
   ]);
 
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
-  const priceManager = await priceManagerP;
-  const timer = await chainTimerService;
-  const storageNode = await makeStorageNodeChild(chainStorage, STORAGE_PATH);
-  const marshaller = await E(board).getReadonlyMarshaller();
 
   const loanFactoryTerms = makeGovernedTerms(
-    { storageNode, marshaller },
     priceManager, // priceMan here
     loanParams,
     installations.liquidate,
@@ -292,7 +289,7 @@ export const startLendingPool = async (
       governorTerms,
       harden({
         governed: {
-          initialPoserInvitation, storageNode, marshaller,
+          initialPoserInvitation,
         },
       }),
     );

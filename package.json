@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "useWorkspaces": true,
-  "type": "module",
   "workspaces": [
     "ui",
     "_agstate/agoric-servers",

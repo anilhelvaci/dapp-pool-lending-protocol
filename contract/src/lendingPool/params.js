@@ -8,7 +8,7 @@ import {
   CONTRACT_ELECTORATE,
   ParamTypes
 } from '@agoric/governance';
-import { makeStoredPublisherKit } from '@agoric/notifier';
+import { makeSubscriptionKit } from '@agoric/notifier';
 
 export const CHARGING_PERIOD_KEY = harden('ChargingPeriod');
 export const RECORDING_PERIOD_KEY = harden('RecordingPeriod');
@@ -47,12 +47,10 @@ const makeLoanParams = (loanTiming, rates) => {
 };
 
 /**
- * @param {ERef<StorageNode>} storageNode
- * @param {ERef<Marshaller>} marshaller
  * @param {LendingPoolTiming} initialValues
  */
-const makeLoanTimingManager = (storageNode, marshaller, initialValues) => {
-  return makeParamManagerSync(makeStoredPublisherKit(storageNode, marshaller),{
+const makeLoanTimingManager = (initialValues) => {
+  return makeParamManagerSync(getSubscriptionKit(),{
     [CHARGING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.chargingPeriod],
     [RECORDING_PERIOD_KEY]: [ParamTypes.NAT, initialValues.recordingPeriod],
     [PRICE_CHECK_PERIOD_KEY]: [ParamTypes.NAT, initialValues.priceCheckPeriod] // TODO this now deprecated and not being used anywhere, should remove it
@@ -60,28 +58,24 @@ const makeLoanTimingManager = (storageNode, marshaller, initialValues) => {
 };
 
 /**
- * @param {ERef<StorageNode>} storageNode
- * @param {ERef<Marshaller>} marshaller
  * @param {Rates} rates
  */
-const makeLoanParamManager = (storageNode, marshaller, rates) => {
-  return makeParamManagerSync(makeStoredPublisherKit(storageNode, marshaller), {
+const makeLoanParamManager = (rates) => {
+  return makeParamManagerSync(getSubscriptionKit(), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
   })
 };
 
 /**
- * @param {ERef<StorageNode>} storageNode
- * @param {ERef<Marshaller>} marshaller
  * @param {Rates} rates
  * @param {{
  *   borrawable: Boolean,
  *   usableAsCol: Boolean,
  *   colLimit: Amount
- * }} riskFactors
+ * }} riskControls
  */
-const makePoolParamManager = (storageNode, marshaller, { rates, riskControls }) => {
-  return makeParamManagerSync(makeStoredPublisherKit(storageNode, marshaller), {
+const makePoolParamManager = ({ rates, riskControls }) => {
+  return makeParamManagerSync(getSubscriptionKit(), {
     [LIQUIDATION_MARGIN_KEY]: [ParamTypes.RATIO, rates.liquidationMargin],
     [INITIAL_EXCHANGE_RATE_KEY]: [ParamTypes.RATIO, rates.initialExchangeRate],
     [BASE_RATE_KEY]: [ParamTypes.RATIO, rates.baseRate],
@@ -94,8 +88,6 @@ const makePoolParamManager = (storageNode, marshaller, { rates, riskControls }) 
 };
 
 /**
- * @param {ERef<StorageNode>} storageNode
- * @param {ERef<Marshaller>} marshaller
  * @param {ERef<ZoeService>} zoe
  * @param {Invitation} electorateInvitation
  * @returns {Promise<{
@@ -105,18 +97,14 @@ const makePoolParamManager = (storageNode, marshaller, { rates, riskControls }) 
  *   updateElectorate: (invitation: Invitation) => void,
  * }>}
  */
-const makeElectorateParamManager = async (zoe, storageNode, marshaller, electorateInvitation) => {
-  return makeParamManager(makeStoredPublisherKit(storageNode, marshaller), {
+const makeElectorateParamManager = async (zoe, electorateInvitation) => {
+  return makeParamManager(getSubscriptionKit(), {
       [CONTRACT_ELECTORATE]: [ParamTypes.INVITATION, electorateInvitation],
     },
     zoe);
 };
 
 /**
- * @param {{
- *   storageNode,
- *   marshaller
- * }} publishKitParams
  * @param {ERef<PriceManager>} priceManager
  * @param {LoanTiming} loanTiming
  * @param {Installation} liquidationInstall
@@ -133,7 +121,6 @@ const makeElectorateParamManager = async (zoe, storageNode, marshaller, electora
  * }} governance
  */
 const makeGovernedTerms = (
-  { storageNode, marshaller },
   priceManager,
   loanTiming,
   liquidationInstall,
@@ -144,9 +131,8 @@ const makeGovernedTerms = (
   compareCurrencyBrand,
   governance
 ) => {
-  const timingParamMgr = makeLoanTimingManager(storageNode, marshaller, loanTiming);
-
-  const rateParamMgr = makeLoanParamManager(storageNode, marshaller, rates);
+  const timingParamMgr = makeLoanTimingManager(loanTiming);
+  const rateParamMgr = makeLoanParamManager(rates);
 
   return harden({
     ammPublicFacet,
@@ -160,6 +146,15 @@ const makeGovernedTerms = (
     compareCurrencyBrand
   });
 };
+
+/**
+ * Creates a standard subscriptionKit and wraps it in an object
+ * where its properties are destructurable by the ParamManager.
+ */
+const getSubscriptionKit = () => {
+  const { publication, subscription } = makeSubscriptionKit();
+  return harden({ publisher: publication, subscriber: subscription });
+}
 
 harden(makeLoanParamManager);
 harden(makePoolParamManager);

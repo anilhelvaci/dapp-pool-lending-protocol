@@ -1,10 +1,11 @@
 // @ts-check
-import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
+import '@endo/init/pre-bundle-source.js';
 import '@agoric/zoe/exported.js';
 import '@agoric/zoe/tools/prepare-test-env.js';
 import test from 'ava';
 import { deeplyFulfilled } from '@endo/marshal';
 
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
 import { E } from '@endo/far';
 import { makeIssuerKit, AssetKind, AmountMath } from '@agoric/ertp';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
@@ -48,7 +49,7 @@ import { makeGovernanceAssertionHelpers } from '../governance/governanceAssertio
 import { TimeMath } from '@agoric/swingset-vat/src/vats/timer/timeMath.js';
 import { makeApiInvocationPositions } from '@agoric/governance/src/contractGovernance/governApi.js';
 import { makeLendingPoolTestProfileOne } from './lendingPoolTestProfiles.js';
-import { BORROWABLE } from '../../src/lendingPool/params.js';
+import { BORROWABLE, USABLE_AS_COLLATERAL } from '../../src/lendingPool/params.js';
 import { ParamTypes } from '@agoric/governance';
 import { observeIteration } from '@agoric/notifier';
 
@@ -212,6 +213,7 @@ test('add-new-pool-with-governance-voting-positive', async t => {
     vanKit: { brand: vanBrand, issuer: vanIssuer },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
   } = t.context;
 
   const {
@@ -264,7 +266,7 @@ test('add-new-pool-with-governance-voting-positive', async t => {
 
   const offerArgs = harden({
     apiMethodName: 'addPoolType',
-    methodArgs: [vanIssuer, 'VAN', vanRates, underlyingPriceAuthority],
+    methodArgs: [vanIssuer, 'VAN', { rates: vanRates, riskControls }, underlyingPriceAuthority],
     voteCounterInstallation: t.context.installations.counter,
     deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
     vote: true,
@@ -358,6 +360,7 @@ test('add-new-pool-with-governance-voting-negative', async t => {
     vanKit: { brand: vanBrand, issuer: vanIssuer },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
   } = t.context;
 
   const {
@@ -408,7 +411,7 @@ test('add-new-pool-with-governance-voting-negative', async t => {
 
   const offerArgs = harden({
     apiMethodName: 'addPoolType',
-    methodArgs: [vanIssuer, 'VAN', vanRates, underlyingPriceAuthority],
+    methodArgs: [vanIssuer, 'VAN', { rates: vanRates, riskControls }, underlyingPriceAuthority],
     voteCounterInstallation: t.context.installations.counter,
     deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
     vote: true,
@@ -502,6 +505,7 @@ test('add-new-pool-with-governance-voting-no-quorum', async t => {
     vanKit: { brand: vanBrand, issuer: vanIssuer },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
   } = t.context;
 
   const {
@@ -549,7 +553,7 @@ test('add-new-pool-with-governance-voting-no-quorum', async t => {
 
   const offerArgs = harden({
     apiMethodName: 'addPoolType',
-    methodArgs: [vanIssuer, 'VAN', vanRates, underlyingPriceAuthority],
+    methodArgs: [vanIssuer, 'VAN', { rates: vanRates, riskControls }, underlyingPriceAuthority],
     voteCounterInstallation: t.context.installations.counter,
     deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), 11n),
     vote: false,
@@ -1100,7 +1104,7 @@ test('bob-can-borrow-after-alice-gets-liquidated', async t => {
   ]);
 });
 
-test('alice-can-borrow-bob-cannot-marked-as-non-borrowable', async t => {
+test('alice-can-borrow-bob-cannot-after-marked-as-non-borrowable', async t => {
   // Uncommment this when you decide to use the debugger
   // await new Promise(resolve => setTimeout(resolve, 5000));
   const {
@@ -1159,9 +1163,89 @@ test('alice-can-borrow-bob-cannot-marked-as-non-borrowable', async t => {
 
   const updateSeatP = await scenarioHelpers.updateDebtPoolParams(harden({ [BORROWABLE]: false }));
 
-  await assertionHelpers.assertParameterUpdatedCorrectly({ userSeat: updateSeatP, poolManager: panPoolMan });
+  await assertionHelpers.assertParameterUpdatedCorrectly({
+    userSeat: updateSeatP,
+    poolManager: panPoolMan,
+  }, {
+    keyword: BORROWABLE,
+    value: false,
+    updateCount: 2,
+  });
   await eventLoopIteration();
 
   const { seat: bobLoanSeat }  = await scenarioHelpers.borrow( 10n ** 8n, 10n ** 6n, true);
   await t.throwsAsync(() => E(bobLoanSeat).getOfferResult(), { message: `The borrow brand is not marked as 'Borrowable'` });
+});
+
+test('alice-can-borrow-bob-cannot-after-marked-as-not-usable-as-col', async t => {
+  // Uncommment this when you decide to use the debugger
+  // await new Promise(resolve => setTimeout(resolve, 5000));
+  const {
+    zoe,
+    lendingPool,
+    timer,
+  } = await setupServices(t);
+
+  const {
+    compareCurrencyKit: { brand: compCurrencyBrand },
+    vanKit: { mint: vanMint, brand: vanBrand },
+    panKit: { mint: panMint, brand: panBrand },
+    vanRates,
+    panRates,
+    riskControls,
+  } = t.context;
+
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 10n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand,
+  };
+
+  const { checkPoolStates, debtPoolMan: panPoolMan, colPoolMan: vanPoolMan } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
+
+  const { loanKit: { loan: aliceLoan } }  = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
+
+  await Promise.all([
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+      requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
+      totalDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
+      underlyingBalanceBefore: AmountMath.make(panBrand, 10n * 10n ** 8n),
+      borrowingRate: makeRatio(320n, panBrand, BASIS_POINTS),
+    }),
+    assertionHelpers.assertCollateralBalance(vanPoolMan, 5_000n * 10n ** 6n),
+    checkPoolStates(),
+  ]);
+
+  const updateSeatP = await scenarioHelpers.updateCollateralPoolParams(harden({ [USABLE_AS_COLLATERAL]: false }));
+  await eventLoopIteration();
+
+  await assertionHelpers.assertParameterUpdatedCorrectly({
+    userSeat: updateSeatP,
+    poolManager: vanPoolMan,
+  }, {
+    keyword: USABLE_AS_COLLATERAL,
+    value: false,
+    updateCount: 2,
+  });
+
+  const { seat: bobLoanSeat }  = await scenarioHelpers.borrow( 10n ** 8n, 10n ** 6n, true);
+  await t.throwsAsync(() => E(bobLoanSeat).getOfferResult(), { message: `The collateral brand is not marked as 'UsableAsCollateral'` });
 });

@@ -3,11 +3,12 @@ import { E } from '@endo/far';
 import { AmountMath, AssetKind, makeIssuerKit } from '@agoric/ertp';
 import { floorMultiplyBy, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { resolve as importMetaResolve } from 'import-meta-resolve';
-import { makeTracer } from '@agoric/run-protocol/src/makeTracer.js';
-import * as Collect from '@agoric/run-protocol/src/collect.js';
+import { makeTracer } from '@agoric/inter-protocol/src/makeTracer.js';
+import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
+import { makeSubscription } from '@agoric/notifier';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -564,3 +565,17 @@ export const makeMarketStateChecker = async (t, poolManager) => {
   });
 
 }
+
+export const getLatestUpdateFromSubscriber = async (subscriber, updateCount) => {
+  const localSubscription = makeSubscription(E(subscriber).getSharableSubscriptionInternals());
+
+  let state;
+  let count = 0;
+  for await (const val of localSubscription) {
+    state = val.current;
+    count++;
+
+    if (count === updateCount) break;
+  }
+  return state;
+};

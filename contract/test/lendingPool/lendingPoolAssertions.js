@@ -1,10 +1,10 @@
 import { E } from '@endo/far';
 import { AmountMath } from '@agoric/ertp';
-import { calculateProtocolFromUnderlying, getPoolMetadata } from './helpers.js';
+import { calculateProtocolFromUnderlying, getPoolMetadata, getLatestUpdateFromSubscriber } from './helpers.js';
 import { floorMultiplyBy, makeRatio, ratioGTE } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { LARGE_DENOMINATOR, BASIS_POINTS } from '../../src/interest.js';
 import { LoanPhase } from '../../src/lendingPool/loan.js';
-import { makeSubscription, observeIteration } from '@agoric/notifier';
+import { makeSubscription, makeSubscriptionKit, observeIteration } from '@agoric/notifier';
 
 /**
  * This module brings together necessary assertions that are
@@ -352,7 +352,7 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     t.deepEqual(expectedTotalSupply, govBalance);
     t.deepEqual(expectedTotalSupply, actualTotalSupply);
   };
-  
+
   const assertGovFetchedCorrectly = async (userSeatP, { keyword, expectedBalanceValue, expectedSupplyValue }) => {
     const govIssuerP = E(lendingPoolPublicFacet).getGovernanceIssuer();
     const offerResult = await E(userSeatP).getOfferResult();
@@ -385,25 +385,22 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
    *
    * @param {UserSeat} userSeat
    * @param {PoolManager} poolManager
+   * @param {String} keyword
+   * @param value
+   * @param {Number} updateCount
    */
-  const assertParameterUpdatedCorrectly = async ({ userSeat, poolManager }) => {
-    let test;
-    const { underlyingBrand } = await getPoolMetadata(poolManager);
-    const subscriptionP = E(lendingPoolPublicFacet).getParamsSubscription(underlyingBrand);
-    const [offerResult] = await Promise.all([
+  const assertParameterUpdatedCorrectly = async ({ userSeat, poolManager }, { keyword, value, updateCount }) => {
+
+    const [offerResult, { underlyingBrand }] = await Promise.all([
       E(userSeat).getOfferResult(),
+      getPoolMetadata(poolManager),
     ]);
 
-    const subP = Promise.resolve(subscriptionP);
-    const subscription = makeSubscription(E(subP).getSharableSubscriptionInternals());
-    const observer = harden({
-      updateState: val => console.log(val),
-      finish: completion => console.log("asşfi"),
-      fail: reason => console.log("asşfi"),
-    });
-    // await observeIteration(subscription, observer);
+    const subscriptionP = E(lendingPoolPublicFacet).getParamsSubscription(underlyingBrand);
+    const state = await getLatestUpdateFromSubscriber(subscriptionP, updateCount);
 
-    // t.log("TEST", test);
+    t.log('STATE', state);
+    t.is(state[keyword].value, value);
     t.deepEqual(offerResult, 'Params successfully updated!');
   };
 
