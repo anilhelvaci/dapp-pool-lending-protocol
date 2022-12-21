@@ -33,6 +33,7 @@ const start = (zcf) => {
 
   const addQuestion = async (counterInstallation, questionSpec) => {
     assertGovernedContextInitialized(governedContext);
+    const { publisher: outcomePublisher } = makePublishKit();
 
     const { publicFacet, instance } = await startCounter(
       zcf,
@@ -41,6 +42,7 @@ const start = (zcf) => {
       counterInstallation,
       allQuestions,
       questionsPublisher,
+      outcomePublisher,
     );
 
     return { publicFacet, instance };
