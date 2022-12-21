@@ -20,7 +20,8 @@ import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import { makeGovernedTerms } from '../../src/lendingPool/params.js';
 import { setupAMMBootstrap } from '@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup.js';
 import { provideBundle } from '@agoric/inter-protocol/test/supports.js';
-import { setupAmm, setupReserve, startEconomicCommittee } from '@agoric/inter-protocol/src/proposals/econ-behaviors.js';
+import { setupAmm, setupReserve } from '@agoric/inter-protocol/src/proposals/econ-behaviors.js';
+import { startEconomicCommittee } from '@agoric/inter-protocol/src/proposals/startEconCommittee.js';
 import { makePriceManager } from '../../src/lendingPool/priceManager.js';
 import { makeLendingPoolScenarioHelpers } from './lendingPoolScenrioHelpers.js';
 import { makeLendingPoolAssertions } from './lendingPoolAssertions.js';
@@ -355,7 +356,13 @@ export const setupAmmAndElectorate = async (
     counter: installation.consume.binaryVoteCounter,
   });
 
-  const governorCreatorFacet = consume.ammGovernorCreatorFacet;
+  const {
+    creatorFacet: ammCreatorFacet,
+    instanceWithoutReserve: governedInstance,
+    governorCreatorFacet,
+    publicFacet: ammPublicFacet
+  } = await consume.ammKit;
+
   const governorInstance = await instance.consume.ammGovernor;
   const governorPublicFacet = await E(zoe).getPublicFacet(governorInstance);
   const g = {
@@ -363,13 +370,9 @@ export const setupAmmAndElectorate = async (
     governorPublicFacet,
     governorCreatorFacet,
   };
-  const governedInstance = E(governorPublicFacet).getGovernedContract();
 
-  /** @type { GovernedPublicFacet<XYKAMMPublicFacet> } */
-    // @ts-expect-error cast from unknown
-  const ammPublicFacet = await E(governorCreatorFacet).getPublicFacet();
   const amm = {
-    ammCreatorFacet: await consume.ammCreatorFacet,
+    ammCreatorFacet,
     ammPublicFacet,
     instance: governedInstance,
   };
