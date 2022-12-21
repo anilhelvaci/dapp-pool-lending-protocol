@@ -155,6 +155,8 @@ const assertColLimitNotExceeded = (balanceTracer, getColLimit, proposal, colUnde
 
   const collateralAmount = collateralAmountGiven ? collateralAmountGiven : collateralAmountWanted;
 
+  if (!collateralAmount) return; // Collateral balance is not changing
+
   const currentBalance = balanceTracer.getBalance(collateralAmount.brand);
   const proposedBalance = AmountMath.add(currentBalance, collateralAmount);
   const colLimit = getColLimit(colUnderlyingBrand);

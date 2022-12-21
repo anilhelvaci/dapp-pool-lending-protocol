@@ -43,6 +43,7 @@ import { LoanPhase } from '../../src/lendingPool/loan.js';
 import { oneMinus } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeLendingPoolAssertions } from './lendingPoolAssertions.js';
 import { ADJUST_PROPOSAL_TYPE, makeLendingPoolScenarioHelpers, POOL_TYPES } from './lendingPoolScenrioHelpers.js';
+import { makeLendingPoolTestProfileOne } from './lendingPoolTestProfiles.js';
 
 const trace = makeTracer('TestST');
 
@@ -101,6 +102,11 @@ test.before(async t => {
     agVanKit,
     vanRates: makeRates(vanKit.brand, usdKit.brand),
     panRates: makeRates(panKit.brand, usdKit.brand),
+    riskControls: {
+      borrowable: true,
+      usableAsCol: true,
+      limitValue: 100_001n, // 10k units protocolToken
+    }
   };
   // trace(t, 'CONTEXT');
 });
@@ -124,6 +130,7 @@ test('add-pool', async t => {
     vanKit: { brand: vanBrand },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
   } = t.context;
 
   const {
@@ -133,7 +140,7 @@ test('add-pool', async t => {
   } = await setupServices(t);
 
   const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const { poolManager: vanPoolMan } = await addPool(vanRates,price, 'VAN', POOL_TYPES.COLLATERAL);
+  const { poolManager: vanPoolMan } = await addPool(vanRates, riskControls, price, 'VAN', POOL_TYPES.COLLATERAL);
 
   await assertPoolAddedCorrectly(vanPoolMan, lendingPoolPublicFacet);
 });
@@ -149,6 +156,7 @@ test('deposit', async t => {
     vanKit: { brand: vanBrand },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
   } = t.context;
 
   const {
@@ -158,7 +166,7 @@ test('deposit', async t => {
 
   // Add the pool to deposit money
   const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const { poolManager: vanPoolMan } = await addPool(vanRates, price, 'VAN', POOL_TYPES.COLLATERAL);
+  const { poolManager: vanPoolMan } = await addPool(vanRates, riskControls, price, 'VAN', POOL_TYPES.COLLATERAL);
 
   const [{ protocolBrand, protocolIssuer, exchangeRate }, { checkMarketStateInSync }] = await Promise.all([
     getPoolMetadata(vanPoolMan),
@@ -189,13 +197,14 @@ test('deposit - false protocolAmountOut', async t => {
     vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
     vanRates,
+    riskControls,
     /** @type ZoeService */ zoe
   } = t.context;
 
   const { scenarioHelpers: { addPool } } = await setupServices(t);
 
   const price = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const { poolManager: vanPoolMan } = await addPool(vanRates, price, 'VAN', POOL_TYPES.COLLATERAL);
+  const { poolManager: vanPoolMan } = await addPool(vanRates, riskControls, price, 'VAN', POOL_TYPES.COLLATERAL);
   const { protocolBrand, exchangeRate } = await getPoolMetadata(vanPoolMan);
   const underlyingAmountIn = AmountMath.make(vanBrand, 10n ** 8n);
   const exceedAmount = AmountMath.make(protocolBrand, 10n);
@@ -231,11 +240,12 @@ test('deposit - false protocolAmountOut', async t => {
 test('borrow', async t => {
   // Destructure bootstraped data
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   // Set loan timing
@@ -248,55 +258,48 @@ test('borrow', async t => {
   t.plan(29);
 
   // Start services
-  const { lendingPool: { lendingPoolPublicFacet }, assertions, scenarioHelpers } = await setupServices(t);
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
 
-  const { assertEnoughLiquidityInPool, assertBorrowSuccessfulNoInterest } = assertions;
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
 
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 10n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN',POOL_TYPES.DEBT);
+  const {
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }, poolNotifier] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-    E(lendingPoolPublicFacet).getPoolNotifier(),
-  ]);
-
-  // Put money inside the pools
-  await depositMoney(POOL_TYPES.COLLATERAL, 1n);
-  await depositMoney(POOL_TYPES.DEBT, 10n);
-
-  // Check market state after deposit
-  const [{value: latestPoolState}] = await Promise.all([
-    E(poolNotifier).getUpdateSince(),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  trace('POOLS', latestPoolState);
-
-  // Check if the pool has enough liquidty
-  const panPoolInitialliquidity = AmountMath.make(panBrand, 10n * 10n ** 8n);
-  await assertEnoughLiquidityInPool(panPoolMan, panPoolInitialliquidity);
 
   const { loanKit: { loan } }  =
-    await borrow(10n ** 8n, 4n * 10n ** 6n);
+    await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, loan, {
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, loan, {
       requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
       totalDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
-      underlyingBalanceBefore: panPoolInitialliquidity,
+      underlyingBalanceBefore: AmountMath.make(panBrand, 10n * 10n ** 8n),
       borrowingRate: makeRatio(258n, panBrand, BASIS_POINTS),
     }),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    checkPoolStates(),
   ]);
 
 });
@@ -311,11 +314,12 @@ test('borrow-rate-fluctuate', async t => {
    * zoe: ZoeService
   }} TestContext */
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   // Set loan timing
@@ -326,69 +330,61 @@ test('borrow-rate-fluctuate', async t => {
   };
 
   // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 10n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 4n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
+
   const {
-    timer,
-    assertions,
-    scenarioHelpers,
-  } = await setupServices(t);
-
-  const { assertEnoughLiquidityInPool, assertBorrowSuccessfulNoInterest, assertInterestCharged } = assertions;
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 10n),
-    depositMoney(POOL_TYPES.DEBT, 4n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 4n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: bobLoan }
-  } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, {
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, {
       requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
       totalDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
       underlyingBalanceBefore: AmountMath.make(panBrand, 4n * 10n ** 8n),
       borrowingRate: makeRatio(270n, panBrand, BASIS_POINTS),
     }),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    checkPoolStates(),
   ]);
 
-  const { loanKit: { loan: aliceLoan } } = await borrow(10n ** 8n, 2n * 10n ** 6n);
+  const { loanKit: { loan: aliceLoan } } = await scenarioHelpers.borrow(10n ** 8n, 2n * 10n ** 6n);
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
       requestedDebt: AmountMath.make(panBrand, 2n * 10n ** 6n),
       totalDebt: AmountMath.make(panBrand, 6n * 10n ** 6n),
       underlyingBalanceBefore: AmountMath.make(panBrand, 396000000n),
       borrowingRate: makeRatio(280n, panBrand, BASIS_POINTS),
     }),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    checkPoolStates(),
   ]);
   // Accrue some interest
   await timer.advanceTo(secondsPerDay * 7n);
@@ -402,9 +398,8 @@ test('borrow-rate-fluctuate', async t => {
   };
 
   await Promise.all([
-    assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
+    checkPoolStates(),
   ]);
 });
 
@@ -416,11 +411,12 @@ test('borrow-rate-fluctuate', async t => {
 test('adjust-balances-no-interest', async t => {
   // Destructure bootstraped data
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   // Set loan timing
@@ -430,49 +426,43 @@ test('adjust-balances-no-interest', async t => {
     priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
-  // Setup services
-  const { assertions, scenarioHelpers } = await setupServices(t);
-
   t.plan(42);
 
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
+
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertAdjustBalancesSuccessful,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, adjust } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -482,9 +472,8 @@ test('adjust-balances-no-interest', async t => {
   };
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   /** @type AdjustConfig */
@@ -500,7 +489,7 @@ test('adjust-balances-no-interest', async t => {
   };
 
   // Send the offer to adjust the loan
-  const aliceUpdatedLoanSeat = await adjust(aliceLoan, collateralConfig, debtConfig);
+  const aliceUpdatedLoanSeat = await scenarioHelpers.adjust(aliceLoan, collateralConfig, debtConfig);
 
   const expectedValuesAfterAdjust = {
     collateralPayoutAmount: undefined,
@@ -510,20 +499,20 @@ test('adjust-balances-no-interest', async t => {
   }
 
   await Promise.all([
-    assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAdjust),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAdjust),
+    checkPoolStates(),
   ]);
 });
 
 test('adjust-balances-no-interest-pay-debt', async t => {
   // Destructure bootstraped data
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   // Set loan timing
@@ -534,46 +523,40 @@ test('adjust-balances-no-interest-pay-debt', async t => {
   };
 
   // Setup services
-  const { assertions, scenarioHelpers } = await setupServices(t);
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertAdjustBalancesSuccessful,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, adjust } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan }
-  } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -584,9 +567,8 @@ test('adjust-balances-no-interest-pay-debt', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   /** @type AdjustConfig */
@@ -596,7 +578,7 @@ test('adjust-balances-no-interest-pay-debt', async t => {
   }
 
   // Send the offer to adjust the loan
-  const aliceUpdatedLoanSeat = await adjust(aliceLoan, undefined, debtConfig);
+  const aliceUpdatedLoanSeat = await scenarioHelpers.adjust(aliceLoan, undefined, debtConfig);
 
   const expectedValuesAfterAliceAdjust = {
     collateralPayoutAmount: undefined,
@@ -607,9 +589,8 @@ test('adjust-balances-no-interest-pay-debt', async t => {
 
   // Check market state after adjust
   await Promise.all([
-    assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
+    checkPoolStates(),
   ]);
 });
 
@@ -622,11 +603,12 @@ test('adjust-balances-no-interest-pay-debt', async t => {
 test('adjust-balances-interest-accrued', async t => {
   // Destructure bootstraped data
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   // Set loan timing
@@ -637,47 +619,40 @@ test('adjust-balances-interest-accrued', async t => {
   };
 
   // Setup services
-  const { timer, assertions, scenarioHelpers } = await setupServices(t);
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertInterestCharged,
-    assertAdjustBalancesSuccessful,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, adjust } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan }
-  } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -688,9 +663,8 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   // Accrue interst by one chargingPeriod
@@ -706,9 +680,8 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Check market state after interest
   await Promise.all([
-    assertInterestCharged(panPoolMan, expectedValuesAfterInterestCharged),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertInterestCharged(panPoolMan, expectedValuesAfterInterestCharged),
+    checkPoolStates(),
   ]);
 
   /** @type AdjustConfig */
@@ -718,7 +691,7 @@ test('adjust-balances-interest-accrued', async t => {
   };
 
   // Send the offer to adjust the loan
-  const aliceUpdatedLoanSeat = await adjust(aliceLoan, undefined, debtConfig);
+  const aliceUpdatedLoanSeat = await scenarioHelpers.adjust(aliceLoan, undefined, debtConfig);
 
   const expectedValuesAfterAliceAdjust = {
     collateralPayoutAmount: undefined,
@@ -729,9 +702,8 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Check market state after adjust
   await Promise.all([
-    assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
+    checkPoolStates(),
   ]);
 
   // Accrue one more chargingPeriod of interest
@@ -747,9 +719,8 @@ test('adjust-balances-interest-accrued', async t => {
 
   // Check market state after interest
   await Promise.all([
-    assertInterestCharged(panPoolMan, expectedValuesAfterSecondInterestCharged),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertInterestCharged(panPoolMan, expectedValuesAfterSecondInterestCharged),
+    checkPoolStates(),
   ]);
 });
 
@@ -760,11 +731,12 @@ test('adjust-balances-interest-accrued', async t => {
  */
 test('adjust-balances-pay-debt-get-collateral', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -773,49 +745,41 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
     priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
-  const {
-    assertions,
-    scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertAdjustBalancesSuccessful,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, adjust } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL,);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow(10n ** 8n, 35n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -826,9 +790,8 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   /** @type AdjustConfig */
@@ -843,7 +806,7 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
     value: 7n * 10n ** 6n,
   };
 
-  const aliceUpdatedLoanSeat = await adjust(aliceLoan, collateralConfig, debtConfig);
+  const aliceUpdatedLoanSeat = await scenarioHelpers.adjust(aliceLoan, collateralConfig, debtConfig);
 
   const expectedValuesAfterAliceAdjust = {
     collateralPayoutAmount: collateralConfig.amount,
@@ -854,9 +817,8 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
 
   // Check market state after adjust
   await Promise.all([
-    assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAliceAdjust),
+    checkPoolStates(),
   ]);
 })
 
@@ -866,11 +828,12 @@ test('adjust-balances-pay-debt-get-collateral', async t => {
  */
 test('close-loan', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -879,46 +842,41 @@ test('close-loan', async t => {
     priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
-  const { assertions, scenarioHelpers } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLoanClosedCorrectly,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, closeLoan } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan }
-  } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -929,16 +887,15 @@ test('close-loan', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   const debtConfig = {
     value: 4n * 10n ** 6n,
   };
 
-  const aliceCloseSeat = await closeLoan(aliceLoan, debtConfig);
+  const aliceCloseSeat = await scenarioHelpers.closeLoan(aliceLoan, debtConfig);
 
   const expectedValuesAfterClose = {
     collateralUnderlyingAmount: AmountMath.make(vanBrand, 10n ** 8n),
@@ -947,9 +904,8 @@ test('close-loan', async t => {
 
   // Check market state after close
   await Promise.all([
-    assertLoanClosedCorrectly(vanPoolMan, panPoolMan, aliceCloseSeat, aliceLoan, expectedValuesAfterClose),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLoanClosedCorrectly(vanPoolMan, panPoolMan, aliceCloseSeat, aliceLoan, expectedValuesAfterClose),
+    checkPoolStates(),
   ]);
 });
 
@@ -961,11 +917,12 @@ test('close-loan', async t => {
  */
 test('redeem-underlying', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -974,47 +931,38 @@ test('redeem-underlying', async t => {
     priceCheckPeriod: secondsPerDay * 7n * 2n,
   };
 
-  const {
-    timer,
-    assertions,
-    /** @type LendingPoolScenarioHelpers */ scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 5n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertInterestCharged,
-    assertRedeemSuccessful,
-  } = assertions;
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  const { addPool, depositMoney, borrow, redeem } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const { poolManager: vanPoolMan } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await depositMoney(POOL_TYPES.COLLATERAL, 5n);
-  await depositMoney(POOL_TYPES.DEBT, 10n);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  const { loanKit: { loan: aliceLoan } } = await borrow(10n ** 8n, 4n * 10n ** 6n);
+  const { loanKit: { loan: aliceLoan } } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const aliceLoanExpectedValues = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -1024,9 +972,8 @@ test('redeem-underlying', async t => {
   }
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, aliceLoanExpectedValues),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, aliceLoanExpectedValues),
+    checkPoolStates(),
   ]);
 
   // interest time
@@ -1041,12 +988,11 @@ test('redeem-underlying', async t => {
   }
 
   await Promise.all([
-    assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
+    checkPoolStates(),
   ]);
 
-  const redeemUserSeat = await redeem(POOL_TYPES.DEBT, 5000n);
+  const redeemUserSeat = await scenarioHelpers.redeem(POOL_TYPES.DEBT, 5000n);
 
   const expectedValuesAfterRedeem = {
     underlyingLiquidity: AmountMath.make(panBrand, 895999800n),
@@ -1056,9 +1002,8 @@ test('redeem-underlying', async t => {
   };
 
   await Promise.all([
-    assertRedeemSuccessful(panPoolMan, redeemUserSeat, expectedValuesAfterRedeem),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertRedeemSuccessful(panPoolMan, redeemUserSeat, expectedValuesAfterRedeem),
+    checkPoolStates(),
   ]);
 });
 
@@ -1075,11 +1020,12 @@ test('redeem-underlying', async t => {
  */
 test('collateral-price-drop-liquidate', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -1088,52 +1034,40 @@ test('collateral-price-drop-liquidate', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const {
-    assertions,
-    scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 5n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-    priceAuthority: vanUsdPriceAuthority,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow(10n ** 8n, 35n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -1144,14 +1078,13 @@ test('collateral-price-drop-liquidate', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
   // This means that we're now underwater, so liquidation should be triggerred
-  vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
+  scenarioHelpers.setCollateralUnderlyingPrice(100n * 10n ** 6n)
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
@@ -1164,19 +1097,19 @@ test('collateral-price-drop-liquidate', async t => {
 
   // Check market state after liquidation
   await Promise.all([
-    assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
   ]);
 });
 
 test('close-the-first-loan-liquidate-second', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -1185,54 +1118,41 @@ test('close-the-first-loan-liquidate-second', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const {
-    assertions,
-    scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 6n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 6n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-    assertActiveLoan,
-    assertLoanClosedCorrectly,
-  } = assertions;
-
-  const { addPool, depositMoney, borrow, closeLoan } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-    priceAuthority: vanUsdPriceAuthority,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const { poolManager: panPoolMan } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+    colPoolMan: vanPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow(10n ** 8n, 20n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 20n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 20n * 10n ** 6n),
@@ -1243,17 +1163,16 @@ test('close-the-first-loan-liquidate-second', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    assertActiveLoan(aliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    checkPoolStates(),
   ]);
 
   const debtConfig = {
     value: 20n * 10n ** 8n / 100n,
   };
 
-  const aliceCloseSeat = await closeLoan(aliceLoan, debtConfig);
+  const aliceCloseSeat = await scenarioHelpers.closeLoan(aliceLoan, debtConfig);
 
   const expectedValuesAfterClose = {
     collateralUnderlyingAmount: AmountMath.make(vanBrand, 10n ** 8n),
@@ -1261,14 +1180,13 @@ test('close-the-first-loan-liquidate-second', async t => {
   };
 
   await Promise.all([
-    assertLoanClosedCorrectly(vanPoolMan, panPoolMan, aliceCloseSeat, aliceLoan, expectedValuesAfterClose),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLoanClosedCorrectly(vanPoolMan, panPoolMan, aliceCloseSeat, aliceLoan, expectedValuesAfterClose),
+    checkPoolStates(),
   ]);
 
   const {
     loanKit: { loan: bobLoan },
-  } = await borrow(10n ** 8n, 35n * 10n ** 6n);
+  } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterBobLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -1279,15 +1197,14 @@ test('close-the-first-loan-liquidate-second', async t => {
 
   // Check market state after borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, expectedValuesAfterBobLoan),
-    assertActiveLoan(bobLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, expectedValuesAfterBobLoan),
+    assertionHelpers.assertActiveLoan(bobLoan),
+    checkPoolStates(),
   ]);
 
   // Collateral price goes down, new max amount of debt is 66 USD worth PAN
   // This means that we're now underwater, so liquidation should be triggerred
-  vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
+  scenarioHelpers.setCollateralUnderlyingPrice(100n * 10n ** 6n)
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
@@ -1298,9 +1215,8 @@ test('close-the-first-loan-liquidate-second', async t => {
   };
 
   await Promise.all([
-    assertLiquidation(panPoolMan, bobLoan, expectedValuesAfterLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, bobLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
   ]);
 });
 
@@ -1311,11 +1227,12 @@ test('close-the-first-loan-liquidate-second', async t => {
  */
 test('debt-price-up-liquidate', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -1324,52 +1241,38 @@ test('debt-price-up-liquidate', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const {
-    assertions, scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 6n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 6n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-    assertActiveLoan,
-  } = assertions;
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const {
-    poolManager: panPoolMan,
-    priceAuthority: panUsdPriceAuthority,
-  } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  const { loanKit: { loan: aliceLoan } } = await borrow(10n ** 8n, 35n * 10n ** 6n);
+  const { loanKit: { loan: aliceLoan } } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -1379,14 +1282,13 @@ test('debt-price-up-liquidate', async t => {
   };
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    assertActiveLoan(aliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    checkPoolStates(),
   ]);
 
   // Value of the debt is now 77 USD, so liquidate
-  panUsdPriceAuthority.setPrice(makeRatio(220n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
+  scenarioHelpers.setDebtPrice(220n * 10n ** 6n);
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
@@ -1397,9 +1299,8 @@ test('debt-price-up-liquidate', async t => {
   };
 
   await Promise.all([
-    assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
   ]);
 });
 
@@ -1409,11 +1310,12 @@ test('debt-price-up-liquidate', async t => {
  */
 test('debt-price-up-col-price-down-liquidate', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -1422,7 +1324,7 @@ test('debt-price-up-col-price-down-liquidate', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const { assertions, scenarioHelpers } = await setupServices(
+  const { zoe, lendingPool, timer } = await setupServices(
     t,
     undefined,
     {
@@ -1434,48 +1336,37 @@ test('debt-price-up-col-price-down-liquidate', async t => {
   );
   await eventLoopIteration();
 
+  // Setup services
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 6n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 6n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
+
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-    assertActiveLoan,
-  } = assertions;
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-    priceAuthority: vanUsdPriceAuthority,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const {
-    poolManager: panPoolMan,
-    priceAuthority: panUsdPriceAuthority,
-  } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  const { loanKit: { loan: aliceLoan } } = await borrow(10n ** 8n, 35n * 10n ** 6n);
+  const { loanKit: { loan: aliceLoan } } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -1485,29 +1376,25 @@ test('debt-price-up-col-price-down-liquidate', async t => {
   };
 
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    assertActiveLoan(aliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    checkPoolStates(),
   ]);
 
   // Max debt quote for the below prices is 67 USD so don't liquidate
-  panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
-  vanUsdPriceAuthority.setPrice(makeRatio(102n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-
+  scenarioHelpers.setDebtPrice(190n * 10n ** 6n);
+  scenarioHelpers.setCollateralUnderlyingPrice(102n * 10n ** 6n);
   await eventLoopIteration();
 
   // Check market state after price change
   await Promise.all([
-    assertActiveLoan(aliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    checkPoolStates(),
   ]);
 
   // Now make the max debt quote 66 USD and the value of the debt is 67 USD, so liquidate
-  panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
-  vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-
+  scenarioHelpers.setDebtPrice(193n * 10n ** 6n);
+  scenarioHelpers.setCollateralUnderlyingPrice(100n * 10n ** 6n);
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
@@ -1518,9 +1405,8 @@ test('debt-price-up-col-price-down-liquidate', async t => {
   };
 
   await Promise.all([
-    assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
   ]);
 });
 
@@ -1532,11 +1418,12 @@ test('debt-price-up-col-price-down-liquidate', async t => {
  */
 test('prices-fluctuate-multiple-loans-liquidate', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls
   } = t.context;
 
   t.context.loanTiming = {
@@ -1545,58 +1432,45 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
     priceCheckPeriod: secondsPerDay,
   };
 
-  const { assertions, scenarioHelpers } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
 
-  await eventLoopIteration();
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 6n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 6n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-    assertActiveLoan,
-  } = assertions;
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(110n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-    priceAuthority: vanUsdPriceAuthority,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const {
-    poolManager: panPoolMan,
-    priceAuthority: panUsdPriceAuthority,
-  } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([,
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  // Get a loan for Alice
+  /**
+   * Get a loan for Alice
+   * Max debt is 73 USD
+   * Debt value is 63 USD
+   */
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow( // borrow is a helper method to get loans
-    10n ** 8n, // Max debt is 73 USD
-    35n * 10n ** 6n); // Debt value is 63 USD
+  } = await scenarioHelpers.borrow(10n ** 8n, 35n * 10n ** 6n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 35n * 10n ** 6n),
@@ -1607,17 +1481,18 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
 
   // Check market state after Alice borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    checkPoolStates(),
   ]);
 
-  // Get a loan for Maggie
+  /**
+   * Get a loan for Maggie
+   * Max debt is 73 USD
+   * Debt value is 7 USD
+   */
   const {
     loanKit: { loan: maggieLoan },
-  } = await borrow(
-    10n ** 8n, // Max debt is 73 USD
-    4n * 10n ** 6n); // Debt value is 7 USD
+  } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
 
   const expectedValuesAfterMaggieLoan = {
     requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
@@ -1628,17 +1503,18 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
 
   // Check market state after Maggie borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, maggieLoan, expectedValuesAfterMaggieLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, maggieLoan, expectedValuesAfterMaggieLoan),
+    checkPoolStates(),
   ]);
 
-  // Get a loan for Bob
+  /**
+   * Get a loan for Bob
+   * Max debt is 36 USD
+   * Debt value is 32 USD
+   */
   const {
     loanKit: { loan: bobLoan },
-  } = await borrow(
-    5n* 10n ** 7n, // Max debt is 36 USD
-    18n * 10n ** 6n); // Debt value is 32 USD
+  } = await scenarioHelpers.borrow(5n* 10n ** 7n, 18n * 10n ** 6n);
 
   const expectedValuesAfterBobLoan = {
     requestedDebt: AmountMath.make(panBrand, 18n * 10n ** 6n),
@@ -1649,41 +1525,41 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
 
   // Check market state after Bob borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, expectedValuesAfterBobLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, bobLoan, expectedValuesAfterBobLoan),
+    checkPoolStates(),
   ]);
 
   await Promise.all([
-    assertActiveLoan(aliceLoan),
-    assertActiveLoan(maggieLoan),
-    assertActiveLoan(bobLoan),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    assertionHelpers.assertActiveLoan(maggieLoan),
+    assertionHelpers.assertActiveLoan(bobLoan),
   ]);
 
-  // Loans are effected as below
-  // Bob max debt is 35 USD, debt value is 34 USD so don't liquidate
-  // Maggie max debt is 70 USD, debt value is 7 USD so don't liquidate
-  // Alice max debt is 70 USD, debt value is 66 USD so don't liquidate
-  panUsdPriceAuthority.setPrice(makeRatio(190n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
-  vanUsdPriceAuthority.setPrice(makeRatio(106n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-
+  /**
+   *  Loans are effected as below
+   *  - Bob max debt is 35 USD, debt value is 34 USD so don't liquidate
+   *  - Maggie max debt is 70 USD, debt value is 7 USD so don't liquidate
+   *  - Alice max debt is 70 USD, debt value is 66 USD so don't liquidate
+   */
+  scenarioHelpers.setDebtPrice(190n * 10n ** 6n);
+  scenarioHelpers.setCollateralUnderlyingPrice(106n * 10n ** 6n);
   await eventLoopIteration();
 
   await Promise.all([
-    assertActiveLoan(aliceLoan),
-    assertActiveLoan(maggieLoan),
-    assertActiveLoan(bobLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    assertionHelpers.assertActiveLoan(maggieLoan),
+    assertionHelpers.assertActiveLoan(bobLoan),
+    checkPoolStates(),
   ]);
 
-  // Loans are effected as below
-  // Bob max debt is 33 USD, debt value is 34 USD so liquidate
-  // Maggie max debt is 66 USD, debt value is 7 USD so don't liquidate
-  // Alice max debt is 66 USD, debt value is 67 USD so liquidate
-  panUsdPriceAuthority.setPrice(makeRatio(193n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, panBrand));
-  vanUsdPriceAuthority.setPrice(makeRatio(100n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
-
+  /**
+   * Loans are effected as below
+   * - Bob max debt is 33 USD, debt value is 34 USD so liquidate
+   * - Maggie max debt is 66 USD, debt value is 7 USD so don't liquidate
+   * - Alice max debt is 66 USD, debt value is 67 USD so liquidate
+   */
+  scenarioHelpers.setDebtPrice(193n * 10n ** 6n);
+  scenarioHelpers.setCollateralUnderlyingPrice(100n * 10n ** 6n);
   await eventLoopIteration();
 
   const expectedValuesAfterAliceLiquidation = {
@@ -1702,11 +1578,10 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
 
   // Check market state after price change
   await Promise.all([
-    assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterAliceLiquidation),
-    assertActiveLoan(maggieLoan),
-    assertLiquidation(panPoolMan, bobLoan, expectedValuesAfterBobLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterAliceLiquidation),
+    assertionHelpers.assertActiveLoan(maggieLoan),
+    assertionHelpers.assertLiquidation(panPoolMan, bobLoan, expectedValuesAfterBobLiquidation),
+    checkPoolStates(),
   ]);
 });
 
@@ -1717,11 +1592,12 @@ test('prices-fluctuate-multiple-loans-liquidate', async t => {
  */
 test('prices-hold-still-liquidates-with-interest-accrual', async t => {
   const {
-    vanKit: { brand: vanBrand },
+    vanKit: { brand: vanBrand, mint: vanMint },
     compareCurrencyKit: { brand: usdBrand },
-    panKit: { brand: panBrand },
+    panKit: { brand: panBrand, mint: panMint },
     vanRates,
     panRates,
+    riskControls,
   } = t.context;
 
   t.context.loanTiming = {
@@ -1730,59 +1606,45 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
     priceCheckPeriod: secondsPerDay * 10n,
   };
 
-  const {
-    timer, assertions,
-    scenarioHelpers,
-  } = await setupServices(t);
+  // Setup services
+  const { zoe, lendingPool, timer } = await setupServices(t);
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, usdBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 108n * 10n ** 6n,
+      rates: vanRates,
+      depositValue: 6n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 179n * 10n ** 6n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls,
+    compCurrencyBrand: usdBrand,
+  };
 
   const {
-    assertEnoughLiquidityInPool,
-    assertBorrowSuccessfulNoInterest,
-    assertLiquidation,
-    assertActiveLoan,
-    assertInterestCharged,
-  } = assertions;
+    checkPoolStates,
+    debtPoolMan: panPoolMan,
+  } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
 
-  const { addPool, depositMoney, borrow } = scenarioHelpers;
-
-  // Make prices
-  const vanUsdPrice = makeRatio(108n * 10n ** 6n, usdBrand, 10n ** 8n, vanBrand);
-  const panUsdPrice = makeRatio(179n * 10n ** 6n, usdBrand, 10n ** 8n, panBrand);
-
-  // Add the pools
-  const {
-    poolManager: vanPoolMan,
-    priceAuthority: vanUsdPriceAuthority,
-  } = await addPool(vanRates, vanUsdPrice, 'VAN', POOL_TYPES.COLLATERAL);
-  const {
-    poolManager: panPoolMan,
-  } = await addPool(panRates, panUsdPrice, 'PAN', POOL_TYPES.DEBT);
-
-  // Get market state checkers
-  const [{ checkMarketStateInSync: checkVanPoolStateInSync }, { checkMarketStateInSync: checkPanPoolStateInSync }] = await Promise.all([
-    makeMarketStateChecker(t, vanPoolMan),
-    makeMarketStateChecker(t, panPoolMan),
-  ]);
-
-  // Put money inside the pools
-  await Promise.all([
-    depositMoney(POOL_TYPES.COLLATERAL, 6n),
-    depositMoney(POOL_TYPES.DEBT, 10n),
-  ]);
-
-  // Check market state after deposit
-  await Promise.all([
-    assertEnoughLiquidityInPool(panPoolMan, AmountMath.make(panBrand, 10n * 10n ** 8n)),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
-  ]);
-
-  // Get a loan for Alice
+  /**
+   * Get a loan for Alice
+   * - Max debt is 72 USD worth of PAN
+   * - Debt value is 71 USD
+   */
   const {
     loanKit: { loan: aliceLoan },
-  } = await borrow(
-    10n ** 8n, // Max debt is 72 USD worth of PAN
-    4019n * 10n ** 4n); // Debt value is 71 USD
+  } = await scenarioHelpers.borrow(10n ** 8n, 4019n * 10n ** 4n);
 
   const expectedValuesAfterAliceLoan = {
     requestedDebt: AmountMath.make(panBrand, 4019n * 10n ** 4n),
@@ -1793,10 +1655,9 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // Check market state after Alice borrow
   await Promise.all([
-    assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
-    assertActiveLoan(aliceLoan),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, expectedValuesAfterAliceLoan),
+    assertionHelpers.assertActiveLoan(aliceLoan),
+    checkPoolStates(),
   ]);
 
   // On one tick 10 periods of interest will accrue in a compounded manner
@@ -1812,13 +1673,12 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // Check market state after interest charged
   await Promise.all([
-    assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertInterestCharged(panPoolMan, expectedValuesAfterInterest),
+    checkPoolStates(),
   ]);
 
   // A price update is necessary to initiate liquidation
-  vanUsdPriceAuthority.setPrice(makeRatio(108n * 10n ** 6n, usdBrand, 1n * 10n ** 8n, vanBrand));
+  scenarioHelpers.setCollateralUnderlyingPrice(108n * 10n ** 6n);
   await eventLoopIteration();
 
   const expectedValuesAfterLiquidation = {
@@ -1830,8 +1690,7 @@ test('prices-hold-still-liquidates-with-interest-accrual', async t => {
 
   // Check market state after liquidation
   await Promise.all([
-    assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
-    checkVanPoolStateInSync(),
-    checkPanPoolStateInSync(),
+    assertionHelpers.assertLiquidation(panPoolMan, aliceLoan, expectedValuesAfterLiquidation),
+    checkPoolStates(),
   ]);
 });
