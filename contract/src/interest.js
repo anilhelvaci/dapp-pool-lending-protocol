@@ -5,6 +5,7 @@ import { assert, details as X } from '@agoric/assert';
 import { makeInterestCalculator, calculateCompoundedInterest } from '@agoric/inter-protocol/src/interest.js';
 
 export const SECONDS_PER_YEAR = 60n * 60n * 24n * 365n;
+export const SECONDS_PER_DAY = 60n * 60n * 24n;
 export const BASIS_POINTS = 10000n;
 export const LARGE_DENOMINATOR = BASIS_POINTS * BASIS_POINTS;
 

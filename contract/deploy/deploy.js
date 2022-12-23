@@ -16,7 +16,7 @@ import {
 } from '../test/lendingPool/helpers.js';
 import { startFaucets } from '../test/lendingPool/helpers.js';
 import { SECONDS_PER_YEAR } from '../src/interest.js';
-import * as Collect from '@agoric/run-protocol/src/collect.js';
+import * as Collect from '@agoric/inter-protocol/src/collect.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import fs from 'fs';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
@@ -30,6 +30,9 @@ const contractRoots = {
   amm: '@agoric/run-protocol/src/vpool-xyk-amm/multipoolMarketMaker.js',
   manualTimerFaucet: './manualTimerFaucet.js'
 };
+
+harden(contractRoots);
+export const CONTRACT_ROOTS = contractRoots;
 
 async function setupServices(
   t,
