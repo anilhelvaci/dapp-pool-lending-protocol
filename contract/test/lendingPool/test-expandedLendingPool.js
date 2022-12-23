@@ -24,7 +24,7 @@ import {
   getPoolMetadata,
   calculateUnderlyingFromProtocol,
   calculateProtocolFromUnderlying,
-  splitCollateral,
+  splitCollateral, makeProtocolAmount,
 } from './helpers.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import {
@@ -49,9 +49,10 @@ import { makeGovernanceAssertionHelpers } from '../governance/governanceAssertio
 import { TimeMath } from '@agoric/swingset-vat/src/vats/timer/timeMath.js';
 import { makeApiInvocationPositions } from '@agoric/governance/src/contractGovernance/governApi.js';
 import { makeLendingPoolTestProfileOne } from './lendingPoolTestProfiles.js';
-import { BORROWABLE, USABLE_AS_COLLATERAL } from '../../src/lendingPool/params.js';
+import { BORROWABLE, COLLATERAL_LIMIT, USABLE_AS_COLLATERAL } from '../../src/lendingPool/params.js';
 import { ParamTypes } from '@agoric/governance';
 import { observeIteration } from '@agoric/notifier';
+import { NUMERIC_PARAMETERS } from '../../src/lendingPool/constants.js';
 
 test.before(async t => {
   const farZoeKit = setUpZoeForTest();
@@ -1100,6 +1101,82 @@ test('bob-can-borrow-after-alice-gets-liquidated', async t => {
       liquidationOccurredBefore: true,
     }),
     assertionHelpers.assertCollateralBalance(vanPoolMan, 5_000n * 10n ** 6n),
+    checkPoolStates(),
+  ]);
+});
+
+test('alice-can-borrow-after-creator-increases-limit', async t => {
+  // Uncommment this when you decide to use the debugger
+  // await new Promise(resolve => setTimeout(resolve, 5000));
+  const {
+    zoe,
+    lendingPool,
+    timer,
+  } = await setupServices(t);
+
+  const {
+    compareCurrencyKit: { brand: compCurrencyBrand },
+    vanKit: { mint: vanMint, brand: vanBrand },
+    panKit: { mint: panMint, brand: panBrand },
+    vanRates,
+    panRates,
+    riskControls,
+  } = t.context;
+
+  const { lendingPoolPublicFacet, lendingPoolInstance } = lendingPool;
+
+  const scenarioHelpers = makeLendingPoolScenarioHelpers(zoe, lendingPool, timer, compCurrencyBrand, vanMint, panMint);
+  const assertionHelpers = makeLendingPoolAssertions(t, lendingPoolPublicFacet, lendingPoolInstance);
+
+  const profileInfo = {
+    collateralPool: {
+      keyword: 'VAN',
+      brand: vanBrand,
+      priceValue: 110n * 10n ** 8n,
+      rates: vanRates,
+      depositValue: 10n,
+    },
+    debtPool: {
+      keyword: 'PAN',
+      brand: panBrand,
+      priceValue: 200n * 10n ** 8n,
+      rates: panRates,
+      depositValue: 10n,
+    },
+    riskControls : {
+      ...riskControls,
+      limitValue: 5_001n,
+    },
+    compCurrencyBrand,
+  };
+
+  const { checkPoolStates, debtPoolMan: panPoolMan, colPoolMan: vanPoolMan } = await makeLendingPoolTestProfileOne(t, scenarioHelpers, assertionHelpers, profileInfo);
+
+  const { seat: aliceSeat }  = await scenarioHelpers.borrow(3n * 10n ** 8n / 2n, 4n * 10n ** 6n, true);
+  await t.throwsAsync(() => E(aliceSeat).getOfferResult(), { message: 'Proposed operation exceeds the allowed collateral limit.' });
+
+  const newColLimit = await makeProtocolAmount(vanPoolMan, 7_501n * 10n ** BigInt(NUMERIC_PARAMETERS.PROTOCOL_TOKEN_DECIMALS));
+  const updateSeatP= await scenarioHelpers.updateCollateralPoolParams(harden({ [COLLATERAL_LIMIT]: newColLimit }));
+
+  await assertionHelpers.assertParameterUpdatedCorrectly({
+    userSeat: updateSeatP,
+    poolManager: vanPoolMan,
+  }, {
+    keyword: COLLATERAL_LIMIT,
+    value: newColLimit,
+    updateCount: 2,
+  });
+
+  const { loanKit: { loan: aliceLoan } } = await scenarioHelpers.borrow(3n * 10n ** 8n / 2n, 4n * 10n ** 6n);
+
+  await Promise.all([
+    assertionHelpers.assertBorrowSuccessfulNoInterest(panPoolMan, aliceLoan, {
+      requestedDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      totalDebt: AmountMath.make(panBrand, 4n * 10n ** 6n),
+      underlyingBalanceBefore: AmountMath.make(panBrand, 10n * 10n ** 8n),
+      borrowingRate: makeRatio(258n, panBrand, BASIS_POINTS),
+    }),
+    assertionHelpers.assertCollateralBalance(vanPoolMan, 7_500n * 10n ** 6n),
     checkPoolStates(),
   ]);
 });

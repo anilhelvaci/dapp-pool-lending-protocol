@@ -400,7 +400,7 @@ export const makeLendingPoolAssertions = (t, lendingPoolPublicFacet, lendingPool
     const state = await getLatestUpdateFromSubscriber(subscriptionP, updateCount);
 
     t.log('STATE', state);
-    t.is(state[keyword].value, value);
+    t.deepEqual(state[keyword].value, value);
     t.deepEqual(offerResult, 'Params successfully updated!');
   };
 

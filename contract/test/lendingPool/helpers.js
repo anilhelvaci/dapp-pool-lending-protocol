@@ -579,3 +579,8 @@ export const getLatestUpdateFromSubscriber = async (subscriber, updateCount) => 
   }
   return state;
 };
+
+export const makeProtocolAmount = async (poolManager, value) => {
+  const { protocolBrand } = await getPoolMetadata(poolManager);
+  return AmountMath.make(protocolBrand, value);
+};
