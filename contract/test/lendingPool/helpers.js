@@ -584,3 +584,120 @@ export const makeProtocolAmount = async (poolManager, value) => {
   const { protocolBrand } = await getPoolMetadata(poolManager);
   return AmountMath.make(protocolBrand, value);
 };
+
+export const makeAmmPoolInitializer = async ({ home }) => {
+  const IST_PURSE_NAME = 'Agoric stable local currency';
+
+  const {
+    getBrandAndIssuerFromBoard,
+    getPublicFacetFromInstance,
+    getAmmPublicFacet,
+    getIstBrandAndIssuer,
+    getPurseFromWallet
+  } = makeSoloHelpers(home);
+
+  const [{ ammPublicFacet }, istRecord] = await Promise.all([
+    getAmmPublicFacet(),
+    getIstBrandAndIssuer(),
+  ]);
+
+  const { purse: istPurse } = await getPurseFromWallet(IST_PURSE_NAME);
+
+  const initAmmPool = async ({ issuerId, assetId, centralValue, secondaryValue, kwd }) => {
+    const [{ brand, issuer }, { publicFacet: faucetPF }] = await Promise.all([
+      getBrandAndIssuerFromBoard(issuerId),
+      getPublicFacetFromInstance(assetId),
+    ]);
+
+    const centralAmount = AmountMath.make(istRecord.istBrand, centralValue * 10n ** 6n);
+    const secondaryAmount = AmountMath.make(brand,  secondaryValue * 10n ** 8n);
+
+    /** @type Issuer */
+    const lpTokenIssuer = await E(ammPublicFacet).addIssuer(
+      issuer,
+      kwd,
+    );
+    const lpTokenBrand = await E(lpTokenIssuer).getBrand();
+    // const centralPayment = E(istPurseP).withdraw(centralAmount);
+    const [centralPayment, secondaryPayment] = await Promise.all([
+      E(istPurse).withdraw(centralAmount),
+      getLiquidityFromFaucet(home.zoe, E(faucetPF).makeFaucetInvitation(), secondaryValue, brand, kwd),
+    ]);
+
+    const proposal = harden({
+      give: {
+        Secondary: secondaryAmount,
+        Central: centralAmount,
+      },
+      want: { Liquidity: AmountMath.make(lpTokenBrand, 1000n) },
+    });
+    const payments = {
+      Secondary: secondaryPayment,
+      Central: centralPayment,
+    };
+
+    /** @type UserSeat */
+    const addLiquiditySeat = await E(home.zoe).offer(
+      E(ammPublicFacet).addPoolInvitation(),
+      proposal,
+      payments,
+    );
+
+    const offetResult = await E(addLiquiditySeat).getOfferResult();
+    console.log("INIT_POOL_OFFER_RESULT", offetResult);
+  };
+
+  return harden({
+    initAmmPool
+  });
+}
+
+export const makeSoloHelpers = (home) => {
+  const { zoe, board, agoricNames, wallet } = home;
+
+  const getBrandAndIssuerFromBoard = async (issuerBoardId) => {
+    const issuer = await E(board).getValue(issuerBoardId);
+    const brand = await E(issuer).getBrand();
+
+    return harden({ issuer, brand });
+  };
+
+  const getPublicFacetFromInstance = async (instanceId) => {
+    const instanceP = E(board).getValue(instanceId);
+    const publicFacet = await E(zoe).getPublicFacet(instanceP);
+
+    return harden({ publicFacet });
+  };
+
+  const getAmmPublicFacet = async () => {
+    const ammInstanceP = E(agoricNames).lookup('instance', 'amm');
+    const ammPublicFacet = await E(zoe).getPublicFacet(ammInstanceP);
+
+    return harden({ ammPublicFacet });
+  };
+
+  const getIstBrandAndIssuer = async () => {
+    const istIssuerP = E(zoe).getFeeIssuer();
+    const [istIssuer, istBrand] = await Promise.all([
+      istIssuerP,
+      E(istIssuerP).getBrand(),
+    ]);
+
+    return harden({ istIssuer, istBrand });
+  };
+
+  const getPurseFromWallet = async petName => {
+    const purse = await E(wallet).getPurse(petName);
+
+    return harden({ purse });
+  };
+
+  return harden({
+    getBrandAndIssuerFromBoard,
+    getPublicFacetFromInstance,
+    getAmmPublicFacet,
+    getIstBrandAndIssuer,
+    getPurseFromWallet,
+  });
+
+};

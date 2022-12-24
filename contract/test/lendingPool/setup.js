@@ -481,6 +481,6 @@ const makeAmmLiquidityManager = (t, zoe, ammPublicFacet, centralR) => {
     return { seat: addLiquiditySeat, lpTokenIssuer };
   };
 
-  return { initPool };
+  return harden({ initPool });
 }
 
