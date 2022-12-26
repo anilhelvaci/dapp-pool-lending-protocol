@@ -9,6 +9,7 @@ import { floorDivideBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 import { makeManualPriceAuthority } from '@agoric/zoe/tools/manualPriceAuthority.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { makeSubscription } from '@agoric/notifier';
+import { makePromiseSpace } from '@agoric/vats/src/core/utils.js';
 
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
@@ -585,25 +586,25 @@ export const makeProtocolAmount = async (poolManager, value) => {
   return AmountMath.make(protocolBrand, value);
 };
 
-export const makeAmmPoolInitializer = async ({ home }) => {
+export const makeAmmPoolInitializer = async ({ homeP }) => {
   const IST_PURSE_NAME = 'Agoric stable local currency';
 
   const {
     getBrandAndIssuerFromBoard,
     getPublicFacetFromInstance,
-    getAmmPublicFacet,
+    getAmm,
     getIstBrandAndIssuer,
     getPurseFromWallet
-  } = makeSoloHelpers(home);
+  } = await makeSoloHelpers(homeP);
 
-  const [{ ammPublicFacet }, istRecord] = await Promise.all([
-    getAmmPublicFacet(),
+  const [{ ammPublicFacet }, istRecord, { purse: istPurse }] = await Promise.all([
+    getAmm(),
     getIstBrandAndIssuer(),
+    getPurseFromWallet(IST_PURSE_NAME),
   ]);
 
-  const { purse: istPurse } = await getPurseFromWallet(IST_PURSE_NAME);
-
   const initAmmPool = async ({ issuerId, assetId, centralValue, secondaryValue, kwd }) => {
+    console.log(`Initializing ${kwd}/IST pool in the AMM...`);
     const [{ brand, issuer }, { publicFacet: faucetPF }] = await Promise.all([
       getBrandAndIssuerFromBoard(issuerId),
       getPublicFacetFromInstance(assetId),
@@ -644,7 +645,7 @@ export const makeAmmPoolInitializer = async ({ home }) => {
     );
 
     const offetResult = await E(addLiquiditySeat).getOfferResult();
-    console.log("INIT_POOL_OFFER_RESULT", offetResult);
+    console.log(`${kwd}/IST Pool Offer Result: ${offetResult}`);
   };
 
   return harden({
@@ -652,8 +653,8 @@ export const makeAmmPoolInitializer = async ({ home }) => {
   });
 }
 
-export const makeSoloHelpers = (home) => {
-  const { zoe, board, agoricNames, wallet } = home;
+export const makeSoloHelpers = async homeP => {
+  const { zoe, board, agoricNames, wallet, scratch } = await homeP;
 
   const getBrandAndIssuerFromBoard = async (issuerBoardId) => {
     const issuer = await E(board).getValue(issuerBoardId);
@@ -669,11 +670,11 @@ export const makeSoloHelpers = (home) => {
     return harden({ publicFacet });
   };
 
-  const getAmmPublicFacet = async () => {
-    const ammInstanceP = E(agoricNames).lookup('instance', 'amm');
-    const ammPublicFacet = await E(zoe).getPublicFacet(ammInstanceP);
+  const getAmm = async () => {
+    const ammInstance = await E(agoricNames).lookup('instance', 'amm');
+    const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
 
-    return harden({ ammPublicFacet });
+    return harden({ ammPublicFacet, ammInstance });
   };
 
   const getIstBrandAndIssuer = async () => {
@@ -692,12 +693,27 @@ export const makeSoloHelpers = (home) => {
     return harden({ purse });
   };
 
+  const getValueFromScracth = async id => {
+    const value = await E(scratch).get(id);
+
+    return harden({ value });
+  };
+
   return harden({
     getBrandAndIssuerFromBoard,
     getPublicFacetFromInstance,
-    getAmmPublicFacet,
+    getAmm,
     getIstBrandAndIssuer,
     getPurseFromWallet,
+    getValueFromScracth,
   });
+};
 
+export const getSpaces = () => {
+  const { produce, consume } = (makePromiseSpace());
+  const installation = (makePromiseSpace());
+  const instance = (makePromiseSpace());
+  const brand = (makePromiseSpace());
+
+  return { produce, consume, installation, instance, brand };
 };

@@ -3,9 +3,7 @@ import { AmountMath } from '@agoric/ertp';
 import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
 import { getLiquidityFromFaucet, makeAmmPoolInitializer } from 'contract/test/lendingPool/helpers.js';
 
-const addLiqAmmPool = async (homeP) => {
-  const home = await homeP;
-
+const addAmmPool = async homeP => {
   const {
     VAN_ISSUER_BOARD_ID,
     VAN_ASSET_INSTANCE_BOARD_ID,
@@ -13,21 +11,21 @@ const addLiqAmmPool = async (homeP) => {
     PAN_ASSET_INSTANCE_BOARD_ID,
   } = lendingPoolDefaults;
 
-  const { initAmmPool } = await makeAmmPoolInitializer({ home });
+  const { initAmmPool } = await makeAmmPoolInitializer({ homeP });
 
   const vanPoolConfig = harden({
     issuerId: VAN_ISSUER_BOARD_ID,
     assetId: VAN_ASSET_INSTANCE_BOARD_ID,
-    centralValue: 10n,
-    secondaryValue: 110n * 10n,
+    centralValue: 110n * 100n,
+    secondaryValue: 100n,
     kwd: 'VAN',
   });
 
   const panPoolConfig = harden({
     issuerId: PAN_ISSUER_BOARD_ID,
     assetId: PAN_ASSET_INSTANCE_BOARD_ID,
-    centralValue: 10n,
-    secondaryValue: 200n * 10n,
+    centralValue: 200n * 100n,
+    secondaryValue: 100n,
     kwd: 'PAN',
   });
 
@@ -37,5 +35,5 @@ const addLiqAmmPool = async (homeP) => {
   ]);
 };
 
-harden(addLiqAmmPool);
-export default addLiqAmmPool;
+harden(addAmmPool);
+export default addAmmPool;

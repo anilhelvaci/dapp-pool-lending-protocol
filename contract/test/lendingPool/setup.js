@@ -45,6 +45,7 @@ export const CONTRACT_ROOTS = {
   lendingPoolElectorate: '../../src/governance/lendingPoolElectorate.js',
   lendingPoolElectionManager: '../../src/governance/lendingPoolElectionManager.js',
   counter: '@agoric/governance/src/binaryVoteCounter.js',
+  priceManagerContract: '../../src/lendingPool/priceManagerContract.js',
 };
 
 /**
@@ -220,35 +221,20 @@ export const startLendingPool = async (
     E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
   ]);
 
-  const compareBrand = await compareBrandP;
-
-  /**
-   * Types for the governed params for the loanFactory; addLoanType() sets actual values
-   *
-   * @type {LoanManagerParamValues}
-   */
-  const poolManagerParams = {
-    // XXX the values aren't used. May be addressed by https://github.com/Agoric/agoric-sdk/issues/4861
-    liquidationMargin: makeRatio(0n, compareBrand),
-    // interestRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-    // loanFee: makeRatio(0n, compareBrand, BASIS_POINTS),
-    initialExchangeRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-    baseRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-    multiplierRate: makeRatio(0n, compareBrand, BASIS_POINTS),
-  };
-
   const [
     ammInstance,
     lendingPoolElectorateInstance,
     lendingPoolElectionManagerInstall,
     priceManager,
-    timer
+    timer,
+    compareBrand
   ] = await Promise.all([
     instance.consume.amm,
     instance.consume.lendingPoolElectorate, // lendingPoolElectorate
     lendingPoolElectionManager, // lendingPoolElectionManager
     priceManagerP,
     chainTimerService,
+    compareBrandP,
   ]);
 
   const ammPublicFacet = await E(zoe).getPublicFacet(ammInstance);
@@ -259,7 +245,6 @@ export const startLendingPool = async (
     installations.liquidate,
     timer,
     invitationAmount,
-    poolManagerParams,
     ammPublicFacet,
     compareBrand,
     {
@@ -430,7 +415,11 @@ const setupLendinPoolElectorate = async (
   instanceProduce.lendingPoolElectorate.resolve(lendingPoolElectorateInstance);
   produce.lendingPoolElectorateCreatorFacet.resolve(lendingPoolElectorateCreatorFacet);
   produce.lendingPoolElectoratePublicFacet.resolve(lendingPoolElectoratePublicFacet);
+};
 
+harden(setupLendinPoolElectorate);
+export {
+  setupLendinPoolElectorate
 };
 
 /**

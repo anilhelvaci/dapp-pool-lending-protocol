@@ -435,7 +435,7 @@ export const start = async (zcf, privateArgs) => {
   const lendingPoolWrapper = Far('powerful lendingPool wrapper', {
     getParamMgrRetriever,
     getLimitedCreatorFacet: () => lendingPool,
-    getGovernedApis: () => harden({ addPoolType }),
+    getGovernedApis: () => Far('GovernedApis', { addPoolType }),
     getGovernedApiNames: () => harden(['addPoolType']),
   });
 

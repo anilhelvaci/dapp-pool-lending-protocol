@@ -126,18 +126,15 @@ const makeGovernedTerms = (
   liquidationInstall,
   timerService,
   invitationAmount,
-  rates,
   ammPublicFacet,
   compareCurrencyBrand,
   governance
 ) => {
   const timingParamMgr = makeLoanTimingManager(loanTiming);
-  const rateParamMgr = makeLoanParamManager(rates);
 
   return harden({
     ammPublicFacet,
     priceManager,
-    loanParams: rateParamMgr.getParams(),
     loanTimingParams: timingParamMgr.getParams(),
     timerService,
     liquidationInstall,
