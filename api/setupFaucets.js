@@ -50,38 +50,17 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
     E(panIssuer).getBrand(),
   ]);
 
-  console.log('Making priceAuthorities...');
-  const [vanUsdPriceAuthority, panUsdPriceAuthority] = await Promise.all([
-    E(priceAuthorityFaucet.creatorFacet).makeManualPriceAuthority({
-      actualBrandIn: vanBrand,
-      actualBrandOut: istBrand,
-      initialPrice: makeRatio(110n * 10n ** 6n, istBrand, 10n ** 8n, vanBrand),
-      timer
-    }),
-    E(priceAuthorityFaucet.creatorFacet).makeManualPriceAuthority({
-      actualBrandIn: panBrand,
-      actualBrandOut: istBrand,
-      initialPrice: makeRatio(200n * 10n ** 6n, istBrand, 10n ** 8n, panBrand),
-      timer,
-    })
-  ]);
-
-
   console.log('Putting private stuff to scratch...');
   const [
     VAN_ASSET_CREATOR_FACET_ID,
     PAN_ASSET_CREATOR_FACET_ID,
     TIMER_ID,
-    VAN_USD_PRICE_AUTH_ID,
-    PAN_USD_PRICE_AUTH_ID,
     PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID,
   ] = await Promise.all(
     [
       E(scratch).set('van_asset_creator_facet_id', vanAsset.creatorFacet),
       E(scratch).set('pan_asset_creator_facet_id', panAsset.creatorFacet),
       E(scratch).set('timer_id', timer),
-      E(scratch).set('van_usd_price_auth_id', vanUsdPriceAuthority),
-      E(scratch).set('pan_usd_price_auth_id', panUsdPriceAuthority),
       E(scratch).set('price_authority_faucet_creator_facet_id', priceAuthorityFaucet.creatorFacet),
     ],
   );
@@ -117,8 +96,6 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
     VAN_ASSET_CREATOR_FACET_ID,
     PAN_ASSET_CREATOR_FACET_ID,
     TIMER_ID,
-    VAN_USD_PRICE_AUTH_ID,
-    PAN_USD_PRICE_AUTH_ID
   };
   const defaultsFile = pathResolve(`../ui/src/generated/lendingPoolDefaults.js`);
   console.log('writing', defaultsFile);

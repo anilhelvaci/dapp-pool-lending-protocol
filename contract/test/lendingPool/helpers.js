@@ -594,7 +594,8 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
     getPublicFacetFromInstance,
     getAmm,
     getIstBrandAndIssuer,
-    getPurseFromWallet
+    getPurseFromWallet,
+    home
   } = await makeSoloHelpers(homeP);
 
   const [{ ammPublicFacet }, istRecord, { purse: istPurse }] = await Promise.all([
@@ -603,8 +604,8 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
     getPurseFromWallet(IST_PURSE_NAME),
   ]);
 
-  const initAmmPool = async ({ issuerId, assetId, centralValue, secondaryValue, kwd }) => {
-    console.log(`Initializing ${kwd}/IST pool in the AMM...`);
+  const initAmmPool = async ({ issuerId, assetId, ammConfig: { centralValue, secondaryValue }, keyword }) => {
+    console.log(`Initializing ${keyword}/IST pool in the AMM...`);
     const [{ brand, issuer }, { publicFacet: faucetPF }] = await Promise.all([
       getBrandAndIssuerFromBoard(issuerId),
       getPublicFacetFromInstance(assetId),
@@ -616,13 +617,13 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
     /** @type Issuer */
     const lpTokenIssuer = await E(ammPublicFacet).addIssuer(
       issuer,
-      kwd,
+      keyword,
     );
     const lpTokenBrand = await E(lpTokenIssuer).getBrand();
     // const centralPayment = E(istPurseP).withdraw(centralAmount);
     const [centralPayment, secondaryPayment] = await Promise.all([
       E(istPurse).withdraw(centralAmount),
-      getLiquidityFromFaucet(home.zoe, E(faucetPF).makeFaucetInvitation(), secondaryValue, brand, kwd),
+      getLiquidityFromFaucet(home.zoe, E(faucetPF).makeFaucetInvitation(), secondaryValue, brand, keyword),
     ]);
 
     const proposal = harden({
@@ -645,7 +646,7 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
     );
 
     const offetResult = await E(addLiquiditySeat).getOfferResult();
-    console.log(`${kwd}/IST Pool Offer Result: ${offetResult}`);
+    console.log(`${keyword}/IST Pool Offer Result: ${offetResult}`);
   };
 
   return harden({
@@ -654,7 +655,8 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
 }
 
 export const makeSoloHelpers = async homeP => {
-  const { zoe, board, agoricNames, wallet, scratch } = await homeP;
+  const home = await homeP;
+  const { zoe, board, agoricNames, wallet, scratch } = home;
 
   const getBrandAndIssuerFromBoard = async (issuerBoardId) => {
     const issuer = await E(board).getValue(issuerBoardId);
@@ -699,6 +701,12 @@ export const makeSoloHelpers = async homeP => {
     return harden({ value });
   };
 
+  const getValueFromBoard = async id => {
+    const value = await E(board).getValue(id);
+
+    return harden({ value });
+  }
+
   return harden({
     getBrandAndIssuerFromBoard,
     getPublicFacetFromInstance,
@@ -706,6 +714,8 @@ export const makeSoloHelpers = async homeP => {
     getIstBrandAndIssuer,
     getPurseFromWallet,
     getValueFromScracth,
+    getValueFromBoard,
+    home,
   });
 };
 
@@ -716,4 +726,35 @@ export const getSpaces = () => {
   const brand = (makePromiseSpace());
 
   return { produce, consume, installation, instance, brand };
+};
+
+export const startFaucetIfCustom = async (home, config, installation) => {
+  console.log('Start faucet if custom...');
+  if (!config.issuerId || !config.assetId) {
+    const faucet = await E(home.zoe).startInstance(installation, undefined, {
+      keyword: config.keyword,
+      displayInfo: config.displayInfo,
+    });
+
+    const issuer = await E(faucet.publicFacet).getIssuer();
+
+    const [
+      ISSUER_BOARD_ID,
+      INSTANCE_BOARD_ID,
+    ] = await Promise.all([
+      E(home.board).getId(issuer),
+      E(home.board).getId(faucet.instance),
+    ]);
+
+    const NEW_ASSET_ISSUER_BOARD_ID = `${config.keyword}_ISSUER_BOARD_ID`;
+    const NEW_ASSET_INSTANCE_BOARD_ID = `${config.keyword}_INSTANCE_BOARD_ID`;
+
+    config.issuerId = ISSUER_BOARD_ID;
+    config.assetId = INSTANCE_BOARD_ID;
+    config.constants = {
+      [NEW_ASSET_ISSUER_BOARD_ID]: ISSUER_BOARD_ID,
+      [NEW_ASSET_INSTANCE_BOARD_ID]: INSTANCE_BOARD_ID
+    };
+    console.log('Config', config);
+  }
 };

@@ -7,13 +7,14 @@ import { objectMap } from '@agoric/internal';
 import { E } from '@endo/far';
 import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
 import { SECONDS_PER_DAY } from 'contract/src/interest.js';
+import fs from 'fs';
 
-const deployLendingPool = async (homeP, { bundleSource }) => {
+const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
   const { getIstBrandAndIssuer, getValueFromScracth, getAmm } = await makeSoloHelpers(homeP);
-  const { zoe, board } = await homeP;
+  const { zoe, board, scratch } = await homeP;
 
   const spaces = getSpaces();
-  const { produce, installation, brand, instance } = spaces;
+  const { produce, installation, brand, instance, consume } = spaces;
 
   const {
     TIMER_ID,
@@ -48,10 +49,11 @@ const deployLendingPool = async (homeP, { bundleSource }) => {
   console.log('Starting LendingPoolElectorate...');
   await setupLendinPoolElectorate(spaces);
 
-  console.log('Starting priceManager...');
+  console.log('Starting PriceManager...');
   const priceManInstallation = await installations.priceManagerContract;
   const {
     priceAuthorityManagerPublicFacet: priceManager,
+    priceAuthorityManagerInstance
   } = await startPriceManager(zoe, priceManInstallation);
   produce.priceManager.resolve(priceManager);
 
@@ -61,31 +63,60 @@ const deployLendingPool = async (homeP, { bundleSource }) => {
     priceCheckPeriod: SECONDS_PER_DAY * 7n * 2n,
   };
 
+  console.log('Starting LendingPool...')
   await startLendingPool(spaces, { loanParams });
 
   const [
     lendingPoolInstance,
     lendingPoolGovernorInstance,
+    lendingPoolCreatorFacet,
   ] = await Promise.all([
     instance.consume.lendingPool,
     instance.consume.lendingPoolGovernor,
+    consume.lendingPoolCreator
   ]);
 
+  console.log('Putting stuff into board...');
   const [
     LENDING_POOL_INSTANCE_BOARD_ID,
-    LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID
+    LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID,
+    AMM_INSTANCE_BOARD_ID,
+    PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
+    PRICE_MANAGER_INSTANCE_BOARD_ID
   ] = await Promise.all([
     E(board).getId(lendingPoolInstance),
-    E(board).getId(lendingPoolGovernorInstance)
+    E(board).getId(lendingPoolGovernorInstance),
+    E(board).getId(ammInstance),
+    E(board).getId(priceManager),
+    E(board).getId(priceAuthorityManagerInstance),
   ]);
 
-  const dappConsts = {
+  console.log('Putting stuff into scratch...');
+  const [
+    LENDING_POOL_CREATOR_FACET_ID,
+  ] = await Promise.all([
+    E(scratch).set('lending_pool_creator_facet_id', lendingPoolCreatorFacet),
+  ])
+
+  const dappConstsUpdated = {
+    ...lendingPoolDefaults,
     LENDING_POOL_INSTANCE_BOARD_ID,
     LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID,
+    LENDING_POOL_CREATOR_FACET_ID,
+    AMM_INSTANCE_BOARD_ID,
+    PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
+    PRICE_MANAGER_INSTANCE_BOARD_ID,
   };
 
-  console.log('Dapp Constants', dappConsts);
+  console.log('Dapp Constants', dappConstsUpdated);
+  const defaultsFile = pathResolve(`../ui/src/generated/lendingPoolDefaults.js`);
+  console.log('writing', defaultsFile);
+  const defaultsContents = `\
+// GENERATED FROM ${pathResolve('./deploy.js')}
+export default ${JSON.stringify(dappConstsUpdated, undefined, 2)};
+`;
 
+  await fs.promises.writeFile(defaultsFile, defaultsContents);
 };
 
 harden(deployLendingPool);

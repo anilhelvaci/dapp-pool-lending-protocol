@@ -1,167 +1,95 @@
-// @ts-check
-
-import { E } from '@endo/far';
 import lendingPoolDefaults from '../ui/src/generated/lendingPoolDefaults.js';
+import { POOL_CONFIG } from './poolConfigurations.js';
 import newPoolConfig from './newPoolConfig.js';
-import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
-import { AmountMath } from '@agoric/ertp';
 import {
-  addPool,
-  getLiquidityFromFaucet,
-  makeBundle, makeRates, depositMoney,
+  makeAmmPoolInitializer,
+  makeRates,
+  makeSoloHelpers,
+  startFaucetIfCustom,
 } from 'contract/test/lendingPool/helpers.js';
+import { E } from '@endo/far';
+import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import fs from 'fs';
 
-const lendingPoolFaucetContractRoot = './lendingPoolFaucet.js';
-
-const addNewPool = async (homeP, { bundleSource, pathResolve }) => {
-  const home = await homeP;
-  const { scratch, board, zoe } = home;
-
-  console.log('Creating a new pool with the config:', newPoolConfig);
-  const { assetConfig } = newPoolConfig;
-
+const addNewPool = async (homeP, { pathResolve }) => {
   const {
     LENDING_POOL_CREATOR_FACET_ID,
-    AMM_INSTANCE_BOARD_ID,
-    USD_ASSET_INSTANCE_BOARD_ID,
-    USD_ISSUER_BOARD_ID,
     PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID,
     TIMER_ID,
+    LENDING_POOL_FAUCET_INSTALL_BOARD_ID,
   } = lendingPoolDefaults;
 
-  const usdInstanceP = E(board).getValue(USD_ASSET_INSTANCE_BOARD_ID);
-  const usdPublicFacetP = E(zoe).getPublicFacet(usdInstanceP);
-  const usdLiquidityInvitationP = E(usdPublicFacetP).makeFaucetInvitation();
-  const usdIssuerP = E(board).getValue(USD_ISSUER_BOARD_ID);
-  const usdBrandP = E(usdIssuerP).getBrand();
-  const bundle = await makeBundle(bundleSource, lendingPoolFaucetContractRoot);
-  const assetFaucetInstallation = await E(zoe).install(bundle);
-  const ammInstanceP = E(board).getValue(AMM_INSTANCE_BOARD_ID);
+  const config = process.env.POOL_KWD ? POOL_CONFIG[process.env.POOL_KWD] : newPoolConfig;
 
-  console.log('Getting lendingPoolCreatorFacet, ammPublicFacet and starting assetFaucet...');
-  const [lendingPoolCreatorFacet, ammPublicFacet, assetFacets] = await Promise.all([
-    E(scratch).get(LENDING_POOL_CREATOR_FACET_ID),
-    E(zoe).getPublicFacet(ammInstanceP),
-    E(zoe).startInstance(
-      assetFaucetInstallation,
-      undefined,
-      assetConfig
-    )
+  const {
+    getValueFromScracth,
+    getValueFromBoard,
+    getIstBrandAndIssuer,
+    getBrandAndIssuerFromBoard,
+    home,
+  } = await makeSoloHelpers(homeP);
+  const { initAmmPool } = await makeAmmPoolInitializer({ homeP });
+
+  console.log('Getting stuff from ag-solo...');
+  const [{ value: lendingPoolCF }, { value: priceAuthFacetCF }, { value: timer }, { value: faucetInstalltion }] = await Promise.all([
+    getValueFromScracth(LENDING_POOL_CREATOR_FACET_ID),
+    getValueFromScracth(PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID),
+    getValueFromScracth(TIMER_ID),
+    getValueFromBoard(LENDING_POOL_FAUCET_INSTALL_BOARD_ID),
   ]);
 
-  const assetFaucetInvitationP = E(assetFacets.publicFacet).makeFaucetInvitation();
-  const assetIssuerP = E(assetFacets.publicFacet).getIssuer();
-  const assetBrandP = E(assetIssuerP).getBrand();
+  await startFaucetIfCustom(home, config, faucetInstalltion);
+  await initAmmPool(config);
 
-  const [assetIssuer, assetBrand, usdBrand] = await Promise.all([
-    assetIssuerP,
-    assetBrandP,
-    usdBrandP,
+  const [
+    { istBrand },
+    { brand: underlyingBrand, issuer: underlyingIssuer },
+  ] = await Promise.all([
+    getIstBrandAndIssuer(),
+    getBrandAndIssuerFromBoard(config.issuerId),
   ]);
 
-  console.log(`Getting liquidity for ${assetConfig.keyword} and USD...`);
-  const [assetLiquidity, usdLiquidity] = await Promise.all([
-    getLiquidityFromFaucet(zoe, assetFaucetInvitationP, newPoolConfig.ammConfig.assetLiquidity, assetBrand, assetConfig.keyword),
-    getLiquidityFromFaucet(zoe, usdLiquidityInvitationP, newPoolConfig.ammConfig.compareLiquidity, usdBrand, 'USD'),
-  ]);
+  const rates = makeRates(underlyingBrand, istBrand);
+  const priceAuth = await E(priceAuthFacetCF).makeManualPriceAuthority({
+        actualBrandIn: underlyingBrand,
+        actualBrandOut: istBrand,
+        initialPrice: makeRatio(config.priceOutInUnits, istBrand, 10n ** BigInt(config.displayInfo.decimalPlaces), underlyingBrand),
+        timer
+      });
 
-  const priceAuthorityCreatorFacetP = E(scratch).get(PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID);
-  const assetLiquidityIssuerP = E(ammPublicFacet).addPool(assetIssuer, assetConfig.keyword);
-  console.log(`Adding ${assetConfig.keyword}/USD pool and getting manual timer from scratch...`);
-  const [assetLiquidityBrand, manualTimer, assetLiquidityAmount, usdLiquidityAmount] = await Promise.all([
-    E(assetLiquidityIssuerP).getBrand(),
-    E(scratch).get(TIMER_ID),
-    E(assetIssuerP).getAmountOf(assetLiquidity),
-    E(usdIssuerP).getAmountOf(usdLiquidity)
-  ]);
-
-  const timer = process.env.USE_MANUAL_TIMER ? manualTimer : home.localTimerService;
-
-  // Build addLiquidity offer
-  const addAssetLiquidityInvitation = E(ammPublicFacet).makeAddLiquidityInvitation();
-
-  const assetAddLiquidityProposal = harden({
-    give: {
-      Secondary: assetLiquidityAmount,
-      Central: usdLiquidityAmount,
-    },
-    want: { Liquidity: AmountMath.makeEmpty(assetLiquidityBrand) }
+  console.log('Adding pool...');
+  console.log('Arguments', {
+    underlyingIssuer,
+    underlyingKeyword: config.keyword,
+    params: { rates, riskControls: config.riskControls },
+    priceAuth,
   });
+  const poolMan = await E(lendingPoolCF).addPoolType(underlyingIssuer, config.keyword, { rates, riskControls: config.riskControls }, priceAuth);
 
-  const assetAddLiquidityPaymentRecord = harden({
-    Secondary: assetLiquidity,
-    Central: usdLiquidity,
-  });
-
-  console.log(`Adding liquidity to AMM and creating the ${assetConfig.keyword}/USD price authority...`);
-  const [assetUsdPriceAuthority] = await Promise.all([
-    E(priceAuthorityCreatorFacetP).makeManualPriceAuthority({
-      actualBrandIn: assetBrand,
-      actualBrandOut: usdBrand,
-      initialPrice: makeRatio(200n * 10n ** 6n, usdBrand, 10n ** 8n, assetBrand),
-      timer,
-    }),
-    E(zoe).offer(
-      addAssetLiquidityInvitation,
-      assetAddLiquidityProposal,
-      assetAddLiquidityPaymentRecord
-    )
+  const POOL_MAN_BOARD_ID = `${config.keyword}_POOL_MANAGER_BOARD_ID`;
+  const PRICE_AUTH_ID_KEY = `${config.keyword}_IST_PRICE_AUTH_ID`;
+  const PRICE_AUTH_ID_VALUE = `${config.keyword.toLowerCase()}_ist_price_auth_id`;
+  const [poolManBoardId, _] = await Promise.all([
+    E(home.board).getId(poolMan),
+    E(home.scratch).set(PRICE_AUTH_ID_VALUE, priceAuth),
   ]);
-
-  const assetPoolRates = makeRates(assetBrand, usdBrand); // Read rates from config file
-
-  console.log(`Adding ${assetConfig.keyword} pool...`);
-  const assetPoolMan = await addPool(zoe, assetPoolRates, lendingPoolCreatorFacet, assetIssuer, assetConfig.keyword, assetUsdPriceAuthority);
-
-  console.log(`Getting liquidity to add ${assetConfig.keyword}/USD pool...`);
-  const [assetProtocolLiquidity, usdProtocolLiquidity] = await Promise.all([
-    getLiquidityFromFaucet(zoe, E(assetFacets.publicFacet).makeFaucetInvitation(), newPoolConfig.ammConfig.assetLiquidity, assetBrand, assetConfig.keyword),
-    getLiquidityFromFaucet(zoe, E(usdPublicFacetP).makeFaucetInvitation(), newPoolConfig.ammConfig.compareLiquidity, usdBrand, 'USD'),
-  ]);
-
-  const [assetProtocolLiquidityAmount, usdProtocolLiquidityAmount, assetProtocolBrand, ASSET_USD_PRICE_AUTH_ID, ASSET_ISSUER_BOARD_ID] = await Promise.all([
-    E(assetIssuerP).getAmountOf(assetProtocolLiquidity),
-    E(usdIssuerP).getAmountOf(usdProtocolLiquidity),
-    E(assetPoolMan).getProtocolBrand(),
-    E(scratch).set(`${assetConfig.keyword}_usd_price_auth_id`, assetUsdPriceAuthority),
-    E(board).getId(assetIssuer),
-  ]);
-
-  const depositProposal = harden({
-    give: {Underlying: assetProtocolLiquidityAmount},
-    want: {Protocol: AmountMath.makeEmpty(assetProtocolBrand)}
-  });
-
-  const depositPaymentRecord = harden({
-    Underlying: assetProtocolLiquidity
-  });
-
-  console.log('Depositing...')
-  await E(zoe).offer(
-    E(assetPoolMan).makeDepositInvitation(assetBrand),
-    depositProposal,
-    depositPaymentRecord
-  );
-
-  console.log(`-- ASSET_USD_PRICE_AUTH_ID: ${ASSET_USD_PRICE_AUTH_ID} --`);
-  console.log(`-- ASSET_USD_PRICE_AUTH_ID: ${ASSET_ISSUER_BOARD_ID} --`);
 
   const dappConstants = {
     ...lendingPoolDefaults,
-    ASSET_USD_PRICE_AUTH_ID,
-    ASSET_ISSUER_BOARD_ID
+    ...config?.constants,
+    [POOL_MAN_BOARD_ID]: poolManBoardId,
+    [PRICE_AUTH_ID_KEY]: PRICE_AUTH_ID_VALUE,
   };
+
   const defaultsFile = pathResolve(`../ui/src/generated/lendingPoolDefaults.js`);
-  console.log('writing', defaultsFile);
+  console.log('writing', dappConstants);
   const defaultsContents = `\
-// UPDATED FROM ${pathResolve('./addNewPool.js')}
+// GENERATED FROM ${pathResolve('./addNewPool.js')}
 export default ${JSON.stringify(dappConstants, undefined, 2)};
 `;
 
   await fs.promises.writeFile(defaultsFile, defaultsContents);
-
-  console.log('Done...');
 };
+harden(addNewPool);
 
 export default addNewPool;
