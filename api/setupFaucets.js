@@ -44,13 +44,11 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
   const [
     VAN_ASSET_CREATOR_FACET_ID,
     PAN_ASSET_CREATOR_FACET_ID,
-    TIMER_ID,
     PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID,
   ] = await Promise.all(
     [
       E(scratch).set('van_asset_creator_facet_id', vanAsset.creatorFacet),
       E(scratch).set('pan_asset_creator_facet_id', panAsset.creatorFacet),
-      E(scratch).set('timer_id', timer),
       E(scratch).set('price_authority_faucet_creator_facet_id', priceAuthorityFaucet.creatorFacet),
     ],
   );
@@ -64,6 +62,7 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
     PAN_ISSUER_BOARD_ID,
     PRICE_AUTHORITY_FAUCET_INSTALL_BOARD_ID,
     LENDING_POOL_FAUCET_INSTALL_BOARD_ID,
+    TIMER_ID,
   ] = await Promise.all([
     E(board).getId(vanAsset.instance),
     E(board).getId(panAsset.instance),
@@ -72,6 +71,7 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
     E(board).getId(panIssuer),
     E(board).getId(await contractInstallations.priceAuthorityFaucet),
     E(board).getId(await contractInstallations.lendingPoolFaucet),
+    E(board).getId(timer),
   ]);
 
   console.log('Suggesting VAN and PAN issuers...');

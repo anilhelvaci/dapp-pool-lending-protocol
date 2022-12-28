@@ -18,7 +18,7 @@ const config = harden({
     limitValue: 1_000n,
   },
   priceOutInUnits: 200n,
-  lockValueInUnits: 20_000n,
+  lockValueInUnits: 40_000n,
   vote: true,
 });
 
