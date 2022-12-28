@@ -14,6 +14,8 @@ import { makePromiseSpace } from '@agoric/vats/src/core/utils.js';
 const trace = makeTracer('Helper');
 const BASIS_POINTS = 10000n;
 
+const { details: X } = assert;
+
 /**
  * @param {ZoeService} zoe
  * @param {PoolManager} pm

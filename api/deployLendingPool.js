@@ -45,6 +45,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
   installation.produce.liquidate.resolve(installations.liquidate);
   installation.produce.lendingPoolElectorate.resolve(installations.lendingPoolElectorate);
   installation.produce.lendingPoolElectionManager.resolve(installations.lendingPoolElectionManager);
+  installation.produce.counter.resolve(installations.counter);
 
   console.log('Starting LendingPoolElectorate...');
   await setupLendinPoolElectorate(spaces);
@@ -72,12 +73,28 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     lendingPoolCreatorFacet,
     lendingPoolPublicFacet,
     governanceIssuer,
+    lendingPoolElectoratePublicFacet,
+    lendingPoolElectorateCreatorFacet,
+    lendingPoolGovernorCreatorFacet,
+    lendingPoolGovernorPublicFacet,
+    popInfo,
+    lendingPoolElectorateInstallation,
+    lendingPoolElectionManagerInstallation,
+    counterInstallation,
   ] = await Promise.all([
     instance.consume.lendingPool,
     instance.consume.lendingPoolGovernor,
     consume.lendingPoolCreator,
     consume.lendingPoolPublicFacet,
     E(consume.lendingPoolPublicFacet).getGovernanceIssuer(),
+    consume.lendingPoolElectoratePublicFacet,
+    consume.lendingPoolElectorateCreatorFacet,
+    consume.lendingPoolGovernorCreator,
+    consume.lendingPoolGovernorPublic,
+    E(consume.lendingPoolGovernorPublic).getPopInfo(),
+    installation.consume.lendingPoolElectorate,
+    installation.consume.lendingPoolElectionManager,
+    installation.consume.counter,
   ]);
 
   console.log('Putting stuff into board...');
@@ -89,6 +106,12 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     PRICE_MANAGER_INSTANCE_BOARD_ID,
     LENDING_POOL_PUBLIC_FACET_BOARD_ID,
     GOVERNANCE_ISSUER_BOARD_ID,
+    LENDING_POOL_ELECTORATE_PUBLIC_FACET_BOARD_ID,
+    LENDING_POOL_GOVERNOR_PUBLIC_FACET_BOARD_D,
+    POP_ISSUER_BOARD_ID,
+    LENDING_POOL_ELECTORATE_INSTALLATION_BOARD_ID,
+    LENDING_POOL_ELECTION_MANAGER_INSTALLATION_BOARD_ID,
+    COUNTER_INSTALLATION,
   ] = await Promise.all([
     E(board).getId(lendingPoolInstance),
     E(board).getId(lendingPoolGovernorInstance),
@@ -97,14 +120,24 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     E(board).getId(priceAuthorityManagerInstance),
     E(board).getId(lendingPoolPublicFacet),
     E(board).getId(governanceIssuer),
+    E(board).getId(lendingPoolElectoratePublicFacet),
+    E(board).getId(lendingPoolGovernorPublicFacet),
+    E(board).getId(popInfo.popIssuer),
+    E(board).getId(lendingPoolElectorateInstallation),
+    E(board).getId(lendingPoolElectionManagerInstallation),
+    E(board).getId(counterInstallation),
   ]);
 
   console.log('Putting stuff into scratch...');
   const [
     LENDING_POOL_CREATOR_FACET_ID,
+    LENDING_POOL_GOVERNOR_CREATOR_FACET_ID,
+    LENDING_POOL_ELECTORATE_CREATOR_FACET_ID,
   ] = await Promise.all([
     E(scratch).set('lending_pool_creator_facet_id', lendingPoolCreatorFacet),
-  ])
+    E(scratch).set('lending_pool_governor_creator_facet_id', lendingPoolGovernorCreatorFacet),
+    E(scratch).set('lending_pool_electorate_creator_facet_id', lendingPoolElectorateCreatorFacet),
+  ]);
 
   const dappConstsUpdated = {
     ...lendingPoolDefaults,
@@ -116,6 +149,14 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     AMM_INSTANCE_BOARD_ID,
     PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
     PRICE_MANAGER_INSTANCE_BOARD_ID,
+    LENDING_POOL_ELECTORATE_PUBLIC_FACET_BOARD_ID,
+    LENDING_POOL_GOVERNOR_CREATOR_FACET_ID,
+    LENDING_POOL_ELECTORATE_CREATOR_FACET_ID,
+    POP_ISSUER_BOARD_ID,
+    LENDING_POOL_GOVERNOR_PUBLIC_FACET_BOARD_D,
+    LENDING_POOL_ELECTORATE_INSTALLATION_BOARD_ID,
+    LENDING_POOL_ELECTION_MANAGER_INSTALLATION_BOARD_ID,
+    COUNTER_INSTALLATION,
   };
 
   console.log('Dapp Constants', dappConstsUpdated);

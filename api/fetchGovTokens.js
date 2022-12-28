@@ -36,7 +36,7 @@ const fetchGovTokens = async homeP => {
   console.log('Getting offerResult...');
   const offerResult = await E(userSeat).getOfferResult();
 
-  const payout = E(userSeat).getPayout(GOV_KEYWORD);
+  const payout = await E(userSeat).getPayout(GOV_KEYWORD);
   const govAmount = await E(lptPurse).deposit(payout);
   console.log('Done:', { payout, offerResult, govAmount });
 };
