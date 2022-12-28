@@ -70,10 +70,14 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     lendingPoolInstance,
     lendingPoolGovernorInstance,
     lendingPoolCreatorFacet,
+    lendingPoolPublicFacet,
+    governanceIssuer,
   ] = await Promise.all([
     instance.consume.lendingPool,
     instance.consume.lendingPoolGovernor,
-    consume.lendingPoolCreator
+    consume.lendingPoolCreator,
+    consume.lendingPoolPublicFacet,
+    E(consume.lendingPoolPublicFacet).getGovernanceIssuer(),
   ]);
 
   console.log('Putting stuff into board...');
@@ -82,13 +86,17 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID,
     AMM_INSTANCE_BOARD_ID,
     PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
-    PRICE_MANAGER_INSTANCE_BOARD_ID
+    PRICE_MANAGER_INSTANCE_BOARD_ID,
+    LENDING_POOL_PUBLIC_FACET_BOARD_ID,
+    GOVERNANCE_ISSUER_BOARD_ID,
   ] = await Promise.all([
     E(board).getId(lendingPoolInstance),
     E(board).getId(lendingPoolGovernorInstance),
     E(board).getId(ammInstance),
     E(board).getId(priceManager),
     E(board).getId(priceAuthorityManagerInstance),
+    E(board).getId(lendingPoolPublicFacet),
+    E(board).getId(governanceIssuer),
   ]);
 
   console.log('Putting stuff into scratch...');
@@ -103,6 +111,8 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     LENDING_POOL_INSTANCE_BOARD_ID,
     LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID,
     LENDING_POOL_CREATOR_FACET_ID,
+    LENDING_POOL_PUBLIC_FACET_BOARD_ID,
+    GOVERNANCE_ISSUER_BOARD_ID,
     AMM_INSTANCE_BOARD_ID,
     PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
     PRICE_MANAGER_INSTANCE_BOARD_ID,

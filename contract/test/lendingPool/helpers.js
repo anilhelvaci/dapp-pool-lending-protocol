@@ -689,6 +689,16 @@ export const makeSoloHelpers = async homeP => {
     return harden({ istIssuer, istBrand });
   };
 
+  const getInvitationBrandAndIssuer = async () => {
+    const invitationIssuerP = E(zoe).getInvitationIssuer();
+    const [zoeInvitationIssuer, zoeInvitationBrand] = await Promise.all([
+      invitationIssuerP,
+      E(invitationIssuerP).getBrand(),
+    ]);
+
+    return harden({ zoeInvitationIssuer, zoeInvitationBrand });
+  };
+
   const getPurseFromWallet = async petName => {
     const purse = await E(wallet).getPurse(petName);
 
@@ -712,6 +722,7 @@ export const makeSoloHelpers = async homeP => {
     getPublicFacetFromInstance,
     getAmm,
     getIstBrandAndIssuer,
+    getInvitationBrandAndIssuer,
     getPurseFromWallet,
     getValueFromScracth,
     getValueFromBoard,
@@ -757,4 +768,44 @@ export const startFaucetIfCustom = async (home, config, installation) => {
     };
     console.log('Config', config);
   }
+};
+
+export const makeWithdrawInvitationHelper = async ({ soloHelpers, instanceId, govDescription }) => {
+
+  const {
+    getInvitationBrandAndIssuer,
+    getPurseFromWallet,
+    getValueFromBoard,
+  } = soloHelpers;
+
+  const [{ purse: invitePurse }, { value: lendingPoolInstance }, {
+    zoeInvitationBrand,
+  }] = await Promise.all([
+    getPurseFromWallet('Default Zoe invite purse'),
+    getValueFromBoard(instanceId),
+    getInvitationBrandAndIssuer(),
+  ]);
+
+  const findCorrectInvitation = async (currentAmount) => {
+    const invitationValues = AmountMath.getValue(zoeInvitationBrand, currentAmount);
+
+    return invitationValues.find(invitationValue => {
+      const { description, instance } = invitationValue;
+      console.log({ description, instance });
+      return govDescription === description && instance === lendingPoolInstance;
+    });
+  };
+
+  const withdraw = async () => {
+    const currentAmount = await E(invitePurse).getCurrentAmount();
+    const invitationValue = await findCorrectInvitation(currentAmount);
+    assert(invitationValue, X`Could not find the correct invitation.`);
+
+    const invitationAmount = AmountMath.make(zoeInvitationBrand, harden([invitationValue]));
+    return E(invitePurse).withdraw(invitationAmount);
+  };
+
+  return harden({
+    withdraw,
+  });
 };

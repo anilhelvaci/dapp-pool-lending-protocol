@@ -280,12 +280,14 @@ export const startLendingPool = async (
       }),
     );
 
-  const [lendingPoolInstance, lendingPoolCreator] = await Promise.all([
+  const [lendingPoolInstance, lendingPoolCreator, lendingPoolPublicFacet] = await Promise.all([
     E(lendingPoolElectionMgrCreatorFacet).getInstance(),
     E(lendingPoolElectionMgrCreatorFacet).getCreatorFacet(),
+    E(lendingPoolElectionMgrCreatorFacet).getPublicFacet(),
   ]);
 
   produce.lendingPoolCreator.resolve(lendingPoolCreator);
+  produce.lendingPoolPublicFacet.resolve(lendingPoolPublicFacet);
   produce.lendingPoolGovernorCreator.resolve(lendingPoolElectionMgrCreatorFacet);
   produce.lendingPoolGovernorPublic.resolve(lendingPoolElectionMgrPublicFacet);
 
