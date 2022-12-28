@@ -22,6 +22,11 @@ export async function start(zcf) {
    * @param {Brand} compareBrand
    */
   const addNewWrappedPriceAuthority = async (brandIn, priceAuthority, compareBrand) => {
+    if (priceAuthorities.has(brandIn)) {
+      const { notifier } = priceAuthorities.get(brandIn);
+      return notifier;
+    }
+
     const displayInfo = await E(brandIn).getDisplayInfo();
     const decimalPlaces = displayInfo?.decimalPlaces || 0n;
     console.log('[DISPLAY_INFO]', displayInfo);

@@ -15,7 +15,7 @@ const config = {
     riskControls: {
       borrowable: false,
       usableAsCol: false,
-      limitValue: 5_000n,
+      limitValue: 1_000n,
     },
     displayInfo: {
       decimalPlaces: 8,

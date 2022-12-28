@@ -11,20 +11,22 @@ const addQuestionNewPool = async homeP => {
     getPublicFacetFromInstance,
     getBrandAndIssuerFromBoard,
     getIstBrandAndIssuer,
-    getValueFromScracth,
+    suggestIssuer,
     getValueFromBoard,
   } = await makeSoloHelpers(homeP);
 
   const {
     LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID,
     LENDING_POOL_ELECTION_MANAGER_INSTALLATION_BOARD_ID,
-    PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID,
+    PRICE_MANAGER_PUBLIC_FACET_BOARD_ID,
     TIMER_ID,
     COUNTER_INSTALLATION,
+    POP_ISSUER_BOARD_ID,
   } = lendingPoolDefaults;
 
   const { underlyingIssuerId, keyword, riskControls } = POOL_PROPOSAL_CONFIG;
 
+  console.log('Fetching data from ag-solo...');
   const [
     walletBridge,
     { publicFacet: governorPF },
@@ -33,7 +35,7 @@ const addQuestionNewPool = async homeP => {
       issuer: underlyingIssuer,
     },
     { istBrand },
-    { value: priceAuthCF },
+    { value: priceManPF },
     { value: timer },
     { value: counterInstallation }
   ] = await Promise.all([
@@ -41,20 +43,21 @@ const addQuestionNewPool = async homeP => {
     getPublicFacetFromInstance(LENDING_POOL_GOVERNOR_INSTANCE_BOARD_ID),
     getBrandAndIssuerFromBoard(underlyingIssuerId),
     getIstBrandAndIssuer(),
-    getValueFromScracth(PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID),
-    getValueFromScracth(TIMER_ID),
+    getValueFromBoard(PRICE_MANAGER_PUBLIC_FACET_BOARD_ID),
+    getValueFromBoard(TIMER_ID),
     getValueFromBoard(COUNTER_INSTALLATION),
+    suggestIssuer('POP Purse', POP_ISSUER_BOARD_ID),
   ]);
 
   console.log('Make rates...');
   const rates = makeRates(underlyingBrand, istBrand);
-  console.log('Make priceAuth...');
-  const underlyingPriceAuthority = await E(priceAuthCF).makeManualPriceAuthority({
-    actualBrandIn: underlyingBrand,
-    actualBrandOut: istBrand,
-    initialPrice: makeRatio(POOL_PROPOSAL_CONFIG.price.numeratorValue, istBrand, 10n ** BigInt(POOL_PROPOSAL_CONFIG.decimalPlaces), underlyingBrand),
-    timer
-  });
+
+  console.log('Get priceAuth...');
+  const { priceAuthority: underlyingPriceAuthority } = await E(priceManPF).getWrappedPriceAuthority(underlyingBrand);
+  console.log({ underlyingPriceAuthority });
+
+  console.log('Get current timestamp...');
+  const currentTimeStamp = await E(timer).getCurrentTimestamp();
 
   const offerConfig = {
     id: `${Date.now()}`,
@@ -71,14 +74,14 @@ const addQuestionNewPool = async homeP => {
       give: {
         LPT: {
           pursePetname: 'LPT Purse',
-          value: 20_000n * 10n ** 6n, // 20k units
+          value: POOL_PROPOSAL_CONFIG.lockValueInUnits * 10n ** 6n,
         },
       },
       arguments: {
         apiMethodName: 'addPoolType',
         methodArgs: [underlyingIssuer, keyword, { rates, riskControls }, underlyingPriceAuthority],
         voteCounterInstallation: counterInstallation,
-        deadline: TimeMath.addAbsRel(timer.getCurrentTimestamp(), POOL_PROPOSAL_CONFIG.deadline),
+        deadline: TimeMath.addAbsRel(currentTimeStamp, POOL_PROPOSAL_CONFIG.deadline),
         vote: POOL_PROPOSAL_CONFIG.vote,
       },
     },

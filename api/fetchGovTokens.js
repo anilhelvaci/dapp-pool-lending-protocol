@@ -9,9 +9,7 @@ const fetchGovTokens = async homeP => {
   const soloHelpers = await makeSoloHelpers(homeP);
 
   const { LENDING_POOL_INSTANCE_BOARD_ID, GOVERNANCE_ISSUER_BOARD_ID } = lendingPoolDefaults;
-  const { home, getPurseFromWallet } = soloHelpers;
-
-  const walletBridgeP = E(home.wallet).getBridge();
+  const { home, getPurseFromWallet, suggestIssuer } = soloHelpers;
 
   console.log('Making withdrawHelper and creating govPurse...');
   const [{ withdraw }] = await Promise.all([
@@ -20,7 +18,7 @@ const fetchGovTokens = async homeP => {
       instanceId: LENDING_POOL_INSTANCE_BOARD_ID,
       govDescription: 'Governance Faucet',
     }),
-    E(walletBridgeP).suggestIssuer(GOV_PURSE_NAME, GOVERNANCE_ISSUER_BOARD_ID)
+    suggestIssuer(GOV_PURSE_NAME, GOVERNANCE_ISSUER_BOARD_ID),
   ]);
 
   console.log('Withdrawing invitation...');

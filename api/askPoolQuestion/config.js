@@ -1,17 +1,24 @@
+import lendingPoolDefaults from '../../ui/src/generated/lendingPoolDefaults.js';
+
+/**
+ * We assume the first proposal will for adding the PAN Pool
+ *
+ */
+
+const { PAN_ISSUER_BOARD_ID } = lendingPoolDefaults;
+
 const config = harden({
-  underlyingIssuerId: '',
-  keyword: '',
-  decimalPlaces: 6,
+  underlyingIssuerId: PAN_ISSUER_BOARD_ID,
+  keyword: 'PAN',
+  decimalPlaces: 8,
   deadline: 100n,
   riskControls: {
     borrowable: false,
     usableAsCol: false,
     limitValue: 1_000n,
   },
-  price: {
-    numeratorValue: 0n, // Brand Out
-    denominatorValue: 0n, // Brand In
-  },
+  priceOutInUnits: 200n,
+  lockValueInUnits: 20_000n,
   vote: true,
 });
 

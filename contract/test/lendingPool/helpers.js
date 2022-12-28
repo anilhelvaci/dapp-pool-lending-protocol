@@ -659,6 +659,7 @@ export const makeAmmPoolInitializer = async ({ homeP }) => {
 export const makeSoloHelpers = async homeP => {
   const home = await homeP;
   const { zoe, board, agoricNames, wallet, scratch } = home;
+  const walletBridgeP = E(wallet).getBridge();
 
   const getBrandAndIssuerFromBoard = async (issuerBoardId) => {
     const issuer = await E(board).getValue(issuerBoardId);
@@ -717,7 +718,11 @@ export const makeSoloHelpers = async homeP => {
     const value = await E(board).getValue(id);
 
     return harden({ value });
-  }
+  };
+
+  const suggestIssuer = async (petName, issuerId) => {
+    await E(walletBridgeP).suggestIssuer(petName, issuerId);
+  };
 
   return harden({
     getBrandAndIssuerFromBoard,
@@ -728,6 +733,7 @@ export const makeSoloHelpers = async homeP => {
     getPurseFromWallet,
     getValueFromScracth,
     getValueFromBoard,
+    suggestIssuer,
     home,
   });
 };

@@ -26,6 +26,7 @@ const addNewPool = async (homeP, { pathResolve }) => {
     getValueFromBoard,
     getIstBrandAndIssuer,
     getBrandAndIssuerFromBoard,
+    suggestIssuer,
     home,
   } = await makeSoloHelpers(homeP);
   const { initAmmPool } = await makeAmmPoolInitializer({ homeP });
@@ -53,7 +54,8 @@ const addNewPool = async (homeP, { pathResolve }) => {
   const priceAuth = await E(priceAuthFacetCF).makeManualPriceAuthority({
         actualBrandIn: underlyingBrand,
         actualBrandOut: istBrand,
-        initialPrice: makeRatio(config.priceOutInUnits, istBrand, 10n ** BigInt(config.displayInfo.decimalPlaces), underlyingBrand),
+        initialPrice: makeRatio(config.priceOutInUnits * 10n ** 6n, istBrand,
+          10n ** BigInt(config.displayInfo.decimalPlaces), underlyingBrand),
         timer
       });
 
@@ -65,20 +67,29 @@ const addNewPool = async (homeP, { pathResolve }) => {
     priceAuth,
   });
   const poolMan = await E(lendingPoolCF).addPoolType(underlyingIssuer, config.keyword, { rates, riskControls: config.riskControls }, priceAuth);
+  const protocolIssuer = await E(poolMan).getProtocolIssuer();
 
   const POOL_MAN_BOARD_ID = `${config.keyword}_POOL_MANAGER_BOARD_ID`;
   const PRICE_AUTH_ID_KEY = `${config.keyword}_IST_PRICE_AUTH_ID`;
+  const PROTOCOL_ISSUER_BOARD_ID = `Ag${config.keyword}_ISSUER_BOARD_ID`;
+  const PROTOCOL_PURSE_PET_NAME = `Ag${config.keyword} Purse`;
+
   const PRICE_AUTH_ID_VALUE = `${config.keyword.toLowerCase()}_ist_price_auth_id`;
-  const [poolManBoardId, _] = await Promise.all([
+  const [poolManBoardId, _, protocolIssuerBoardId] = await Promise.all([
     E(home.board).getId(poolMan),
     E(home.scratch).set(PRICE_AUTH_ID_VALUE, priceAuth),
+    E(home.board).getId(protocolIssuer),
   ]);
+
+  console.log('Suggesting protocol issuer...');
+  await suggestIssuer(PROTOCOL_PURSE_PET_NAME, protocolIssuerBoardId);
 
   const dappConstants = {
     ...lendingPoolDefaults,
     ...config?.constants,
     [POOL_MAN_BOARD_ID]: poolManBoardId,
     [PRICE_AUTH_ID_KEY]: PRICE_AUTH_ID_VALUE,
+    [PROTOCOL_ISSUER_BOARD_ID]: protocolIssuerBoardId,
   };
 
   const defaultsFile = pathResolve(`../ui/src/generated/lendingPoolDefaults.js`);

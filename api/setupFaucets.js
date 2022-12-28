@@ -1,5 +1,5 @@
 import { E } from '@endo/far';
-import { makeBundle, startFaucets } from 'contract/test/lendingPool/helpers.js';
+import { makeBundle, makeSoloHelpers, startFaucets } from 'contract/test/lendingPool/helpers.js';
 import { CONTRACT_ROOTS } from 'contract/deploy/deploy.js';
 import fs from 'fs';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
@@ -9,7 +9,7 @@ import { SECONDS_PER_DAY } from 'contract/src/interest.js';
 
 const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
 
-  const home = await homeP;
+  const { home, suggestIssuer } = await makeSoloHelpers(homeP);
   const { board, scratch, zoe } = home;
 
   const bundles = await Collect.allValues({
@@ -29,25 +29,15 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
   } = await startFaucets(zoe, contractInstallations);
 
   console.log('Building timer...');
-  const timer = process.env.USE_MANUAL_TIMER ? await E(manualTimerFaucet.creatorFacet).makeManualTimer({
+  const timer = await E(manualTimerFaucet.creatorFacet).makeManualTimer({
     startValue: 0n,
     timeStep: SECONDS_PER_DAY * 7n,
-  }) : home.localTimerService;
-
-  console.log('Getting brands and issuers...');
-  const istIssuerP = E(zoe).getFeeIssuer();
-  const istBrand = await E(istIssuerP).getBrand();
+  });
 
   console.log('Getting faucet issuers...');
   const [vanIssuer, panIssuer] = await Promise.all([
     E(vanAsset.publicFacet).getIssuer(),
     E(panAsset.publicFacet).getIssuer(),
-  ]);
-
-  console.log('Getting faucet brands...');
-  const [vanBrand, panBrand] = await Promise.all([
-    E(vanIssuer).getBrand(),
-    E(panIssuer).getBrand(),
   ]);
 
   console.log('Putting private stuff to scratch...');
@@ -82,6 +72,12 @@ const setupFaucets = async (homeP, { bundleSource, pathResolve }) => {
     E(board).getId(panIssuer),
     E(board).getId(await contractInstallations.priceAuthorityFaucet),
     E(board).getId(await contractInstallations.lendingPoolFaucet),
+  ]);
+
+  console.log('Suggesting VAN and PAN issuers...');
+  await Promise.all([
+    suggestIssuer('VAN Purse', VAN_ISSUER_BOARD_ID),
+    suggestIssuer('PAN Purse', PAN_ISSUER_BOARD_ID),
   ]);
 
   const dappConstants = {
