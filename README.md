@@ -33,4 +33,9 @@ Please make sure you install the agoric-sdk first.
    2. Run `npx ava --verbose test/lendingPool/test-lendingPool.js`.
 
 ## Demo
+### Expanded Lending Pool Bounty
+* For the code checkout `feature/expanded-demonstrate`.
+* For the YouTube video, [click here](https://www.youtube.com/watch?v=oyF2YlMk3-8).
+
+### Cosmoverse
 For the demo showcased in Cosmoverse 2022, `git checkout feature/cosmoverse` and follow the steps there.
