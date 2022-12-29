@@ -29,7 +29,6 @@ const addNewPool = async (homeP, { pathResolve }) => {
     suggestIssuer,
     home,
   } = await makeSoloHelpers(homeP);
-  const { initAmmPool } = await makeAmmPoolInitializer({ homeP });
 
   console.log('Getting stuff from ag-solo...');
   const [{ value: lendingPoolCF }, { value: priceAuthFacetCF }, { value: timer }, { value: faucetInstalltion }] = await Promise.all([
@@ -40,7 +39,6 @@ const addNewPool = async (homeP, { pathResolve }) => {
   ]);
 
   await startFaucetIfCustom(home, config, faucetInstalltion);
-  await initAmmPool(config);
 
   const [
     { istBrand },
