@@ -153,12 +153,19 @@ const assertColLimitNotExceeded = (balanceTracer, getColLimit, proposal, colUnde
     }
   } = proposal;
 
-  const collateralAmount = collateralAmountGiven ? collateralAmountGiven : collateralAmountWanted;
+  let colBrand;
+  let colValue;
 
-  if (!collateralAmount) return; // Collateral balance is not changing
+  if (collateralAmountGiven) {
+    colValue = collateralAmountGiven.value;
+    colBrand = collateralAmountGiven.brand;
+  } else if (collateralAmountWanted) {
+    colValue = collateralAmountWanted.value * -1n;
+    colBrand = collateralAmountWanted.brand;
+  } else return;
 
-  const currentBalance = balanceTracer.getBalance(collateralAmount.brand);
-  const proposedBalance = AmountMath.add(currentBalance, collateralAmount);
+  const currentBalance = balanceTracer.getBalance(colBrand);
+  const proposedBalance = AmountMath.make(colBrand, currentBalance.value + colValue);
   const colLimit = getColLimit(colUnderlyingBrand);
   console.log('@@@@@@@1', {currentBalance, proposedBalance, colLimit});
   assert(AmountMath.isGTE(colLimit, proposedBalance), X`Proposed operation exceeds the allowed collateral limit.`);

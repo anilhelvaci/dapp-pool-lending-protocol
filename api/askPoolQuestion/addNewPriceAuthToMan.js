@@ -31,7 +31,7 @@ const addNewPriceAuthToMan = async homeP => {
     getValueFromBoard(PRICE_MANAGER_PUBLIC_FACET_BOARD_ID),
     getBrandAndIssuerFromBoard(underlyingIssuerId),
     getIstBrandAndIssuer(),
-    getValueFromScracth(TIMER_ID),
+    getValueFromBoard(TIMER_ID),
   ]);
 
   console.log('Making priceAuth...');

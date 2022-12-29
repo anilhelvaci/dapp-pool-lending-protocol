@@ -10,7 +10,7 @@ import { SECONDS_PER_DAY } from 'contract/src/interest.js';
 import fs from 'fs';
 
 const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
-  const { getIstBrandAndIssuer, getValueFromScracth, getAmm } = await makeSoloHelpers(homeP);
+  const { getIstBrandAndIssuer, getAmm, getValueFromBoard } = await makeSoloHelpers(homeP);
   const { zoe, board, scratch } = await homeP;
 
   const spaces = getSpaces();
@@ -22,7 +22,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
 
   const [{ istBrand }, { value: timer }, { ammInstance }] = await Promise.all([
     getIstBrandAndIssuer(),
-    getValueFromScracth(TIMER_ID),
+    getValueFromBoard(TIMER_ID),
     getAmm()
   ]);
 
@@ -81,6 +81,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     lendingPoolElectorateInstallation,
     lendingPoolElectionManagerInstallation,
     counterInstallation,
+    lendingPoolInstallation,
   ] = await Promise.all([
     instance.consume.lendingPool,
     instance.consume.lendingPoolGovernor,
@@ -95,6 +96,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     installation.consume.lendingPoolElectorate,
     installation.consume.lendingPoolElectionManager,
     installation.consume.counter,
+    installation.consume.LendingPool
   ]);
 
   console.log('Putting stuff into board...');
@@ -112,6 +114,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     LENDING_POOL_ELECTORATE_INSTALLATION_BOARD_ID,
     LENDING_POOL_ELECTION_MANAGER_INSTALLATION_BOARD_ID,
     COUNTER_INSTALLATION,
+    LENDING_POOL_INSTALL_BOARD_ID,
   ] = await Promise.all([
     E(board).getId(lendingPoolInstance),
     E(board).getId(lendingPoolGovernorInstance),
@@ -126,6 +129,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     E(board).getId(lendingPoolElectorateInstallation),
     E(board).getId(lendingPoolElectionManagerInstallation),
     E(board).getId(counterInstallation),
+    E(board).getId(lendingPoolInstallation),
   ]);
 
   console.log('Putting stuff into scratch...');
@@ -157,6 +161,7 @@ const deployLendingPool = async (homeP, { bundleSource, pathResolve }) => {
     LENDING_POOL_ELECTORATE_INSTALLATION_BOARD_ID,
     LENDING_POOL_ELECTION_MANAGER_INSTALLATION_BOARD_ID,
     COUNTER_INSTALLATION,
+    LENDING_POOL_INSTALL_BOARD_ID,
   };
 
   console.log('Dapp Constants', dappConstsUpdated);

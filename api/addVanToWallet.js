@@ -2,16 +2,17 @@ import { E } from '@endo/far';
 import { AmountMath } from "@agoric/ertp";
 import lendingPoolDefaults from "../ui/src/generated/lendingPoolDefaults.js";
 import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat.js";
+import { makeSoloHelpers } from 'contract/test/lendingPool/helpers.js';
 
 export default async function addVanToWallet(homeP) {
-  const home = await homeP;
+  const { home, suggestIssuer } = await makeSoloHelpers(homeP);
+
   const zoe = home.zoe;
   const board = home.board;
   const wallet = home.wallet;
-  const scratch = home.scratch;
 
   let liqAmountValue;
-  const pursePetname = ['LendingPool','VAN']
+  const pursePetname = 'VAN Purse'
 
   if (process.env.LIQUIDITY_AMOUNT) {
     liqAmountValue = parseAsNat(process.env.LIQUIDITY_AMOUNT);
@@ -28,12 +29,13 @@ export default async function addVanToWallet(homeP) {
   const vanIssuerP = E(board).getValue(VAN_ISSUER_BOARD_ID);
   const vanBrandP = E(vanIssuerP).getBrand();
 
-  console.log("Getting necessary stuff...");
+  console.log("Getting necessary stuff and suggesting issuer...");
   const [vanAssetPublicFacet, vanIssuer, vanBrand, vanDisplayInfo] = await Promise.all([
     E(zoe).getPublicFacet(vanInstanceP),
     vanIssuerP,
     vanBrandP,
-    E(vanBrandP).getDisplayInfo()
+    E(vanBrandP).getDisplayInfo(),
+    suggestIssuer(pursePetname, VAN_ISSUER_BOARD_ID),
   ]);
 
   const proposal = {

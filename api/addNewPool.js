@@ -35,7 +35,7 @@ const addNewPool = async (homeP, { pathResolve }) => {
   const [{ value: lendingPoolCF }, { value: priceAuthFacetCF }, { value: timer }, { value: faucetInstalltion }] = await Promise.all([
     getValueFromScracth(LENDING_POOL_CREATOR_FACET_ID),
     getValueFromScracth(PRICE_AUTHORITY_FAUCET_CREATOR_FACET_ID),
-    getValueFromScracth(TIMER_ID),
+    getValueFromBoard(TIMER_ID),
     getValueFromBoard(LENDING_POOL_FAUCET_INSTALL_BOARD_ID),
   ]);
 

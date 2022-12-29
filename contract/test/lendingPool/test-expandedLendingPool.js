@@ -887,7 +887,7 @@ test('bob-can-borrow-after-alice-adjusts', async t => {
   /** @type AdjustConfig */
   const collateralConfig = {
     type: ADJUST_PROPOSAL_TYPE.WANT,
-    value: 10n ** 8n / 2n,
+    value: 10n ** 8n,
   };
 
   /** @type AdjustConfig */
@@ -902,11 +902,11 @@ test('bob-can-borrow-after-alice-adjusts', async t => {
   const expectedValuesAfterAdjust = {
     collateralPayoutAmount: undefined,
     debtPayoutAmount: undefined,
-    totalCollateralUnderlyingAfterUpdate: AmountMath.make(vanBrand, 10n ** 8n),
+    totalCollateralUnderlyingAfterUpdate: AmountMath.make(vanBrand, 10n ** 8n / 2n),
     totalDebtAfterUpdate: AmountMath.make(panBrand, 30n * 10n ** 6n)
   };
   await assertionHelpers.assertAdjustBalancesSuccessful(vanPoolMan, panPoolMan, aliceLoan, aliceUpdatedLoanSeat, expectedValuesAfterAdjust);
-  await assertionHelpers.assertCollateralBalance(vanPoolMan, 5_000n * 10n ** 6n);
+  await assertionHelpers.assertCollateralBalance(vanPoolMan, 2_500n * 10n ** 6n);
 
   const { loanKit: { loan: bobLoan } } = await scenarioHelpers.borrow(10n ** 8n, 4n * 10n ** 6n);
   await Promise.all([
@@ -916,7 +916,7 @@ test('bob-can-borrow-after-alice-adjusts', async t => {
       underlyingBalanceBefore: AmountMath.make(panBrand, 97n * 10n ** 7n),
       borrowingRate: makeRatio(318n, panBrand, BASIS_POINTS),
     }),
-    assertionHelpers.assertCollateralBalance(vanPoolMan, 10_000n * 10n ** 6n),
+    assertionHelpers.assertCollateralBalance(vanPoolMan, 7_500n * 10n ** 6n),
     checkPoolStates(),
   ]);
 });

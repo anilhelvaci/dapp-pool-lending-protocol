@@ -2,7 +2,6 @@ import lendingPoolDefaults from '../../ui/src/generated/lendingPoolDefaults.js';
 
 /**
  * We assume the first proposal will for adding the PAN Pool
- *
  */
 
 const { PAN_ISSUER_BOARD_ID } = lendingPoolDefaults;
