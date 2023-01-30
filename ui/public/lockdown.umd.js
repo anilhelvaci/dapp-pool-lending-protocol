@@ -2,7 +2,7 @@
 (() => {
   const functors = [
 // === functors[0] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   /* global globalThis */
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   /* global globalThis */
 /* eslint-disable no-restricted-globals */
 
 /**
@@ -18,12 +18,13 @@
 
 // We cannot use globalThis as the local name since it would capture the
 // lexical name.
-const universalThis = globalThis;$h‍_once.universalThis(universalThis);
+const universalThis=  globalThis;$h‍_once.universalThis(universalThis);
 
 
-const {
+const        {
   Array,
   Date,
+  FinalizationRegistry,
   Float32Array,
   JSON,
   Map,
@@ -37,10 +38,10 @@ const {
   Set,
   String,
   WeakMap,
-  WeakSet } =
-globalThis;$h‍_once.Array(Array);$h‍_once.Date(Date);$h‍_once.Float32Array(Float32Array);$h‍_once.JSON(JSON);$h‍_once.Map(Map);$h‍_once.Math(Math);$h‍_once.Number(Number);$h‍_once.Object(Object);$h‍_once.Promise(Promise);$h‍_once.Proxy(Proxy);$h‍_once.Reflect(Reflect);$h‍_once.FERAL_REG_EXP(FERAL_REG_EXP);$h‍_once.Set(Set);$h‍_once.String(String);$h‍_once.WeakMap(WeakMap);$h‍_once.WeakSet(WeakSet);
+  WeakSet}=
+    globalThis;$h‍_once.Array(Array);$h‍_once.Date(Date);$h‍_once.FinalizationRegistry(FinalizationRegistry);$h‍_once.Float32Array(Float32Array);$h‍_once.JSON(JSON);$h‍_once.Map(Map);$h‍_once.Math(Math);$h‍_once.Number(Number);$h‍_once.Object(Object);$h‍_once.Promise(Promise);$h‍_once.Proxy(Proxy);$h‍_once.Reflect(Reflect);$h‍_once.FERAL_REG_EXP(FERAL_REG_EXP);$h‍_once.Set(Set);$h‍_once.String(String);$h‍_once.WeakMap(WeakMap);$h‍_once.WeakSet(WeakSet);
 
-const {
+const        {
   // The feral Error constructor is safe for internal use, but must not be
   // revealed to post-lockdown code in any compartment including the start
   // compartment since in V8 at least it bears stack inspection capabilities.
@@ -48,10 +49,10 @@ const {
   RangeError,
   ReferenceError,
   SyntaxError,
-  TypeError } =
-globalThis;$h‍_once.FERAL_ERROR(FERAL_ERROR);$h‍_once.RangeError(RangeError);$h‍_once.ReferenceError(ReferenceError);$h‍_once.SyntaxError(SyntaxError);$h‍_once.TypeError(TypeError);
+  TypeError}=
+    globalThis;$h‍_once.FERAL_ERROR(FERAL_ERROR);$h‍_once.RangeError(RangeError);$h‍_once.ReferenceError(ReferenceError);$h‍_once.SyntaxError(SyntaxError);$h‍_once.TypeError(TypeError);
 
-const {
+const        {
   assign,
   create,
   defineProperties,
@@ -66,39 +67,30 @@ const {
   keys,
   prototype: objectPrototype,
   seal,
+  preventExtensions,
   setPrototypeOf,
-  values } =
-Object;$h‍_once.assign(assign);$h‍_once.create(create);$h‍_once.defineProperties(defineProperties);$h‍_once.entries(entries);$h‍_once.freeze(freeze);$h‍_once.getOwnPropertyDescriptor(getOwnPropertyDescriptor);$h‍_once.getOwnPropertyDescriptors(getOwnPropertyDescriptors);$h‍_once.getOwnPropertyNames(getOwnPropertyNames);$h‍_once.getPrototypeOf(getPrototypeOf);$h‍_once.is(is);$h‍_once.isExtensible(isExtensible);$h‍_once.keys(keys);$h‍_once.objectPrototype(objectPrototype);$h‍_once.seal(seal);$h‍_once.setPrototypeOf(setPrototypeOf);$h‍_once.values(values);
+  values,
+  fromEntries}=
+    Object;$h‍_once.assign(assign);$h‍_once.create(create);$h‍_once.defineProperties(defineProperties);$h‍_once.entries(entries);$h‍_once.freeze(freeze);$h‍_once.getOwnPropertyDescriptor(getOwnPropertyDescriptor);$h‍_once.getOwnPropertyDescriptors(getOwnPropertyDescriptors);$h‍_once.getOwnPropertyNames(getOwnPropertyNames);$h‍_once.getPrototypeOf(getPrototypeOf);$h‍_once.is(is);$h‍_once.isExtensible(isExtensible);$h‍_once.keys(keys);$h‍_once.objectPrototype(objectPrototype);$h‍_once.seal(seal);$h‍_once.preventExtensions(preventExtensions);$h‍_once.setPrototypeOf(setPrototypeOf);$h‍_once.values(values);$h‍_once.fromEntries(fromEntries);
 
-const {
+const        {
   species: speciesSymbol,
   toStringTag: toStringTagSymbol,
   iterator: iteratorSymbol,
-  matchAll: matchAllSymbol } =
-Symbol;$h‍_once.speciesSymbol(speciesSymbol);$h‍_once.toStringTagSymbol(toStringTagSymbol);$h‍_once.iteratorSymbol(iteratorSymbol);$h‍_once.matchAllSymbol(matchAllSymbol);
+  matchAll: matchAllSymbol,
+  unscopables: unscopablesSymbol,
+  keyFor: symbolKeyFor,
+  for: symbolFor}=
+    Symbol;$h‍_once.speciesSymbol(speciesSymbol);$h‍_once.toStringTagSymbol(toStringTagSymbol);$h‍_once.iteratorSymbol(iteratorSymbol);$h‍_once.matchAllSymbol(matchAllSymbol);$h‍_once.unscopablesSymbol(unscopablesSymbol);$h‍_once.symbolKeyFor(symbolKeyFor);$h‍_once.symbolFor(symbolFor);
 
-const { stringify: stringifyJson } = JSON;$h‍_once.stringifyJson(stringifyJson);
+const        { isInteger}=   Number;$h‍_once.isInteger(isInteger);
 
-// At time of this writing, we still support Node 10 which doesn't have
-// `Object.fromEntries`. If it is absent, this should be an adequate
-// replacement.
-// By the terminology of https://ponyfoo.com/articles/polyfills-or-ponyfills
-// it is a ponyfill rather than a polyfill or shim because we do not
-// install it on `Object`.
-const objectFromEntries = (entryPairs) => {
-  const result = {};
-  for (const [prop, val] of entryPairs) {
-    result[prop] = val;
-  }
-  return result;
-};
-
-const fromEntries = Object.fromEntries || objectFromEntries;$h‍_once.fromEntries(fromEntries);
+const        { stringify: stringifyJson}=   JSON;
 
 // Needed only for the Safari bug workaround below
-const { defineProperty: originalDefineProperty } = Object;
+$h‍_once.stringifyJson(stringifyJson);const{defineProperty:originalDefineProperty}=Object;
 
-const defineProperty = (object, prop, descriptor) => {
+const        defineProperty=  (object, prop, descriptor)=>  {
   // We used to do the following, until we had to reopen Safari bug
   // https://bugs.webkit.org/show_bug.cgi?id=222538#c17
   // Once this is fixed, we may restore it.
@@ -107,18 +99,18 @@ const defineProperty = (object, prop, descriptor) => {
   // return defineProperties(object, { [prop]: descriptor });
 
   // Instead, to workaround the Safari bug
-  const result = originalDefineProperty(object, prop, descriptor);
-  if (result !== object) {
+  const result=  originalDefineProperty(object, prop, descriptor);
+  if( result!==  object) {
     throw TypeError(
-    `Please report that the original defineProperty silently failed to set ${stringifyJson(
-    String(prop))
-    }. (SES_DEFINE_PROPERTY_FAILED_SILENTLY)`);
+       `Please report that the original defineProperty silently failed to set ${stringifyJson(
+        String(prop))
+        }. (SES_DEFINE_PROPERTY_FAILED_SILENTLY)`);
 
-  }
+   }
   return result;
-};$h‍_once.defineProperty(defineProperty);
+ };$h‍_once.defineProperty(defineProperty);
 
-const {
+const        {
   apply,
   construct,
   get: reflectGet,
@@ -127,106 +119,125 @@ const {
   isExtensible: reflectIsExtensible,
   ownKeys,
   preventExtensions: reflectPreventExtensions,
-  set: reflectSet } =
-Reflect;$h‍_once.apply(apply);$h‍_once.construct(construct);$h‍_once.reflectGet(reflectGet);$h‍_once.reflectGetOwnPropertyDescriptor(reflectGetOwnPropertyDescriptor);$h‍_once.reflectHas(reflectHas);$h‍_once.reflectIsExtensible(reflectIsExtensible);$h‍_once.ownKeys(ownKeys);$h‍_once.reflectPreventExtensions(reflectPreventExtensions);$h‍_once.reflectSet(reflectSet);
+  set: reflectSet}=
+    Reflect;$h‍_once.apply(apply);$h‍_once.construct(construct);$h‍_once.reflectGet(reflectGet);$h‍_once.reflectGetOwnPropertyDescriptor(reflectGetOwnPropertyDescriptor);$h‍_once.reflectHas(reflectHas);$h‍_once.reflectIsExtensible(reflectIsExtensible);$h‍_once.ownKeys(ownKeys);$h‍_once.reflectPreventExtensions(reflectPreventExtensions);$h‍_once.reflectSet(reflectSet);
 
-const { isArray, prototype: arrayPrototype } = Array;$h‍_once.isArray(isArray);$h‍_once.arrayPrototype(arrayPrototype);
-const { prototype: mapPrototype } = Map;$h‍_once.mapPrototype(mapPrototype);
-const { revocable: proxyRevocable } = Proxy;$h‍_once.proxyRevocable(proxyRevocable);
-const { prototype: regexpPrototype } = RegExp;$h‍_once.regexpPrototype(regexpPrototype);
-const { prototype: setPrototype } = Set;$h‍_once.setPrototype(setPrototype);
-const { prototype: stringPrototype } = String;$h‍_once.stringPrototype(stringPrototype);
-const { prototype: weakmapPrototype } = WeakMap;$h‍_once.weakmapPrototype(weakmapPrototype);
-const { prototype: weaksetPrototype } = WeakSet;$h‍_once.weaksetPrototype(weaksetPrototype);
-const { prototype: functionPrototype } = Function;$h‍_once.functionPrototype(functionPrototype);
-const { prototype: promisePrototype } = Promise;$h‍_once.promisePrototype(promisePrototype);
+const        { isArray, prototype: arrayPrototype}=   Array;$h‍_once.isArray(isArray);$h‍_once.arrayPrototype(arrayPrototype);
+const        { prototype: mapPrototype}=   Map;$h‍_once.mapPrototype(mapPrototype);
+const        { revocable: proxyRevocable}=   Proxy;$h‍_once.proxyRevocable(proxyRevocable);
+const        { prototype: regexpPrototype}=   RegExp;$h‍_once.regexpPrototype(regexpPrototype);
+const        { prototype: setPrototype}=   Set;$h‍_once.setPrototype(setPrototype);
+const        { prototype: stringPrototype}=   String;$h‍_once.stringPrototype(stringPrototype);
+const        { prototype: weakmapPrototype}=   WeakMap;$h‍_once.weakmapPrototype(weakmapPrototype);
+const        { prototype: weaksetPrototype}=   WeakSet;$h‍_once.weaksetPrototype(weaksetPrototype);
+const        { prototype: functionPrototype}=   Function;$h‍_once.functionPrototype(functionPrototype);
+const        { prototype: promisePrototype}=   Promise;$h‍_once.promisePrototype(promisePrototype);
 
+const        typedArrayPrototype=  getPrototypeOf(Uint8Array.prototype);$h‍_once.typedArrayPrototype(typedArrayPrototype);
+
+const { bind}=   functionPrototype;
 /**
  * uncurryThis()
- * This form of uncurry uses Reflect.apply()
- *
- * The original uncurry uses:
- * const bind = Function.prototype.bind;
- * const uncurryThis = bind.bind(bind.call);
+ * Equivalent of: fn => (thisArg, ...args) => apply(fn, thisArg, args)
  *
  * See those reference for a complete explanation:
  * http://wiki.ecmascript.org/doku.php?id=conventions:safe_meta_programming
  * which only lives at
  * http://web.archive.org/web/20160805225710/http://wiki.ecmascript.org/doku.php?id=conventions:safe_meta_programming
  *
- * @param {(thisArg: Object, ...args: any[]) => any} fn
+ * @type {<F extends (this: any, ...args: any[]) => any>(fn: F) => ((thisArg: ThisParameterType<F>, ...args: Parameters<F>) => ReturnType<F>)}
  */
-const uncurryThis = (fn) => (thisArg, ...args) => apply(fn, thisArg, args);$h‍_once.uncurryThis(uncurryThis);
-
-const objectHasOwnProperty = uncurryThis(objectPrototype.hasOwnProperty);$h‍_once.objectHasOwnProperty(objectHasOwnProperty);
+const        uncurryThis=  bind.bind(bind.call); // eslint-disable-line @endo/no-polymorphic-call
+$h‍_once.uncurryThis(uncurryThis);
+const        objectHasOwnProperty=  uncurryThis(objectPrototype.hasOwnProperty);
 //
-const arrayFilter = uncurryThis(arrayPrototype.filter);$h‍_once.arrayFilter(arrayFilter);
-const arrayForEach = uncurryThis(arrayPrototype.forEach);$h‍_once.arrayForEach(arrayForEach);
-const arrayIncludes = uncurryThis(arrayPrototype.includes);$h‍_once.arrayIncludes(arrayIncludes);
-const arrayJoin = uncurryThis(arrayPrototype.join);$h‍_once.arrayJoin(arrayJoin);
-const arrayMap = uncurryThis(arrayPrototype.map);$h‍_once.arrayMap(arrayMap);
-const arrayPop = uncurryThis(arrayPrototype.pop);$h‍_once.arrayPop(arrayPop);
-const arrayPush = uncurryThis(arrayPrototype.push);$h‍_once.arrayPush(arrayPush);
-const arraySlice = uncurryThis(arrayPrototype.slice);$h‍_once.arraySlice(arraySlice);
-const arraySome = uncurryThis(arrayPrototype.some);$h‍_once.arraySome(arraySome);
-const arraySort = uncurryThis(arrayPrototype.sort);$h‍_once.arraySort(arraySort);
-const iterateArray = uncurryThis(arrayPrototype[iteratorSymbol]);$h‍_once.iterateArray(iterateArray);
+$h‍_once.objectHasOwnProperty(objectHasOwnProperty);const arrayFilter=uncurryThis(arrayPrototype.filter);$h‍_once.arrayFilter(arrayFilter);
+const        arrayForEach=  uncurryThis(arrayPrototype.forEach);$h‍_once.arrayForEach(arrayForEach);
+const        arrayIncludes=  uncurryThis(arrayPrototype.includes);$h‍_once.arrayIncludes(arrayIncludes);
+const        arrayJoin=  uncurryThis(arrayPrototype.join);
+/** @type {<T, U>(thisArg: readonly T[], callbackfn: (value: T, index: number, array: T[]) => U, thisArg?: any) => U[]} */$h‍_once.arrayJoin(arrayJoin);
+const        arrayMap=  uncurryThis(arrayPrototype.map);$h‍_once.arrayMap(arrayMap);
+const        arrayPop=  uncurryThis(arrayPrototype.pop);
+/** @type {<T>(thisArg: T[], ...items: T[]) => number} */$h‍_once.arrayPop(arrayPop);
+const        arrayPush=  uncurryThis(arrayPrototype.push);$h‍_once.arrayPush(arrayPush);
+const        arraySlice=  uncurryThis(arrayPrototype.slice);$h‍_once.arraySlice(arraySlice);
+const        arraySome=  uncurryThis(arrayPrototype.some);$h‍_once.arraySome(arraySome);
+const        arraySort=  uncurryThis(arrayPrototype.sort);$h‍_once.arraySort(arraySort);
+const        iterateArray=  uncurryThis(arrayPrototype[iteratorSymbol]);
 //
-const mapSet = uncurryThis(mapPrototype.set);$h‍_once.mapSet(mapSet);
-const mapGet = uncurryThis(mapPrototype.get);$h‍_once.mapGet(mapGet);
-const mapHas = uncurryThis(mapPrototype.has);$h‍_once.mapHas(mapHas);
-const iterateMap = uncurryThis(mapPrototype[iteratorSymbol]);$h‍_once.iterateMap(iterateMap);
+$h‍_once.iterateArray(iterateArray);const mapSet=uncurryThis(mapPrototype.set);$h‍_once.mapSet(mapSet);
+const        mapGet=  uncurryThis(mapPrototype.get);$h‍_once.mapGet(mapGet);
+const        mapHas=  uncurryThis(mapPrototype.has);$h‍_once.mapHas(mapHas);
+const        mapDelete=  uncurryThis(mapPrototype.delete);$h‍_once.mapDelete(mapDelete);
+const        mapEntries=  uncurryThis(mapPrototype.entries);$h‍_once.mapEntries(mapEntries);
+const        iterateMap=  uncurryThis(mapPrototype[iteratorSymbol]);
 //
-const setAdd = uncurryThis(setPrototype.add);$h‍_once.setAdd(setAdd);
-const setForEach = uncurryThis(setPrototype.forEach);$h‍_once.setForEach(setForEach);
-const setHas = uncurryThis(setPrototype.has);$h‍_once.setHas(setHas);
-const iterateSet = uncurryThis(setPrototype[iteratorSymbol]);$h‍_once.iterateSet(iterateSet);
+$h‍_once.iterateMap(iterateMap);const setAdd=uncurryThis(setPrototype.add);$h‍_once.setAdd(setAdd);
+const        setDelete=  uncurryThis(setPrototype.delete);$h‍_once.setDelete(setDelete);
+const        setForEach=  uncurryThis(setPrototype.forEach);$h‍_once.setForEach(setForEach);
+const        setHas=  uncurryThis(setPrototype.has);$h‍_once.setHas(setHas);
+const        iterateSet=  uncurryThis(setPrototype[iteratorSymbol]);
 //
-const regexpTest = uncurryThis(regexpPrototype.test);$h‍_once.regexpTest(regexpTest);
-const regexpExec = uncurryThis(regexpPrototype.exec);$h‍_once.regexpExec(regexpExec);
-const matchAllRegExp = uncurryThis(regexpPrototype[matchAllSymbol]);$h‍_once.matchAllRegExp(matchAllRegExp);
+$h‍_once.iterateSet(iterateSet);const regexpTest=uncurryThis(regexpPrototype.test);$h‍_once.regexpTest(regexpTest);
+const        regexpExec=  uncurryThis(regexpPrototype.exec);$h‍_once.regexpExec(regexpExec);
+const        matchAllRegExp=  uncurryThis(regexpPrototype[matchAllSymbol]);
 //
-const stringEndsWith = uncurryThis(stringPrototype.endsWith);$h‍_once.stringEndsWith(stringEndsWith);
-const stringIncludes = uncurryThis(stringPrototype.includes);$h‍_once.stringIncludes(stringIncludes);
-const stringIndexOf = uncurryThis(stringPrototype.indexOf);$h‍_once.stringIndexOf(stringIndexOf);
-const stringMatch = uncurryThis(stringPrototype.match);$h‍_once.stringMatch(stringMatch);
-const stringReplace = uncurryThis(stringPrototype.replace);$h‍_once.stringReplace(stringReplace);
-const stringSearch = uncurryThis(stringPrototype.search);$h‍_once.stringSearch(stringSearch);
-const stringSlice = uncurryThis(stringPrototype.slice);$h‍_once.stringSlice(stringSlice);
-const stringSplit = uncurryThis(stringPrototype.split);$h‍_once.stringSplit(stringSplit);
-const stringStartsWith = uncurryThis(stringPrototype.startsWith);$h‍_once.stringStartsWith(stringStartsWith);
-const iterateString = uncurryThis(stringPrototype[iteratorSymbol]);$h‍_once.iterateString(iterateString);
+$h‍_once.matchAllRegExp(matchAllRegExp);const stringEndsWith=uncurryThis(stringPrototype.endsWith);$h‍_once.stringEndsWith(stringEndsWith);
+const        stringIncludes=  uncurryThis(stringPrototype.includes);$h‍_once.stringIncludes(stringIncludes);
+const        stringIndexOf=  uncurryThis(stringPrototype.indexOf);$h‍_once.stringIndexOf(stringIndexOf);
+const        stringMatch=  uncurryThis(stringPrototype.match);
+/**
+ * @type {
+ *   ((thisArg: string, searchValue: { [Symbol.replace](string: string, replaceValue: string): string; }, replaceValue: string) => string) |
+ *   ((thisArg: string, searchValue: { [Symbol.replace](string: string, replacer: (substring: string, ...args: any[]) => string): string; }, replacer: (substring: string, ...args: any[]) => string) => string)
+ * }
+ */$h‍_once.stringMatch(stringMatch);
+const        stringReplace=  uncurryThis(stringPrototype.replace);$h‍_once.stringReplace(stringReplace);
+const        stringSearch=  uncurryThis(stringPrototype.search);$h‍_once.stringSearch(stringSearch);
+const        stringSlice=  uncurryThis(stringPrototype.slice);
+/** @type {(thisArg: string, splitter: string | RegExp | { [Symbol.split](string: string, limit?: number): string[]; }, limit?: number) => string[]} */$h‍_once.stringSlice(stringSlice);
+const        stringSplit=  uncurryThis(stringPrototype.split);$h‍_once.stringSplit(stringSplit);
+const        stringStartsWith=  uncurryThis(stringPrototype.startsWith);$h‍_once.stringStartsWith(stringStartsWith);
+const        iterateString=  uncurryThis(stringPrototype[iteratorSymbol]);
 //
-const weakmapDelete = uncurryThis(weakmapPrototype.delete);$h‍_once.weakmapDelete(weakmapDelete);
-const weakmapGet = uncurryThis(weakmapPrototype.get);$h‍_once.weakmapGet(weakmapGet);
-const weakmapHas = uncurryThis(weakmapPrototype.has);$h‍_once.weakmapHas(weakmapHas);
-const weakmapSet = uncurryThis(weakmapPrototype.set);$h‍_once.weakmapSet(weakmapSet);
+$h‍_once.iterateString(iterateString);const weakmapDelete=uncurryThis(weakmapPrototype.delete);
+/** @type {<K, V>(thisArg: WeakMap<K, V>, ...args: Parameters<WeakMap<K,V>['get']>) => ReturnType<WeakMap<K,V>['get']>} */$h‍_once.weakmapDelete(weakmapDelete);
+const        weakmapGet=  uncurryThis(weakmapPrototype.get);$h‍_once.weakmapGet(weakmapGet);
+const        weakmapHas=  uncurryThis(weakmapPrototype.has);$h‍_once.weakmapHas(weakmapHas);
+const        weakmapSet=  uncurryThis(weakmapPrototype.set);
 //
-const weaksetAdd = uncurryThis(weaksetPrototype.add);$h‍_once.weaksetAdd(weaksetAdd);
-const weaksetGet = uncurryThis(weaksetPrototype.get);$h‍_once.weaksetGet(weaksetGet);
-const weaksetHas = uncurryThis(weaksetPrototype.has);$h‍_once.weaksetHas(weaksetHas);
+$h‍_once.weakmapSet(weakmapSet);const weaksetAdd=uncurryThis(weaksetPrototype.add);$h‍_once.weaksetAdd(weaksetAdd);
+const        weaksetGet=  uncurryThis(weaksetPrototype.get);$h‍_once.weaksetGet(weaksetGet);
+const        weaksetHas=  uncurryThis(weaksetPrototype.has);
 //
-const functionToString = uncurryThis(functionPrototype.toString);$h‍_once.functionToString(functionToString);
+$h‍_once.weaksetHas(weaksetHas);const functionToString=uncurryThis(functionPrototype.toString);
 //
-const { all } = Promise;
-const promiseAll = (promises) => apply(all, Promise, [promises]);$h‍_once.promiseAll(promiseAll);
-const promiseCatch = uncurryThis(promisePrototype.catch);$h‍_once.promiseCatch(promiseCatch);
-const promiseThen = uncurryThis(promisePrototype.then);$h‍_once.promiseThen(promiseThen);
+$h‍_once.functionToString(functionToString);const{all}=Promise;
+const        promiseAll=  (promises)=>apply(all, Promise, [promises]);$h‍_once.promiseAll(promiseAll);
+const        promiseCatch=  uncurryThis(promisePrototype.catch);
+/** @type {<T, TResult1 = T, TResult2 = never>(thisArg: T, onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null) => Promise<TResult1 | TResult2>} */$h‍_once.promiseCatch(promiseCatch);
+const        promiseThen=  uncurryThis(promisePrototype.then);
+//
+$h‍_once.promiseThen(promiseThen);const finalizationRegistryRegister=
+  FinalizationRegistry&&  uncurryThis(FinalizationRegistry.prototype.register);$h‍_once.finalizationRegistryRegister(finalizationRegistryRegister);
+const        finalizationRegistryUnregister=
+  FinalizationRegistry&&
+  uncurryThis(FinalizationRegistry.prototype.unregister);
 
 /**
  * getConstructorOf()
  * Return the constructor from an instance.
  *
  * @param {Function} fn
- */
-const getConstructorOf = (fn) =>
-reflectGet(getPrototypeOf(fn), 'constructor');$h‍_once.getConstructorOf(getConstructorOf);
+ */$h‍_once.finalizationRegistryUnregister(finalizationRegistryUnregister);
+const        getConstructorOf=  (fn)=>
+  reflectGet(getPrototypeOf(fn), 'constructor');
 
 /**
  * immutableObject
  * An immutable (frozen) empty object that is safe to share.
- */
-const immutableObject = freeze(create(null));$h‍_once.immutableObject(immutableObject);
+ */$h‍_once.getConstructorOf(getConstructorOf);
+const        immutableObject=  freeze(create(null));
 
 /**
  * isObject tests whether a value is an object.
@@ -244,8 +255,8 @@ const immutableObject = freeze(create(null));$h‍_once.immutableObject(immutabl
  * attempting to box a primitive.
  *
  * @param {any} value
- */
-const isObject = (value) => Object(value) === value;$h‍_once.isObject(isObject);
+ */$h‍_once.immutableObject(immutableObject);
+const        isObject=  (value)=>Object(value)===  value;
 
 /**
  * isError tests whether an object inherits from the intrinsic
@@ -257,23 +268,29 @@ const isObject = (value) => Object(value) === value;$h‍_once.isObject(isObject
  * for such a trivial case outside commons.js, we provide a utility function.
  *
  * @param {any} value
- */
-const isError = (value) => value instanceof FERAL_ERROR;$h‍_once.isError(isError);
+ */$h‍_once.isObject(isObject);
+const        isError=  (value)=>value instanceof FERAL_ERROR;
 
 // The original unsafe untamed eval function, which must not escape.
 // Sample at module initialization time, which is before lockdown can
 // repair it.  Use it only to build powerless abstractions.
 // eslint-disable-next-line no-eval
-const FERAL_EVAL = eval;$h‍_once.FERAL_EVAL(FERAL_EVAL);
+$h‍_once.isError(isError);const FERAL_EVAL=eval;
 
 // The original unsafe untamed Function constructor, which must not escape.
 // Sample at module initialization time, which is before lockdown can
 // repair it.  Use it only to build powerless abstractions.
-const FERAL_FUNCTION = Function;$h‍_once.FERAL_FUNCTION(FERAL_FUNCTION);
+$h‍_once.FERAL_EVAL(FERAL_EVAL);const FERAL_FUNCTION=Function;$h‍_once.FERAL_FUNCTION(FERAL_FUNCTION);
+
+const        noEvalEvaluate=  ()=>  {
+  throw new TypeError(
+    'Cannot eval with evalTaming set to "noEval" (SES_NO_EVAL)');
+
+ };$h‍_once.noEvalEvaluate(noEvalEvaluate);
 })
 ,
 // === functors[1] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   // @ts-check
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   // @ts-check
 
 /**
  * @typedef {readonly any[]} LogArgs
@@ -365,7 +382,7 @@ const FERAL_FUNCTION = Function;$h‍_once.FERAL_FUNCTION(FERAL_FUNCTION);
 })
 ,
 // === functors[2] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Set,String,arrayJoin,arraySlice,freeze,is,isError,setAdd,setHas,stringIncludes,stringStartsWith,stringifyJson,toStringTagSymbol;$h‍_imports([["../commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arraySlice", [$h‍_a => (arraySlice = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]],["stringIncludes", [$h‍_a => (stringIncludes = $h‍_a)]],["stringStartsWith", [$h‍_a => (stringStartsWith = $h‍_a)]],["stringifyJson", [$h‍_a => (stringifyJson = $h‍_a)]],["toStringTagSymbol", [$h‍_a => (toStringTagSymbol = $h‍_a)]]]]]);   
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Set,String,arrayJoin,arraySlice,freeze,is,isError,setAdd,setHas,stringIncludes,stringStartsWith,stringifyJson,toStringTagSymbol;$h‍_imports([["../commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arraySlice", [$h‍_a => (arraySlice = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]],["stringIncludes", [$h‍_a => (stringIncludes = $h‍_a)]],["stringStartsWith", [$h‍_a => (stringStartsWith = $h‍_a)]],["stringifyJson", [$h‍_a => (stringifyJson = $h‍_a)]],["toStringTagSymbol", [$h‍_a => (toStringTagSymbol = $h‍_a)]]]]]);   
 
 
 
@@ -386,23 +403,23 @@ const FERAL_FUNCTION = Function;$h‍_once.FERAL_FUNCTION(FERAL_FUNCTION);
 /**
  * Joins English terms with commas and an optional conjunction.
  *
- * @param {string[]} terms
+ * @param {(string | StringablePayload)[]} terms
  * @param {"and" | "or"} conjunction
  */
-const enJoin = (terms, conjunction) => {
-  if (terms.length === 0) {
+const        enJoin=  (terms, conjunction)=>  {
+  if( terms.length===  0) {
     return '(none)';
-  } else if (terms.length === 1) {
+   }else if( terms.length===  1) {
     return terms[0];
-  } else if (terms.length === 2) {
-    const [first, second] = terms;
-    return `${first} ${conjunction} ${second}`;
-  } else {
-    return `${arrayJoin(arraySlice(terms, 0, -1), ', ')}, ${conjunction} ${
-    terms[terms.length - 1]
-    }`;
-  }
-};$h‍_once.enJoin(enJoin);
+   }else if( terms.length===  2) {
+    const [first, second]=  terms;
+    return  `${first} ${conjunction} ${second}`;
+   }else {
+    return  `${arrayJoin(arraySlice(terms,0, -1), ', ') }, ${conjunction} ${
+      terms[terms.length-  1]
+     }`;
+   }
+ };
 
 /**
  * Prepend the correct indefinite article onto a noun, typically a typeof
@@ -410,14 +427,14 @@ const enJoin = (terms, conjunction) => {
  *
  * @param {string} str The noun to prepend
  * @returns {string} The noun prepended with a/an
- */
-const an = (str) => {
-  str = `${str}`;
-  if (str.length >= 1 && stringIncludes('aeiouAEIOU', str[0])) {
-    return `an ${str}`;
-  }
-  return `a ${str}`;
-};$h‍_once.an(an);
+ */$h‍_once.enJoin(enJoin);
+const an=  (str)=>{
+  str=   `${str}`;
+  if( str.length>=  1&&  stringIncludes('aeiouAEIOU', str[0])) {
+    return  `an ${str}`;
+   }
+  return  `a ${str}`;
+ };$h‍_once.an(an);
 freeze(an);
 
 
@@ -448,81 +465,81 @@ freeze(an);
  * @param {(string|number)=} spaces
  * @returns {string}
  */
-const bestEffortStringify = (payload, spaces = undefined) => {
-  const seenSet = new Set();
-  const replacer = (_, val) => {
-    switch (typeof val) {
-      case 'object':{
-          if (val === null) {
-            return null;
-          }
-          if (setHas(seenSet, val)) {
-            return '[Seen]';
-          }
-          setAdd(seenSet, val);
-          if (isError(val)) {
-            return `[${val.name}: ${val.message}]`;
-          }
-          if (toStringTagSymbol in val) {
-            // For the built-ins that have or inherit a `Symbol.toStringTag`-named
-            // property, most of them inherit the default `toString` method,
-            // which will print in a similar manner: `"[object Foo]"` vs
-            // `"[Foo]"`. The exceptions are
-            //    * `Symbol.prototype`, `BigInt.prototype`, `String.prototype`
-            //      which don't matter to us since we handle primitives
-            //      separately and we don't care about primitive wrapper objects.
-            //    * TODO
-            //      `Date.prototype`, `TypedArray.prototype`.
-            //      Hmmm, we probably should make special cases for these. We're
-            //      not using these yet, so it's not urgent. But others will run
-            //      into these.
-            //
-            // Once #2018 is closed, the only objects in our code that have or
-            // inherit a `Symbol.toStringTag`-named property are remotables
-            // or their remote presences.
-            // This printing will do a good job for these without
-            // violating abstraction layering. This behavior makes sense
-            // purely in terms of JavaScript concepts. That's some of the
-            // motivation for choosing that representation of remotables
-            // and their remote presences in the first place.
-            return `[${val[toStringTagSymbol]}]`;
-          }
-          return val;
-        }
-      case 'function':{
-          return `[Function ${val.name || '<anon>'}]`;
-        }
-      case 'string':{
-          if (stringStartsWith(val, '[')) {
-            return `[${val}]`;
-          }
-          return val;
-        }
+const bestEffortStringify=  (payload, spaces=  undefined)=>  {
+  const seenSet=  new Set();
+  const replacer=  (_, val)=>  {
+    switch( typeof val){
+      case 'object': {
+        if( val===  null) {
+          return null;
+         }
+        if( setHas(seenSet, val)) {
+          return '[Seen]';
+         }
+        setAdd(seenSet, val);
+        if( isError(val)) {
+          return  `[${val.name}: ${val.message}]`;
+         }
+        if( toStringTagSymbol in val) {
+          // For the built-ins that have or inherit a `Symbol.toStringTag`-named
+          // property, most of them inherit the default `toString` method,
+          // which will print in a similar manner: `"[object Foo]"` vs
+          // `"[Foo]"`. The exceptions are
+          //    * `Symbol.prototype`, `BigInt.prototype`, `String.prototype`
+          //      which don't matter to us since we handle primitives
+          //      separately and we don't care about primitive wrapper objects.
+          //    * TODO
+          //      `Date.prototype`, `TypedArray.prototype`.
+          //      Hmmm, we probably should make special cases for these. We're
+          //      not using these yet, so it's not urgent. But others will run
+          //      into these.
+          //
+          // Once #2018 is closed, the only objects in our code that have or
+          // inherit a `Symbol.toStringTag`-named property are remotables
+          // or their remote presences.
+          // This printing will do a good job for these without
+          // violating abstraction layering. This behavior makes sense
+          // purely in terms of JavaScript concepts. That's some of the
+          // motivation for choosing that representation of remotables
+          // and their remote presences in the first place.
+          return  `[${val[toStringTagSymbol]}]`;
+         }
+        return val;
+       }
+      case 'function': {
+        return  `[Function ${val.name|| '<anon>' }]`;
+       }
+      case 'string': {
+        if( stringStartsWith(val, '[')) {
+          return  `[${val}]`;
+         }
+        return val;
+       }
       case 'undefined':
-      case 'symbol':{
-          return `[${String(val)}]`;
-        }
-      case 'bigint':{
-          return `[${val}n]`;
-        }
-      case 'number':{
-          if (is(val, NaN)) {
-            return '[NaN]';
-          } else if (val === Infinity) {
-            return '[Infinity]';
-          } else if (val === -Infinity) {
-            return '[-Infinity]';
-          }
-          return val;
-        }
-      default:{
-          return val;
-        }}
+      case 'symbol': {
+        return  `[${String(val)}]`;
+       }
+      case 'bigint': {
+        return  `[${val}n]`;
+       }
+      case 'number': {
+        if( is(val, NaN)) {
+          return '[NaN]';
+         }else if( val===  Infinity) {
+          return '[Infinity]';
+         }else if( val===  -Infinity) {
+          return '[-Infinity]';
+         }
+        return val;
+       }
+      default: {
+        return val;
+       }}
 
-  };
+   };
   try {
     return stringifyJson(payload, replacer, spaces);
-  } catch (_err) {
+   }catch( _err) {
     // Don't do anything more fancy here if there is any
     // chance that might throw, unless you surround that
     // with another try-catch-recovery. For example,
@@ -530,13 +547,13 @@ const bestEffortStringify = (payload, spaces = undefined) => {
     // object rather than an error. The proxy might throw
     // whenever it is possible for it to.
     return '[Something that failed to stringify]';
-  }
-};$h‍_once.bestEffortStringify(bestEffortStringify);
+   }
+ };$h‍_once.bestEffortStringify(bestEffortStringify);
 freeze(bestEffortStringify);
 })
 ,
 // === functors[3] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   // @ts-check
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   // @ts-check
 
 /**
  * @callback BaseAssert
@@ -550,7 +567,7 @@ freeze(bestEffortStringify);
  */
 
 /**
- * @typedef {Object} AssertMakeErrorOptions
+ * @typedef {object} AssertMakeErrorOptions
  * @property {string=} errorName
  */
 
@@ -597,51 +614,65 @@ freeze(bestEffortStringify);
  */
 
 // Type all the overloads of the assertTypeof function.
-// There may eventually be a better way to do this, but they break with
-// Typescript 4.0.
+// There may eventually be a better way to do this, but
+// thems the breaks with Typescript 4.0.
 /**
  * @callback AssertTypeofBigint
  * @param {any} specimen
  * @param {'bigint'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is bigint}
- *
+ */
+
+/**
  * @callback AssertTypeofBoolean
  * @param {any} specimen
  * @param {'boolean'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is boolean}
- *
+ */
+
+/**
  * @callback AssertTypeofFunction
  * @param {any} specimen
  * @param {'function'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is Function}
- *
+ */
+
+/**
  * @callback AssertTypeofNumber
  * @param {any} specimen
  * @param {'number'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is number}
- *
+ */
+
+/**
  * @callback AssertTypeofObject
  * @param {any} specimen
  * @param {'object'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is Record<any, any> | null}
- *
+ */
+
+/**
  * @callback AssertTypeofString
  * @param {any} specimen
  * @param {'string'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is string}
- *
+ */
+
+/**
  * @callback AssertTypeofSymbol
  * @param {any} specimen
  * @param {'symbol'} typename
  * @param {Details=} optDetails
  * @returns {asserts specimen is symbol}
- *
+ */
+
+/**
  * @callback AssertTypeofUndefined
  * @param {any} specimen
  * @param {'undefined'} typename
@@ -695,7 +726,7 @@ freeze(bestEffortStringify);
  */
 
 /**
- * @typedef {Object} StringablePayload
+ * @typedef {object} StringablePayload
  * Holds the payload passed to quote so that its printed form is visible.
  * @property {() => string} toString How to print the payload
  */
@@ -799,6 +830,64 @@ freeze(bestEffortStringify);
  */
 
 /**
+ * @typedef {(template: TemplateStringsArray | string[], ...args: any) => never} FailTag
+ * The `Fail` tamplate tag supports replacing patterns like
+ * ```js
+ * assert(cond, X`...complaint...`);
+ * ```
+ * or
+ * ```js
+ * cond || assert.fail(X`...complaint...`);
+ * ```
+ * with patterns like
+ * ```js
+ * cond || Fail`...complaint...`;
+ * ```
+ *
+ * However, due to [weakness in current
+ * TypeScript](https://github.com/microsoft/TypeScript/issues/51426), the `||`
+ * patterns are not as powerful as the `assert(...)` call at enabling static
+ * reasoning. Of the `||`, again due to weaknesses in current TypeScript,
+ * the
+ * ```js
+ * cond || Fail`...complaint...`
+ * ```
+ * pattern is not as powerful as the
+ * ```js
+ * cond || assert.fail(X`...complaint...`);
+ * ```
+ * at enabling static resoning. Despite these problems, we do not want to
+ * return to the
+ * ```js
+ * assert(cond, X`...complaint...`)
+ * ```
+ * style because of the substantial overhead in
+ * evaluating the `X` template in the typical `true` case where it is not
+ * needed. And we do not want to return to the
+ * ```js
+ * assert.fail(X`...complaint...`)`
+ * ```
+ * because of the verbosity and loss of readability. Instead, until/unless
+ * https://github.com/microsoft/TypeScript/issues/51426 is fixed, for those
+ * new-style assertions where this loss of static reasoning is a problem,
+ * instead express the assertion as
+ * ```js
+ *   if (!cond) {
+ *     Fail`...complaint...`;
+ *   }
+ * ```
+ * or, if needed,
+ * ```js
+ *   if (!cond) {
+ *     // `throw` is noop since `Fail` throws. But linter confused
+ *     throw Fail`...complaint...`;
+ *   }
+ * ```
+ * This avoid the TypeScript bugs that cause the loss of static reasoning,
+ * but with no loss of efficiency and little loss of readability.
+ */
+
+/**
  * assert that expr is truthy, with an optional details to describe
  * the assertion. It is a tagged template literal like
  * ```js
@@ -824,6 +913,7 @@ freeze(bestEffortStringify);
  *   string: AssertString,
  *   note: AssertNote,
  *   details: DetailsTag,
+ *   Fail: FailTag,
  *   quote: AssertQuote,
  *   makeAssert: MakeAssert,
  * } } Assert
@@ -889,7 +979,7 @@ freeze(bestEffortStringify);
 })
 ,
 // === functors[4] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let RangeError,TypeError,WeakMap,arrayJoin,arrayMap,arrayPop,arrayPush,assign,freeze,globalThis,is,isError,stringIndexOf,stringReplace,stringSlice,stringStartsWith,weakmapDelete,weakmapGet,weakmapHas,weakmapSet,an,bestEffortStringify;$h‍_imports([["../commons.js", [["RangeError", [$h‍_a => (RangeError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPop", [$h‍_a => (arrayPop = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["stringIndexOf", [$h‍_a => (stringIndexOf = $h‍_a)]],["stringReplace", [$h‍_a => (stringReplace = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]],["stringStartsWith", [$h‍_a => (stringStartsWith = $h‍_a)]],["weakmapDelete", [$h‍_a => (weakmapDelete = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapHas", [$h‍_a => (weakmapHas = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]]]],["./stringify-utils.js", [["an", [$h‍_a => (an = $h‍_a)]],["bestEffortStringify", [$h‍_a => (bestEffortStringify = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let RangeError,TypeError,WeakMap,arrayJoin,arrayMap,arrayPop,arrayPush,assign,freeze,globalThis,is,isError,stringIndexOf,stringReplace,stringSlice,stringStartsWith,weakmapDelete,weakmapGet,weakmapHas,weakmapSet,an,bestEffortStringify;$h‍_imports([["../commons.js", [["RangeError", [$h‍_a => (RangeError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPop", [$h‍_a => (arrayPop = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["stringIndexOf", [$h‍_a => (stringIndexOf = $h‍_a)]],["stringReplace", [$h‍_a => (stringReplace = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]],["stringStartsWith", [$h‍_a => (stringStartsWith = $h‍_a)]],["weakmapDelete", [$h‍_a => (weakmapDelete = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapHas", [$h‍_a => (weakmapHas = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]]]],["./stringify-utils.js", [["an", [$h‍_a => (an = $h‍_a)]],["bestEffortStringify", [$h‍_a => (bestEffortStringify = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
 
 
 
@@ -934,16 +1024,16 @@ freeze(bestEffortStringify);
 // /////////////////////////////////////////////////////////////////////////////
 
 /** @type {WeakMap<StringablePayload, any>} */
-const declassifiers = new WeakMap();
+const declassifiers=  new WeakMap();
 
 /** @type {AssertQuote} */
-const quote = (payload, spaces = undefined) => {
-  const result = freeze({
-    toString: freeze(() => bestEffortStringify(payload, spaces)) });
+const quote=  (payload, spaces=  undefined)=>  {
+  const result=  freeze({
+    toString: freeze(()=>  bestEffortStringify(payload, spaces))});
 
   weakmapSet(declassifiers, result, payload);
   return result;
-};
+ };
 freeze(quote);
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -963,28 +1053,28 @@ freeze(quote);
  * Maps from a details token which a `details` template literal returned
  * to a record of the contents of that template literal expression.
  */
-const hiddenDetailsMap = new WeakMap();
+const hiddenDetailsMap=  new WeakMap();
 
 /**
  * @param {HiddenDetails} hiddenDetails
  * @returns {string}
  */
-const getMessageString = ({ template, args }) => {
-  const parts = [template[0]];
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
+const getMessageString=  ({ template, args})=>   {
+  const parts=  [template[0]];
+  for( let i=  0; i<  args.length; i+=  1) {
+    const arg=  args[i];
     let argStr;
-    if (weakmapHas(declassifiers, arg)) {
-      argStr = `${arg}`;
-    } else if (isError(arg)) {
-      argStr = `(${an(arg.name)})`;
-    } else {
-      argStr = `(${an(typeof arg)})`;
-    }
-    arrayPush(parts, argStr, template[i + 1]);
-  }
+    if( weakmapHas(declassifiers, arg)) {
+      argStr=   `${arg}`;
+     }else if( isError(arg)) {
+      argStr=   `(${an(arg.name)})`;
+     }else {
+      argStr=   `(${an(typeof arg)})`;
+     }
+    arrayPush(parts, argStr, template[i+  1]);
+   }
   return arrayJoin(parts, '');
-};
+ };
 
 /**
  * Give detailsTokens a toString behavior. To minimize the overhead of
@@ -998,14 +1088,14 @@ const getMessageString = ({ template, args }) => {
  * the same `getMessageString` we use to construct the redacted message
  * string for a thrown assertion error.
  */
-const DetailsTokenProto = freeze({
+const DetailsTokenProto=  freeze({
   toString() {
-    const hiddenDetails = weakmapGet(hiddenDetailsMap, this);
-    if (hiddenDetails === undefined) {
+    const hiddenDetails=  weakmapGet(hiddenDetailsMap, this);
+    if( hiddenDetails===  undefined) {
       return '[Not a DetailsToken]';
-    }
+     }
     return getMessageString(hiddenDetails);
-  } });
+   }});
 
 freeze(DetailsTokenProto.toString);
 
@@ -1020,15 +1110,15 @@ freeze(DetailsTokenProto.toString);
  *
  * @type {DetailsTag}
  */
-const redactedDetails = (template, ...args) => {
+const redactedDetails=  (template, ...args)=>  {
   // Keep in mind that the vast majority of calls to `details` creates
   // a details token that is never used, so this path must remain as fast as
   // possible. Hence we store what we've got with little processing, postponing
   // all the work to happen only if needed, for example, if an assertion fails.
-  const detailsToken = freeze({ __proto__: DetailsTokenProto });
-  weakmapSet(hiddenDetailsMap, detailsToken, { template, args });
+  const detailsToken=  freeze({ __proto__: DetailsTokenProto});
+  weakmapSet(hiddenDetailsMap, detailsToken, { template, args});
   return detailsToken;
-};
+ };
 freeze(redactedDetails);
 
 /**
@@ -1044,12 +1134,12 @@ freeze(redactedDetails);
  *
  * @type {DetailsTag}
  */
-const unredactedDetails = (template, ...args) => {
-  args = arrayMap(args, (arg) =>
-  weakmapHas(declassifiers, arg) ? arg : quote(arg));
+const unredactedDetails=  (template, ...args)=>  {
+  args=  arrayMap(args, (arg)=>
+    weakmapHas(declassifiers, arg)?  arg:  quote(arg));
 
   return redactedDetails(template, ...args);
-};$h‍_once.unredactedDetails(unredactedDetails);
+ };$h‍_once.unredactedDetails(unredactedDetails);
 freeze(unredactedDetails);
 
 
@@ -1057,27 +1147,27 @@ freeze(unredactedDetails);
  * @param {HiddenDetails} hiddenDetails
  * @returns {LogArgs}
  */
-const getLogArgs = ({ template, args }) => {
-  const logArgs = [template[0]];
-  for (let i = 0; i < args.length; i += 1) {
-    let arg = args[i];
-    if (weakmapHas(declassifiers, arg)) {
-      arg = weakmapGet(declassifiers, arg);
-    }
+const getLogArgs=  ({ template, args})=>   {
+  const logArgs=  [template[0]];
+  for( let i=  0; i<  args.length; i+=  1) {
+    let arg=  args[i];
+    if( weakmapHas(declassifiers, arg)) {
+      arg=  weakmapGet(declassifiers, arg);
+     }
     // Remove the extra spaces (since console.error puts them
     // between each cause).
-    const priorWithoutSpace = stringReplace(arrayPop(logArgs) || '', / $/, '');
-    if (priorWithoutSpace !== '') {
+    const priorWithoutSpace=  stringReplace(arrayPop(logArgs)||  '', / $/, '');
+    if( priorWithoutSpace!==  '') {
       arrayPush(logArgs, priorWithoutSpace);
-    }
-    const nextWithoutSpace = stringReplace(template[i + 1], /^ /, '');
+     }
+    const nextWithoutSpace=  stringReplace(template[i+  1], /^ /, '');
     arrayPush(logArgs, arg, nextWithoutSpace);
-  }
-  if (logArgs[logArgs.length - 1] === '') {
+   }
+  if( logArgs[logArgs.length-  1]===  '') {
     arrayPop(logArgs);
-  }
+   }
   return logArgs;
-};
+ };
 
 /**
  * @type {WeakMap<Error, LogArgs>}
@@ -1086,58 +1176,58 @@ const getLogArgs = ({ template, args }) => {
  * alternative message for that error. When logging the error, these
  * log args should be preferred to `error.message`.
  */
-const hiddenMessageLogArgs = new WeakMap();
+const hiddenMessageLogArgs=  new WeakMap();
 
 // So each error tag will be unique.
-let errorTagNum = 0;
+let errorTagNum=  0;
 
 /**
  * @type {WeakMap<Error, string>}
  */
-const errorTags = new WeakMap();
+const errorTags=  new WeakMap();
 
 /**
  * @param {Error} err
  * @param {string=} optErrorName
  * @returns {string}
  */
-const tagError = (err, optErrorName = err.name) => {
-  let errorTag = weakmapGet(errorTags, err);
-  if (errorTag !== undefined) {
+const tagError=  (err, optErrorName=  err.name)=>  {
+  let errorTag=  weakmapGet(errorTags, err);
+  if( errorTag!==  undefined) {
     return errorTag;
-  }
-  errorTagNum += 1;
-  errorTag = `${optErrorName}#${errorTagNum}`;
+   }
+  errorTagNum+=  1;
+  errorTag=   `${optErrorName}#${errorTagNum}`;
   weakmapSet(errorTags, err, errorTag);
   return errorTag;
-};
+ };
 
 /**
  * @type {AssertMakeError}
  */
-const makeError = (
-optDetails = redactedDetails`Assert failed`,
-ErrorConstructor = globalThis.Error,
-{ errorName = undefined } = {}) =>
-{
-  if (typeof optDetails === 'string') {
+const makeError=  (
+  optDetails=  redactedDetails `Assert failed`,
+  ErrorConstructor=  globalThis.Error,
+  { errorName=  undefined}=   {})=>
+     {
+  if( typeof optDetails===  'string') {
     // If it is a string, use it as the literal part of the template so
     // it doesn't get quoted.
-    optDetails = redactedDetails([optDetails]);
-  }
-  const hiddenDetails = weakmapGet(hiddenDetailsMap, optDetails);
-  if (hiddenDetails === undefined) {
-    throw new TypeError(`unrecognized details ${quote(optDetails)}`);
-  }
-  const messageString = getMessageString(hiddenDetails);
-  const error = new ErrorConstructor(messageString);
+    optDetails=  redactedDetails([optDetails]);
+   }
+  const hiddenDetails=  weakmapGet(hiddenDetailsMap, optDetails);
+  if( hiddenDetails===  undefined) {
+    throw new TypeError( `unrecognized details ${quote(optDetails)}`);
+   }
+  const messageString=  getMessageString(hiddenDetails);
+  const error=  new ErrorConstructor(messageString);
   weakmapSet(hiddenMessageLogArgs, error, getLogArgs(hiddenDetails));
-  if (errorName !== undefined) {
+  if( errorName!==  undefined) {
     tagError(error, errorName);
-  }
+   }
   // The next line is a particularly fruitful place to put a breakpoint.
   return error;
-};
+ };
 freeze(makeError);
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1152,7 +1242,7 @@ freeze(makeError);
  * An augmented console, like the causal console of `console.js`, could
  * then retrieve the graph of such annotations.
  */
-const hiddenNoteLogArgsArrays = new WeakMap();
+const hiddenNoteLogArgsArrays=  new WeakMap();
 
 /**
  * @type {WeakMap<Error, NoteCallback[]>}
@@ -1166,34 +1256,34 @@ const hiddenNoteLogArgsArrays = new WeakMap();
  * assume. We make this an array of callbacks so multiple registrations
  * are independent.
  */
-const hiddenNoteCallbackArrays = new WeakMap();
+const hiddenNoteCallbackArrays=  new WeakMap();
 
 /** @type {AssertNote} */
-const note = (error, detailsNote) => {
-  if (typeof detailsNote === 'string') {
+const note=  (error, detailsNote)=>  {
+  if( typeof detailsNote===  'string') {
     // If it is a string, use it as the literal part of the template so
     // it doesn't get quoted.
-    detailsNote = redactedDetails([detailsNote]);
-  }
-  const hiddenDetails = weakmapGet(hiddenDetailsMap, detailsNote);
-  if (hiddenDetails === undefined) {
-    throw new TypeError(`unrecognized details ${quote(detailsNote)}`);
-  }
-  const logArgs = getLogArgs(hiddenDetails);
-  const callbacks = weakmapGet(hiddenNoteCallbackArrays, error);
-  if (callbacks !== undefined) {
-    for (const callback of callbacks) {
+    detailsNote=  redactedDetails([detailsNote]);
+   }
+  const hiddenDetails=  weakmapGet(hiddenDetailsMap, detailsNote);
+  if( hiddenDetails===  undefined) {
+    throw new TypeError( `unrecognized details ${quote(detailsNote)}`);
+   }
+  const logArgs=  getLogArgs(hiddenDetails);
+  const callbacks=  weakmapGet(hiddenNoteCallbackArrays, error);
+  if( callbacks!==  undefined) {
+    for( const callback of callbacks) {
       callback(error, logArgs);
-    }
-  } else {
-    const logArgsArray = weakmapGet(hiddenNoteLogArgsArrays, error);
-    if (logArgsArray !== undefined) {
+     }
+   }else {
+    const logArgsArray=  weakmapGet(hiddenNoteLogArgsArrays, error);
+    if( logArgsArray!==  undefined) {
       arrayPush(logArgsArray, logArgs);
-    } else {
+     }else {
       weakmapSet(hiddenNoteLogArgsArrays, error, [logArgs]);
-    }
-  }
-};
+     }
+   }
+ };
 freeze(note);
 
 /**
@@ -1204,44 +1294,44 @@ freeze(note);
  * @param {Error} error
  * @returns {string}
  */
-const defaultGetStackString = (error) => {
-  if (!('stack' in error)) {
+const defaultGetStackString=  (error)=>{
+  if( !('stack'in  error)) {
     return '';
-  }
-  const stackString = `${error.stack}`;
-  const pos = stringIndexOf(stackString, '\n');
-  if (stringStartsWith(stackString, ' ') || pos === -1) {
+   }
+  const stackString=   `${error.stack}`;
+  const pos=  stringIndexOf(stackString, '\n');
+  if( stringStartsWith(stackString, ' ')||  pos===  -1) {
     return stackString;
-  }
-  return stringSlice(stackString, pos + 1); // exclude the initial newline
-};
+   }
+  return stringSlice(stackString, pos+  1); // exclude the initial newline
+ };
 
 /** @type {LoggedErrorHandler} */
-const loggedErrorHandler = {
-  getStackString: globalThis.getStackString || defaultGetStackString,
-  tagError: (error) => tagError(error),
-  resetErrorTagNum: () => {
-    errorTagNum = 0;
-  },
-  getMessageLogArgs: (error) => weakmapGet(hiddenMessageLogArgs, error),
-  takeMessageLogArgs: (error) => {
-    const result = weakmapGet(hiddenMessageLogArgs, error);
+const loggedErrorHandler=  {
+  getStackString: globalThis.getStackString||  defaultGetStackString,
+  tagError: (error)=>tagError(error),
+  resetErrorTagNum: ()=>  {
+    errorTagNum=  0;
+   },
+  getMessageLogArgs: (error)=>weakmapGet(hiddenMessageLogArgs, error),
+  takeMessageLogArgs: (error)=>{
+    const result=  weakmapGet(hiddenMessageLogArgs, error);
     weakmapDelete(hiddenMessageLogArgs, error);
     return result;
-  },
-  takeNoteLogArgsArray: (error, callback) => {
-    const result = weakmapGet(hiddenNoteLogArgsArrays, error);
+   },
+  takeNoteLogArgsArray: (error, callback)=>  {
+    const result=  weakmapGet(hiddenNoteLogArgsArrays, error);
     weakmapDelete(hiddenNoteLogArgsArrays, error);
-    if (callback !== undefined) {
-      const callbacks = weakmapGet(hiddenNoteCallbackArrays, error);
-      if (callbacks) {
+    if( callback!==  undefined) {
+      const callbacks=  weakmapGet(hiddenNoteCallbackArrays, error);
+      if( callbacks) {
         arrayPush(callbacks, callback);
-      } else {
+       }else {
         weakmapSet(hiddenNoteCallbackArrays, error, [callback]);
-      }
-    }
-    return result || [];
-  } };$h‍_once.loggedErrorHandler(loggedErrorHandler);
+       }
+     }
+    return result||  [];
+   }};$h‍_once.loggedErrorHandler(loggedErrorHandler);
 
 freeze(loggedErrorHandler);
 
@@ -1251,72 +1341,75 @@ freeze(loggedErrorHandler);
 /**
  * @type {MakeAssert}
  */
-const makeAssert = (optRaise = undefined, unredacted = false) => {
-  const details = unredacted ? unredactedDetails : redactedDetails;
+const makeAssert=  (optRaise=  undefined, unredacted=  false)=>  {
+  const details=  unredacted?  unredactedDetails:  redactedDetails;
   /** @type {AssertFail} */
-  const fail = (
-  optDetails = details`Assert failed`,
-  ErrorConstructor = globalThis.Error) =>
-  {
-    const reason = makeError(optDetails, ErrorConstructor);
-    if (optRaise !== undefined) {
+  const fail=  (
+    optDetails=  details `Assert failed`,
+    ErrorConstructor=  globalThis.Error)=>
+       {
+    const reason=  makeError(optDetails, ErrorConstructor);
+    if( optRaise!==  undefined) {
       optRaise(reason);
-    }
+     }
     throw reason;
-  };
+   };
   freeze(fail);
+
+  /** @type {FailTag} */
+  const Fail=  (template, ...args)=>  fail(details(template, ...args));
 
   // Don't freeze or export `baseAssert` until we add methods.
   // TODO If I change this from a `function` function to an arrow
   // function, I seem to get type errors from TypeScript. Why?
   /** @type {BaseAssert} */
   function baseAssert(
-  flag,
-  optDetails = details`Check failed`,
-  ErrorConstructor = globalThis.Error)
-  {
-    if (!flag) {
+    flag,
+    optDetails=  details `Check failed`,
+    ErrorConstructor=  globalThis.Error)
+    {
+    if( !flag) {
       throw fail(optDetails, ErrorConstructor);
-    }
-  }
+     }
+   }
 
   /** @type {AssertEqual} */
-  const equal = (
-  actual,
-  expected,
-  optDetails = details`Expected ${actual} is same as ${expected}`,
-  ErrorConstructor = RangeError) =>
-  {
+  const equal=  (
+    actual,
+    expected,
+    optDetails=  details `Expected ${actual} is same as ${expected}`,
+    ErrorConstructor=  RangeError)=>
+       {
     baseAssert(is(actual, expected), optDetails, ErrorConstructor);
-  };
+   };
   freeze(equal);
 
   /** @type {AssertTypeof} */
-  const assertTypeof = (specimen, typename, optDetails) => {
+  const assertTypeof=  (specimen, typename, optDetails)=>  {
     baseAssert(
-    typeof typename === 'string',
-    details`${quote(typename)} must be a string`);
+      typeof typename===  'string',
+      details `${quote(typename)} must be a string`);
 
-    if (optDetails === undefined) {
+    if( optDetails===  undefined) {
       // Like
       // ```js
       // optDetails = details`${specimen} must be ${quote(an(typename))}`;
       // ```
       // except it puts the typename into the literal part of the template
       // so it doesn't get quoted.
-      optDetails = details(['', ` must be ${an(typename)}`], specimen);
-    }
+      optDetails=  details(['',  ` must be ${an(typename)}`],specimen);
+     }
     equal(typeof specimen, typename, optDetails, TypeError);
-  };
+   };
   freeze(assertTypeof);
 
   /** @type {AssertString} */
-  const assertString = (specimen, optDetails) =>
-  assertTypeof(specimen, 'string', optDetails);
+  const assertString=  (specimen, optDetails)=>
+    assertTypeof(specimen, 'string', optDetails);
 
   // Note that "assert === baseAssert"
   /** @type {Assert} */
-  const assert = assign(baseAssert, {
+  const assert=  assign(baseAssert, {
     error: makeError,
     fail,
     equal,
@@ -1324,94 +1417,111 @@ const makeAssert = (optRaise = undefined, unredacted = false) => {
     string: assertString,
     note,
     details,
+    Fail,
     quote,
-    makeAssert });
+    makeAssert});
 
   return freeze(assert);
-};$h‍_once.makeAssert(makeAssert);
+ };$h‍_once.makeAssert(makeAssert);
 freeze(makeAssert);
 
 
 /** @type {Assert} */
-const assert = makeAssert();$h‍_once.assert(assert);
+const assert=  makeAssert();$h‍_once.assert(assert);
 })
 ,
 // === functors[5] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_FUNCTION,arrayJoin;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]]]]]);   
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_EVAL,create,defineProperties,freeze,assert;$h‍_imports([["./commons.js", [["FERAL_EVAL", [$h‍_a => (FERAL_EVAL = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
-/**
- * buildOptimizer()
- * Given an array of indentifier, the optimizer return a `const` declaration
- * destructring `this`.
- *
- * @param {Array<string>} constants
- */
-function buildOptimizer(constants) {
-  // No need to build an optimizer when there are no constants.
-  if (constants.length === 0) return '';
-  // Use 'this' to avoid going through the scope proxy, which is unecessary
-  // since the optimizer only needs references to the safe global.
-  return `const {${arrayJoin(constants, ',')}} = this;`;
-}
 
-/**
- * makeEvaluateFactory()
- * The factory create 'evaluate' functions with the correct optimizer
- * inserted.
- *
- * @param {Array<string>} [constants]
- */
-const makeEvaluateFactory = (constants = []) => {
-  const optimizer = buildOptimizer(constants);
 
-  // Create a function in sloppy mode, so that we can use 'with'. It returns
-  // a function in strict mode that evaluates the provided code using direct
-  // eval, and thus in strict mode in the same scope. We must be very careful
-  // to not create new names in this scope
+const { Fail}=   assert;
 
-  // 1: we use 'with' (around a Proxy) to catch all free variable names. The
-  // `this` value holds the Proxy which safely wraps the safeGlobal
-  // 2: 'optimizer' catches constant variable names for speed.
-  // 3: The inner strict function is effectively passed two parameters:
-  //    a) its arguments[0] is the source to be directly evaluated.
-  //    b) its 'this' is the this binding seen by the code being
-  //       directly evaluated (the globalObject).
-  // 4: The outer sloppy function is passed one parameter, the scope proxy.
-  //    as the `this` parameter.
+// We attempt to frustrate stack bumping attacks on the safe evaluator
+// (`make-safe-evaluator.js`).
+// A stack bumping attack forces an API call to throw a stack overflow
+// `RangeError` at an inopportune time.
+// The attacker arranges for the stack to be sufficiently deep that the API
+// consumes exactly enough stack frames to throw an exception.
+//
+// For the safe evaluator, an exception thrown between adding and then deleting
+// `eval` on `evalScope` could leak the real `eval` to an attacker's lexical
+// scope.
+// This would be sufficiently disastrous that we guard against it twice.
+// First, we delete `eval` from `evalScope` immediately before rendering it to
+// the guest program's lexical scope.
+//
+// If the attacker manages to arrange for `eval` to throw an exception after we
+// call `allowNextEvalToBeUnsafe` but before the guest program accesses `eval`,
+// it would be able to access `eval` once more in its own code.
+// Although they could do no harm with a direct `eval`, they would be able to
+// escape to the true global scope with an indirect `eval`.
+//
+//   prepareStack(depth, () => {
+//     (eval)('');
+//   });
+//   const unsafeEval = (eval);
+//   const safeEval = (eval);
+//   const realGlobal = unsafeEval('globalThis');
+//
+// To protect against that case, we also delete `eval` from the `evalScope` in
+// a `finally` block surrounding the call to the safe evaluator.
+// The only way to reach this case is if `eval` remains on `evalScope` due to
+// an attack, so we assume that attack would have have invalided our isolation
+// and revoke all future access to the evaluator.
+//
+// To defeat a stack bumping attack, we must use fewer stack frames to recover
+// in that `finally` block than we used in the `try` block.
+// We have no reliable guarantees about how many stack frames a block of
+// JavaScript will consume.
+// Function inlining, tail-call optimization, variations in the size of a stack
+// frame, and block scopes may affect the depth of the stack.
+// The only number of acceptable stack frames to use in the finally block is
+// zero.
+// We only use property assignment and deletion in the safe evaluator's
+// `finally` block.
+// We use `delete evalScope.eval` to withhold the evaluator.
+// We assign an envelope object over `evalScopeKit.revoked` to revoke the
+// evaluator.
+//
+// This is why we supply a meaningfully named function for
+// `allowNextEvalToBeUnsafe` but do not provide a corresponding
+// `revokeAccessToUnsafeEval` or even simply `revoke`.
+// These recovery routines are expressed inline in the safe evaluator.
 
-  // Notes:
-  // - everything in the 'optimizer' string is looked up in the proxy
-  //   (including an 'arguments[0]', which points at the Proxy).
-  // - keywords like 'function' which are reserved keywords, and cannot be
-  //   used as a variable, so they are not part of the optimizer.
-  // - when 'eval' is looked up in the proxy, and it's the first time it is
-  //   looked up after allowNextEvalToBeUnsafe is turned on, the proxy returns
-  //   the powerful, unsafe eval intrinsic, and flips allowNextEvalToBeUnsafe
-  //   back to false. Any reference to 'eval' in that string will get the tamed
-  //   evaluator.
+const        makeEvalScopeKit=  ()=>  {
+  const evalScope=  create(null);
+  const oneTimeEvalProperties=  freeze({
+    eval: {
+      get() {
+        delete evalScope.eval;
+        return FERAL_EVAL;
+       },
+      enumerable: false,
+      configurable: true}});
 
-  // TODO https://github.com/endojs/endo/issues/816
-  // The optimizer currently runs under sloppy mode, and although we doubt that
-  // there is any vulnerability introduced just by running the optimizer
-  // sloppy, we are much more confident in the semantics of strict mode.
-  // The motivation for having the optimizer in sloppy mode is that it can be
-  // reused for multiple evaluations, but in practice we have no such calls.
-  // We could probably both move the optimizer into the inner function
-  // and we could also simplify makeEvaluateFactory to simply evaluate.
-  return FERAL_FUNCTION(`
-    with (this) {
-      ${optimizer}
-      return function() {
-        'use strict';
-        return eval(arguments[0]);
-      };
-    }
-  `);
-};$h‍_once.makeEvaluateFactory(makeEvaluateFactory);
+
+
+  const evalScopeKit=  {
+    evalScope,
+    allowNextEvalToBeUnsafe() {
+      if( evalScopeKit.revoked!==  null) {
+        Fail `a handler did not reset allowNextEvalToBeUnsafe ${this.revoked.err}`;
+       }
+      // Allow next reference to eval produce the unsafe FERAL_EVAL.
+      // We avoid defineProperty because it consumes an extra stack frame taming
+      // its return value.
+      defineProperties(evalScope, oneTimeEvalProperties);
+     },
+    revoked: null};
+
+
+  return evalScopeKit;
+ };$h‍_once.makeEvalScopeKit(makeEvalScopeKit);
 })
 ,
 // === functors[6] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let arrayFilter,arrayIncludes,getOwnPropertyDescriptor,getOwnPropertyNames,objectHasOwnProperty,regexpTest;$h‍_imports([["./commons.js", [["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["regexpTest", [$h‍_a => (regexpTest = $h‍_a)]]]]]);   
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let arrayFilter,arrayIncludes,getOwnPropertyDescriptor,getOwnPropertyNames,objectHasOwnProperty,regexpTest;$h‍_imports([["./commons.js", [["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["regexpTest", [$h‍_a => (regexpTest = $h‍_a)]]]]]);   
 
 
 
@@ -1425,72 +1535,72 @@ const makeEvaluateFactory = (constants = []) => {
  * In JavaScript you cannot use these reserved words as variables.
  * See 11.6.1 Identifier Names
  */
-const keywords = [
-// 11.6.2.1 Keywords
-'await',
-'break',
-'case',
-'catch',
-'class',
-'const',
-'continue',
-'debugger',
-'default',
-'delete',
-'do',
-'else',
-'export',
-'extends',
-'finally',
-'for',
-'function',
-'if',
-'import',
-'in',
-'instanceof',
-'new',
-'return',
-'super',
-'switch',
-'this',
-'throw',
-'try',
-'typeof',
-'var',
-'void',
-'while',
-'with',
-'yield',
+const keywords=  [
+  // 11.6.2.1 Keywords
+  'await',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'export',
+  'extends',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'new',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
 
-// Also reserved when parsing strict mode code
-'let',
-'static',
+  // Also reserved when parsing strict mode code
+  'let',
+  'static',
 
-// 11.6.2.2 Future Reserved Words
-'enum',
+  // 11.6.2.2 Future Reserved Words
+  'enum',
 
-// Also reserved when parsing strict mode code
-'implements',
-'package',
-'protected',
-'interface',
-'private',
-'public',
+  // Also reserved when parsing strict mode code
+  'implements',
+  'package',
+  'protected',
+  'interface',
+  'private',
+  'public',
 
-// Reserved but not mentioned in specs
-'await',
+  // Reserved but not mentioned in specs
+  'await',
 
-'null',
-'true',
-'false',
+  'null',
+  'true',
+  'false',
 
-'this',
-'arguments'];
+  'this',
+  'arguments'];
 
 
 /**
  * identifierPattern
- * Simplified validation of indentifier names: may only contain alphanumeric
+ * Simplified validation of identifier names: may only contain alphanumeric
  * characters (or "$" or "_"), and may not start with a digit. This is safe
  * and does not reduces the compatibility of the shim. The motivation for
  * this limitation was to decrease the complexity of the implementation,
@@ -1498,7 +1608,7 @@ const keywords = [
  * Note: \w is equivalent [a-zA-Z_0-9]
  * See 11.6.1 Identifier Names
  */
-const identifierPattern = /^[a-zA-Z_$][\w$]*$/;
+const identifierPattern=  /^[a-zA-Z_$][\w$]*$/;
 
 /**
  * isValidIdentifierName()
@@ -1511,23 +1621,23 @@ const identifierPattern = /^[a-zA-Z_$][\w$]*$/;
  *
  * @param {string} name
  */
-const isValidIdentifierName = (name) => {
+const        isValidIdentifierName=  (name)=>{
   // Ensure we have a valid identifier. We use regexpTest rather than
   // /../.test() to guard against the case where RegExp has been poisoned.
-  return (
-    name !== 'eval' &&
-    !arrayIncludes(keywords, name) &&
+  return(
+    name!==  'eval'&&
+    !arrayIncludes(keywords, name)&&
     regexpTest(identifierPattern, name));
 
-};$h‍_once.isValidIdentifierName(isValidIdentifierName);
+ };
 
 /*
  * isImmutableDataProperty
- */
+ */$h‍_once.isValidIdentifierName(isValidIdentifierName);
 
 function isImmutableDataProperty(obj, name) {
-  const desc = getOwnPropertyDescriptor(obj, name);
-  return (
+  const desc=  getOwnPropertyDescriptor(obj, name);
+  return(
     //
     // The getters will not have .writable, don't let the falsyness of
     // 'undefined' trick us: test with === false, not ! . However descriptors
@@ -1535,8 +1645,8 @@ function isImmutableDataProperty(obj, name) {
     // extra properties which weren't really there. Accessor properties have
     // 'get/set/enumerable/configurable', while data properties have
     // 'value/writable/enumerable/configurable'.
-    desc.configurable === false &&
-    desc.writable === false &&
+    desc.configurable===  false&&
+    desc.writable===  false&&
     //
     // Checks for data properties because they're the only ones we can
     // optimize (accessors are most likely non-constant). Descriptors can't
@@ -1545,7 +1655,7 @@ function isImmutableDataProperty(obj, name) {
     // case where Object.prototype has been poisoned.
     objectHasOwnProperty(desc, 'value'));
 
-}
+ }
 
 /**
  * getScopeConstants()
@@ -1557,39 +1667,156 @@ function isImmutableDataProperty(obj, name) {
  * safe and only prevent performance optimization.
  *
  * @param {Object} globalObject
- * @param {Object} localObject
+ * @param {Object} moduleLexicals
  */
-const getScopeConstants = (globalObject, localObject = {}) => {
+const        getScopeConstants=  (globalObject, moduleLexicals=  {})=>  {
   // getOwnPropertyNames() does ignore Symbols so we don't need to
   // filter them out.
-  const globalNames = getOwnPropertyNames(globalObject);
-  const localNames = getOwnPropertyNames(localObject);
+  const globalObjectNames=  getOwnPropertyNames(globalObject);
+  const moduleLexicalNames=  getOwnPropertyNames(moduleLexicals);
 
   // Collect all valid & immutable identifiers from the endowments.
-  const localConstants = arrayFilter(
-  localNames,
-  (name) =>
-  isValidIdentifierName(name) && isImmutableDataProperty(localObject, name));
+  const moduleLexicalConstants=  arrayFilter(
+    moduleLexicalNames,
+    (name)=>
+      isValidIdentifierName(name)&&
+      isImmutableDataProperty(moduleLexicals, name));
 
 
   // Collect all valid & immutable identifiers from the global that
-  // are also not present in the endwoments (immutable or not).
-  const globalConstants = arrayFilter(
-  globalNames,
-  (name) =>
-  // Can't define a constant: it would prevent a
-  // lookup on the endowments.
-  !arrayIncludes(localNames, name) &&
-  isValidIdentifierName(name) &&
-  isImmutableDataProperty(globalObject, name));
+  // are also not present in the endowments (immutable or not).
+  const globalObjectConstants=  arrayFilter(
+    globalObjectNames,
+    (name)=>
+      // Can't define a constant: it would prevent a
+      // lookup on the endowments.
+      !arrayIncludes(moduleLexicalNames, name)&&
+      isValidIdentifierName(name)&&
+      isImmutableDataProperty(globalObject, name));
 
 
-  return [...globalConstants, ...localConstants];
-};$h‍_once.getScopeConstants(getScopeConstants);
+  return {
+    globalObjectConstants,
+    moduleLexicalConstants};
+
+ };$h‍_once.getScopeConstants(getScopeConstants);
 })
 ,
 // === functors[7] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_EVAL,Proxy,String,TypeError,create,freeze,getOwnPropertyDescriptor,getOwnPropertyDescriptors,globalThis,immutableObject,objectHasOwnProperty,reflectGet,reflectSet,assert;$h‍_imports([["./commons.js", [["FERAL_EVAL", [$h‍_a => (FERAL_EVAL = $h‍_a)]],["Proxy", [$h‍_a => (Proxy = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["immutableObject", [$h‍_a => (immutableObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["reflectGet", [$h‍_a => (reflectGet = $h‍_a)]],["reflectSet", [$h‍_a => (reflectSet = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_FUNCTION,arrayJoin,apply,getScopeConstants;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]]]],["./scope-constants.js", [["getScopeConstants", [$h‍_a => (getScopeConstants = $h‍_a)]]]]]);   
+
+
+
+
+/**
+ * buildOptimizer()
+ * Given an array of identifiers, the optimizer returns a `const` declaration
+ * destructuring `this.${name}`.
+ *
+ * @param {Array<string>} constants
+ * @param {string} name
+ */
+function buildOptimizer(constants, name) {
+  // No need to build an optimizer when there are no constants.
+  if( constants.length===  0) return '';
+  // Use 'this' to avoid going through the scope proxy, which is unnecessary
+  // since the optimizer only needs references to the safe global.
+  // Destructure the constants from the target scope object.
+  return  `const {${arrayJoin(constants,',') }} = this.${name};`;
+ }
+
+/**
+ * makeEvaluate()
+ * Create an 'evaluate' function with the correct optimizer inserted.
+ *
+ * @param {object} context
+ * @param {object} context.evalScope
+ * @param {object} context.moduleLexicals
+ * @param {object} context.globalObject
+ * @param {object} context.scopeTerminator
+ */
+const        makeEvaluate=  (context)=>{
+  const { globalObjectConstants, moduleLexicalConstants}=   getScopeConstants(
+    context.globalObject,
+    context.moduleLexicals);
+
+  const globalObjectOptimizer=  buildOptimizer(
+    globalObjectConstants,
+    'globalObject');
+
+  const moduleLexicalOptimizer=  buildOptimizer(
+    moduleLexicalConstants,
+    'moduleLexicals');
+
+
+  // Create a function in sloppy mode, so that we can use 'with'. It returns
+  // a function in strict mode that evaluates the provided code using direct
+  // eval, and thus in strict mode in the same scope. We must be very careful
+  // to not create new names in this scope
+
+  // 1: we use multiple nested 'with' to catch all free variable names. The
+  // `this` value of the outer sloppy function holds the different scope
+  // layers, from inner to outer:
+  //    a) `evalScope` which must release the `FERAL_EVAL` as 'eval' once for
+  //       every invocation of the inner `evaluate` function in order to
+  //       trigger direct eval. The direct eval semantics is what allows the
+  //       evaluated code to lookup free variable names on the other scope
+  //       objects and not in global scope.
+  //    b) `moduleLexicals` which provide a way to introduce free variables
+  //       that are not available on the globalObject.
+  //    c) `globalObject` is the global scope object of the evaluator, aka the
+  //       Compartment's `globalThis`.
+  //    d) `scopeTerminator` is a proxy object which prevents free variable
+  //       lookups to escape to the start compartment's global object.
+  // 2: `optimizer`s catch constant variable names for speed.
+  // 3: The inner strict `evaluate` function should be passed two parameters:
+  //    a) its arguments[0] is the source to be directly evaluated.
+  //    b) its 'this' is the this binding seen by the code being
+  //       directly evaluated (the globalObject).
+
+  // Notes:
+  // - The `optimizer` strings only lookup values on the `globalObject` and
+  //   `moduleLexicals` objects by construct. Keywords like 'function' are
+  //   reserved and cannot be used as a variable, so they are excluded from the
+  //   optimizer. Furthermore to prevent shadowing 'eval', while a valid
+  //   identifier, that name is also explicitly excluded.
+  // - when 'eval' is looked up in the `evalScope`, the powerful unsafe eval
+  //   intrinsic is returned after automatically removing it from the
+  //   `evalScope`. Any further reference to 'eval' in the evaluate string will
+  //   get the tamed evaluator from the `globalObject`, if any.
+
+  // TODO https://github.com/endojs/endo/issues/816
+  // The optimizer currently runs under sloppy mode, and although we doubt that
+  // there is any vulnerability introduced just by running the optimizer
+  // sloppy, we are much more confident in the semantics of strict mode.
+  // The `evaluate` function can be and is reused across multiple evaluations.
+  // Since the optimizer should not be re-evaluated every time, it cannot be
+  // inside the `evaluate` closure. While we could potentially nest an
+  // intermediate layer of `() => {'use strict'; ${optimizers}; ...`, it
+  // doesn't seem worth the overhead and complexity.
+  const evaluateFactory=  FERAL_FUNCTION( `
+    with (this.scopeTerminator) {
+      with (this.globalObject) {
+        with (this.moduleLexicals) {
+          with (this.evalScope) {
+            ${globalObjectOptimizer }
+            ${moduleLexicalOptimizer }
+            return function() {
+              'use strict';
+              return eval(arguments[0]);
+            };
+          }
+        }
+      }
+    }
+  `);
+
+  return apply(evaluateFactory, context, []);
+ };$h‍_once.makeEvaluate(makeEvaluate);
+})
+,
+// === functors[8] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Proxy,String,TypeError,ReferenceError,create,freeze,getOwnPropertyDescriptors,globalThis,immutableObject,assert;$h‍_imports([["./commons.js", [["Proxy", [$h‍_a => (Proxy = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["immutableObject", [$h‍_a => (immutableObject = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -1602,226 +1829,156 @@ const getScopeConstants = (globalObject, localObject = {}) => {
 
 
 
-
-
-
-
-const { details: d, quote: q } = assert;
+const { Fail, quote: q}=   assert;
 
 /**
  * alwaysThrowHandler
  * This is an object that throws if any property is called. It's used as
  * a proxy handler which throws on any trap called.
  * It's made from a proxy with a get trap that throws. It's safe to
- * create one and share it between all scopeHandlers.
+ * create one and share it between all Proxy handlers.
  */
-const alwaysThrowHandler = new Proxy(
-immutableObject,
-freeze({
-  get(_shadow, prop) {
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    assert.fail(
-    d`Please report unexpected scope handler trap: ${q(String(prop))}`);
-
-  } }));
+const        alwaysThrowHandler=  new Proxy(
+  immutableObject,
+  freeze({
+    get(_shadow, prop) {
+      Fail `Please report unexpected scope handler trap: ${q(String(prop))}`;
+     }}));
 
 
 
 /*
- * createScopeHandler()
- * ScopeHandler manages a Proxy which serves as the global scope for the
- * safeEvaluate operation (the Proxy is the argument of a 'with' binding).
- * As described in createSafeEvaluator(), it has several functions:
- * - allow the very first (and only the very first) use of 'eval' to map to
- * the real (unsafe) eval function, so it acts as a 'direct eval' and can
- * access its lexical scope (which maps to the 'with' binding, which the
- * ScopeHandler also controls).
- * - ensure that all subsequent uses of 'eval' map to the safeEvaluator,
- * which lives as the 'eval' property of the safeGlobal.
- * - route all other property lookups at the safeGlobal.
- * - hide the unsafeGlobal which lives on the scope chain above the 'with'.
- * - ensure the Proxy invariants despite some global properties being frozen.
- */
-const createScopeHandler = (
-globalObject,
-localObject = {},
-{ sloppyGlobalsMode = false } = {}) =>
-{
-  // This flag allow us to determine if the eval() call is an done by the
-  // compartment's code or if it is user-land invocation, so we can react
-  // differently.
-  let allowNextEvalToBeUnsafe = false;
+ * scopeProxyHandlerProperties
+ * scopeTerminatorHandler manages a strictScopeTerminator Proxy which serves as
+ * the final scope boundary that will always return "undefined" in order
+ * to prevent access to "start compartment globals".
+ */$h‍_once.alwaysThrowHandler(alwaysThrowHandler);
+const scopeProxyHandlerProperties=  {
+  get(_shadow, _prop) {
+    return undefined;
+   },
 
-  const admitOneUnsafeEvalNext = () => {
-    allowNextEvalToBeUnsafe = true;
-  };
+  set(_shadow, prop, _value) {
+    // We should only hit this if the has() hook returned true matches the v8
+    // ReferenceError message "Uncaught ReferenceError: xyz is not defined"
+    throw new ReferenceError( `${String(prop)} is not defined`);
+   },
 
-  const resetOneUnsafeEvalNext = () => {
-    const wasSet = allowNextEvalToBeUnsafe;
-    allowNextEvalToBeUnsafe = false;
-    return wasSet;
-  };
+  has(_shadow, prop) {
+    // we must at least return true for all properties on the realm globalThis
+    return prop in globalThis;
+   },
 
-  const scopeProxyHandlerProperties = {
-    get(_shadow, prop) {
-      if (typeof prop === 'symbol') {
-        return undefined;
-      }
+  // note: this is likely a bug of safari
+  // https://bugs.webkit.org/show_bug.cgi?id=195534
+  getPrototypeOf() {
+    return null;
+   },
 
-      // Special treatment for eval. The very first lookup of 'eval' gets the
-      // unsafe (real direct) eval, so it will get the lexical scope that uses
-      // the 'with' context.
-      if (prop === 'eval') {
-        // test that it is true rather than merely truthy
-        if (allowNextEvalToBeUnsafe === true) {
-          // revoke before use
-          allowNextEvalToBeUnsafe = false;
-          return FERAL_EVAL;
-        }
-        // fall through
-      }
-
-      // Properties of the localObject.
-      if (prop in localObject) {
-        // Use reflect to defeat accessors that could be present on the
-        // localObject object itself as `this`.
-        // This is done out of an overabundance of caution, as the SES shim
-        // only use the localObject carry globalLexicals and live binding
-        // traps.
-        // The globalLexicals are captured as a snapshot of what's passed to
-        // the Compartment constructor, wherein all accessors and setters are
-        // eliminated and the result frozen.
-        // The live binding traps do use accessors, and none of those accessors
-        // make use of their receiver.
-        // Live binding traps provide no avenue for user code to observe the
-        // receiver.
-        return reflectGet(localObject, prop, globalObject);
-      }
-
-      // Properties of the global.
-      return reflectGet(globalObject, prop);
-    },
-
-    set(_shadow, prop, value) {
-      // Properties of the localObject.
-      if (prop in localObject) {
-        const desc = getOwnPropertyDescriptor(localObject, prop);
-        if (objectHasOwnProperty(desc, 'value')) {
-          // Work around a peculiar behavior in the specs, where
-          // value properties are defined on the receiver.
-          return reflectSet(localObject, prop, value);
-        }
-        // Ensure that the 'this' value on setters resolves
-        // to the safeGlobal, not to the localObject object.
-        return reflectSet(localObject, prop, value, globalObject);
-      }
-
-      // Properties of the global.
-      return reflectSet(globalObject, prop, value);
-    },
-
-    // we need has() to return false for some names to prevent the lookup from
-    // climbing the scope chain and eventually reaching the unsafeGlobal
-    // object (globalThis), which is bad.
-
-    // todo: we'd like to just have has() return true for everything, and then
-    // use get() to raise a ReferenceError for anything not on the safe global.
-    // But we want to be compatible with ReferenceError in the normal case and
-    // the lack of ReferenceError in the 'typeof' case. Must either reliably
-    // distinguish these two cases (the trap behavior might be different), or
-    // we rely on a mandatory source-to-source transform to change 'typeof abc'
-    // to XXX. We already need a mandatory parse to prevent the 'import',
-    // since it's a special form instead of merely being a global variable/
-
-    // note: if we make has() return true always, then we must implement a
-    // set() trap to avoid subverting the protection of strict mode (it would
-    // accept assignments to undefined globals, when it ought to throw
-    // ReferenceError for such assignments)
-
-    has(_shadow, prop) {
-      // unsafeGlobal: hide all properties of the current global
-      // at the expense of 'typeof' being wrong for those properties. For
-      // example, in the browser, evaluating 'document = 3', will add
-      // a property to globalObject instead of throwing a ReferenceError.
-
-      // !!!!!      WARNING: DANGER ZONE      !!!!!!
-      // The order of the conditions in the `||` expression below is of the
-      // utmost importance. Under no circumstances should `eval` be checked
-      // after `globalObject`. The prototype of the global object is under
-      // full control of user code and may be replaced by a proxy with a
-      // `has` trap. If we allow that trap to trigger while the
-      // `allowNextEvalToBeUnsafe` flag is down, it could allow user code
-      // to get a hold of `FERAL_EVAL`, resulting in a complete escape of
-      // the compartment.
-      // !!!!!      WARNING: DANGER ZONE      !!!!!!
-      return (
-        sloppyGlobalsMode ||
-        allowNextEvalToBeUnsafe && prop === 'eval' ||
-        prop in localObject ||
-        prop in globalObject ||
-        prop in globalThis);
-
-    },
-
-    // note: this is likely a bug of safari
-    // https://bugs.webkit.org/show_bug.cgi?id=195534
-
-    getPrototypeOf() {
-      return null;
-    },
-
-    // Chip has seen this happen single stepping under the Chrome/v8 debugger.
-    // TODO record how to reliably reproduce, and to test if this fix helps.
-    // TODO report as bug to v8 or Chrome, and record issue link here.
-
-    getOwnPropertyDescriptor(_target, prop) {
-      // Coerce with `String` in case prop is a symbol.
-      const quotedProp = q(String(prop));
-      // eslint-disable-next-line @endo/no-polymorphic-call
-      console.warn(
-      `getOwnPropertyDescriptor trap on scopeHandler for ${quotedProp}`,
+  // Chip has seen this happen single stepping under the Chrome/v8 debugger.
+  // TODO record how to reliably reproduce, and to test if this fix helps.
+  // TODO report as bug to v8 or Chrome, and record issue link here.
+  getOwnPropertyDescriptor(_target, prop) {
+    // Coerce with `String` in case prop is a symbol.
+    const quotedProp=  q(String(prop));
+    // eslint-disable-next-line @endo/no-polymorphic-call
+    console.warn(
+       `getOwnPropertyDescriptor trap on scopeTerminatorHandler for ${quotedProp}`,
       new TypeError().stack);
 
-      return undefined;
-    } };
+    return undefined;
+   }};
+
+
+// The scope handler's prototype is a proxy that throws if any trap other
+// than get/set/has are run (like getOwnPropertyDescriptors, apply,
+// getPrototypeOf).
+const        strictScopeTerminatorHandler=  freeze(
+  create(
+    alwaysThrowHandler,
+    getOwnPropertyDescriptors(scopeProxyHandlerProperties)));$h‍_once.strictScopeTerminatorHandler(strictScopeTerminatorHandler);
+
+
+
+const        strictScopeTerminator=  new Proxy(
+  immutableObject,
+  strictScopeTerminatorHandler);$h‍_once.strictScopeTerminator(strictScopeTerminator);
+})
+,
+// === functors[9] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Proxy,create,freeze,getOwnPropertyDescriptors,immutableObject,reflectSet,strictScopeTerminatorHandler,alwaysThrowHandler;$h‍_imports([["./commons.js", [["Proxy", [$h‍_a => (Proxy = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["immutableObject", [$h‍_a => (immutableObject = $h‍_a)]],["reflectSet", [$h‍_a => (reflectSet = $h‍_a)]]]],["./strict-scope-terminator.js", [["strictScopeTerminatorHandler", [$h‍_a => (strictScopeTerminatorHandler = $h‍_a)]],["alwaysThrowHandler", [$h‍_a => (alwaysThrowHandler = $h‍_a)]]]]]);   
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ * createSloppyGlobalsScopeTerminator()
+ * strictScopeTerminatorHandler manages a scopeTerminator Proxy which serves as
+ * the final scope boundary that will always return "undefined" in order
+ * to prevent access to "start compartment globals". When "sloppyGlobalsMode"
+ * is true, the Proxy will perform sets on the "globalObject".
+ */
+const        createSloppyGlobalsScopeTerminator=  (globalObject)=>{
+  const scopeProxyHandlerProperties=  {
+    // inherit scopeTerminator behavior
+    ...strictScopeTerminatorHandler,
+
+    // Redirect set properties to the globalObject.
+    set(_shadow, prop, value) {
+      return reflectSet(globalObject, prop, value);
+     },
+
+    // Always claim to have a potential property in order to be the recipient of a set
+    has(_shadow, _prop) {
+      return true;
+     }};
 
 
   // The scope handler's prototype is a proxy that throws if any trap other
   // than get/set/has are run (like getOwnPropertyDescriptors, apply,
   // getPrototypeOf).
-  const scopeHandler = freeze(
-  create(
-  alwaysThrowHandler,
-  getOwnPropertyDescriptors(scopeProxyHandlerProperties)));
+  const sloppyGlobalsScopeTerminatorHandler=  freeze(
+    create(
+      alwaysThrowHandler,
+      getOwnPropertyDescriptors(scopeProxyHandlerProperties)));
 
 
 
-  return {
-    admitOneUnsafeEvalNext,
-    resetOneUnsafeEvalNext,
-    scopeHandler };
+  const sloppyGlobalsScopeTerminator=  new Proxy(
+    immutableObject,
+    sloppyGlobalsScopeTerminatorHandler);
 
-};$h‍_once.createScopeHandler(createScopeHandler);
+
+  return sloppyGlobalsScopeTerminator;
+ };$h‍_once.createSloppyGlobalsScopeTerminator(createSloppyGlobalsScopeTerminator);
 })
 ,
-// === functors[8] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_REG_EXP,regexpExec,stringSlice;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]]]]]);   
+// === functors[10] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_REG_EXP,regexpExec,stringSlice;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]]]]]);   
 
 // Captures a key and value of the form #key=value or @key=value
-const sourceMetaEntryRegExp =
-'\\s*[@#]\\s*([a-zA-Z][a-zA-Z0-9]*)\\s*=\\s*([^\\s\\*]*)';
+const sourceMetaEntryRegExp=
+  '\\s*[@#]\\s*([a-zA-Z][a-zA-Z0-9]*)\\s*=\\s*([^\\s\\*]*)';
 // Captures either a one-line or multi-line comment containing
 // one #key=value or @key=value.
 // Produces two pairs of capture groups, but the initial two may be undefined.
 // On account of the mechanics of regular expressions, scanning from the end
 // does not allow us to capture every pair, so getSourceURL must capture and
 // trim until there are no matching comments.
-const sourceMetaEntriesRegExp = new FERAL_REG_EXP(
-`(?:\\s*//${sourceMetaEntryRegExp}|/\\*${sourceMetaEntryRegExp}\\s*\\*/)\\s*$`);
+const sourceMetaEntriesRegExp=  new FERAL_REG_EXP(
+   `(?:\\s*//${sourceMetaEntryRegExp}|/\\*${sourceMetaEntryRegExp}\\s*\\*/)\\s*$`);
 
 
-const getSourceURL = (src) => {
-  let sourceURL = '<unknown>';
+const        getSourceURL=  (src)=>{
+  let sourceURL=  '<unknown>';
 
   // Our regular expression matches the last one or two comments with key value
   // pairs at the end of the source, avoiding a scan over the entire length of
@@ -1830,12 +1987,12 @@ const getSourceURL = (src) => {
   // sourceMapURL in addition to sourceURL.
   // So, we sublimate the comments out of the source until no source or no
   // comments remain.
-  while (src.length > 0) {
-    const match = regexpExec(sourceMetaEntriesRegExp, src);
-    if (match === null) {
+  while( src.length>  0) {
+    const match=  regexpExec(sourceMetaEntriesRegExp, src);
+    if( match===  null) {
       break;
-    }
-    src = stringSlice(src, 0, src.length - match[0].length);
+     }
+    src=  stringSlice(src, 0, src.length-  match[0].length);
 
     // We skip $0 since it contains the entire match.
     // The match contains four capture groups,
@@ -1843,19 +2000,19 @@ const getSourceURL = (src) => {
     // may be undefined.
     // On the off-chance someone put two sourceURL comments in their code with
     // different commenting conventions, the latter has precedence.
-    if (match[3] === 'sourceURL') {
-      sourceURL = match[4];
-    } else if (match[1] === 'sourceURL') {
-      sourceURL = match[2];
-    }
-  }
+    if( match[3]===  'sourceURL') {
+      sourceURL=  match[4];
+     }else if( match[1]===  'sourceURL') {
+      sourceURL=  match[2];
+     }
+   }
 
   return sourceURL;
-};$h‍_once.getSourceURL(getSourceURL);
+ };$h‍_once.getSourceURL(getSourceURL);
 })
 ,
-// === functors[9] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_REG_EXP,SyntaxError,stringReplace,stringSearch,stringSlice,stringSplit,getSourceURL;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["stringReplace", [$h‍_a => (stringReplace = $h‍_a)]],["stringSearch", [$h‍_a => (stringSearch = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]],["stringSplit", [$h‍_a => (stringSplit = $h‍_a)]]]],["./get-source-url.js", [["getSourceURL", [$h‍_a => (getSourceURL = $h‍_a)]]]]]);   
+// === functors[11] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_REG_EXP,SyntaxError,stringReplace,stringSearch,stringSlice,stringSplit,getSourceURL;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["stringReplace", [$h‍_a => (stringReplace = $h‍_a)]],["stringSearch", [$h‍_a => (stringSearch = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]],["stringSplit", [$h‍_a => (stringSplit = $h‍_a)]]]],["./get-source-url.js", [["getSourceURL", [$h‍_a => (getSourceURL = $h‍_a)]]]]]);   
 
 
 
@@ -1876,22 +2033,22 @@ const getSourceURL = (src) => {
  * @returns {number}
  */
 function getLineNumber(src, pattern) {
-  const index = stringSearch(src, pattern);
-  if (index < 0) {
+  const index=  stringSearch(src, pattern);
+  if( index<  0) {
     return -1;
-  }
+   }
 
   // The importPattern incidentally captures an initial \n in
   // an attempt to reject a . prefix, so we need to offset
   // the line number in that case.
-  const adjustment = src[index] === '\n' ? 1 : 0;
+  const adjustment=  src[index]===  '\n'?  1:  0;
 
-  return stringSplit(stringSlice(src, 0, index), '\n').length + adjustment;
-}
+  return stringSplit(stringSlice(src, 0, index), '\n').length+  adjustment;
+ }
 
 // /////////////////////////////////////////////////////////////////////////////
 
-const htmlCommentPattern = new FERAL_REG_EXP(`(?:${'<'}!--|--${'>'})`, 'g');
+const htmlCommentPattern=  new FERAL_REG_EXP( `(?:${'<'}!--|--${'>'})`,'g');
 
 /**
  * Conservatively reject the source text if it may contain text that some
@@ -1920,16 +2077,16 @@ const htmlCommentPattern = new FERAL_REG_EXP(`(?:${'<'}!--|--${'>'})`, 'g');
  * @param {string} src
  * @returns {string}
  */
-const rejectHtmlComments = (src) => {
-  const lineNumber = getLineNumber(src, htmlCommentPattern);
-  if (lineNumber < 0) {
+const        rejectHtmlComments=  (src)=>{
+  const lineNumber=  getLineNumber(src, htmlCommentPattern);
+  if( lineNumber<  0) {
     return src;
-  }
-  const name = getSourceURL(src);
+   }
+  const name=  getSourceURL(src);
   throw new SyntaxError(
-  `Possible HTML comment rejected at ${name}:${lineNumber}. (SES_HTML_COMMENT_REJECTED)`);
+     `Possible HTML comment rejected at ${name}:${lineNumber}. (SES_HTML_COMMENT_REJECTED)`);
 
-};$h‍_once.rejectHtmlComments(rejectHtmlComments);
+ };
 
 /**
  * An optional transform to place ahead of `rejectHtmlComments` to evade *that*
@@ -1950,19 +2107,19 @@ const rejectHtmlComments = (src) => {
  * not change the meaning of the program because it only changes the contents of
  * those comments.
  *
- * @param { string } src
- * @returns { string }
- */
-const evadeHtmlCommentTest = (src) => {
-  const replaceFn = (match) => match[0] === '<' ? '< ! --' : '-- >';
+ * @param {string} src
+ * @returns {string}
+ */$h‍_once.rejectHtmlComments(rejectHtmlComments);
+const        evadeHtmlCommentTest=  (src)=>{
+  const replaceFn=  (match)=> match[0]===  '<'?  '< ! --':  '-- >';
   return stringReplace(src, htmlCommentPattern, replaceFn);
-};$h‍_once.evadeHtmlCommentTest(evadeHtmlCommentTest);
+ };
 
 // /////////////////////////////////////////////////////////////////////////////
-
-const importPattern = new FERAL_REG_EXP(
-'(^|[^.])\\bimport(\\s*(?:\\(|/[/*]))',
-'g');
+$h‍_once.evadeHtmlCommentTest(evadeHtmlCommentTest);
+const importPattern=  new FERAL_REG_EXP(
+  '(^|[^.])\\bimport(\\s*(?:\\(|/[/*]))',
+  'g');
 
 
 /**
@@ -1992,19 +2149,19 @@ const importPattern = new FERAL_REG_EXP(
  * something like that from something like importnotreally('power.js') which
  * is perfectly safe.
  *
- * @param { string } src
- * @returns { string }
+ * @param {string} src
+ * @returns {string}
  */
-const rejectImportExpressions = (src) => {
-  const lineNumber = getLineNumber(src, importPattern);
-  if (lineNumber < 0) {
+const        rejectImportExpressions=  (src)=>{
+  const lineNumber=  getLineNumber(src, importPattern);
+  if( lineNumber<  0) {
     return src;
-  }
-  const name = getSourceURL(src);
+   }
+  const name=  getSourceURL(src);
   throw new SyntaxError(
-  `Possible import expression rejected at ${name}:${lineNumber}. (SES_IMPORT_REJECTED)`);
+     `Possible import expression rejected at ${name}:${lineNumber}. (SES_IMPORT_REJECTED)`);
 
-};$h‍_once.rejectImportExpressions(rejectImportExpressions);
+ };
 
 /**
  * An optional transform to place ahead of `rejectImportExpressions` to evade
@@ -2019,19 +2176,19 @@ const rejectImportExpressions = (src) => {
  * the meaning of the program, depending on the binding, if any, of the lexical
  * variable `__import__`.
  *
- * @param { string } src
- * @returns { string }
- */
-const evadeImportExpressionTest = (src) => {
-  const replaceFn = (_, p1, p2) => `${p1}__import__${p2}`;
+ * @param {string} src
+ * @returns {string}
+ */$h‍_once.rejectImportExpressions(rejectImportExpressions);
+const        evadeImportExpressionTest=  (src)=>{
+  const replaceFn=  (_, p1, p2)=>   `${p1}__import__${p2}`;
   return stringReplace(src, importPattern, replaceFn);
-};$h‍_once.evadeImportExpressionTest(evadeImportExpressionTest);
+ };
 
 // /////////////////////////////////////////////////////////////////////////////
-
-const someDirectEvalPattern = new FERAL_REG_EXP(
-'(^|[^.])\\beval(\\s*\\()',
-'g');
+$h‍_once.evadeImportExpressionTest(evadeImportExpressionTest);
+const someDirectEvalPattern=  new FERAL_REG_EXP(
+  '(^|[^.])\\beval(\\s*\\()',
+  'g');
 
 
 /**
@@ -2063,19 +2220,19 @@ const someDirectEvalPattern = new FERAL_REG_EXP(
  *
  * Exported for unit tests.
  *
- * @param { string } src
- * @returns { string }
+ * @param {string} src
+ * @returns {string}
  */
-const rejectSomeDirectEvalExpressions = (src) => {
-  const lineNumber = getLineNumber(src, someDirectEvalPattern);
-  if (lineNumber < 0) {
+const        rejectSomeDirectEvalExpressions=  (src)=>{
+  const lineNumber=  getLineNumber(src, someDirectEvalPattern);
+  if( lineNumber<  0) {
     return src;
-  }
-  const name = getSourceURL(src);
+   }
+  const name=  getSourceURL(src);
   throw new SyntaxError(
-  `Possible direct eval expression rejected at ${name}:${lineNumber}. (SES_EVAL_REJECTED)`);
+     `Possible direct eval expression rejected at ${name}:${lineNumber}. (SES_EVAL_REJECTED)`);
 
-};$h‍_once.rejectSomeDirectEvalExpressions(rejectSomeDirectEvalExpressions);
+ };
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -2085,12 +2242,12 @@ const rejectSomeDirectEvalExpressions = (src) => {
  *
  * @param {string} source
  * @returns {string}
- */
-const mandatoryTransforms = (source) => {
-  source = rejectHtmlComments(source);
-  source = rejectImportExpressions(source);
+ */$h‍_once.rejectSomeDirectEvalExpressions(rejectSomeDirectEvalExpressions);
+const        mandatoryTransforms=  (source)=>{
+  source=  rejectHtmlComments(source);
+  source=  rejectImportExpressions(source);
   return source;
-};$h‍_once.mandatoryTransforms(mandatoryTransforms);
+ };
 
 /**
  * Starting with `source`, apply each transform to the result of the
@@ -2099,17 +2256,17 @@ const mandatoryTransforms = (source) => {
  * @param {string} source
  * @param {((str: string) => string)[]} transforms
  * @returns {string}
- */
-const applyTransforms = (source, transforms) => {
-  for (const transform of transforms) {
-    source = transform(source);
-  }
+ */$h‍_once.mandatoryTransforms(mandatoryTransforms);
+const        applyTransforms=  (source, transforms)=>  {
+  for( const transform of transforms) {
+    source=  transform(source);
+   }
   return source;
-};$h‍_once.applyTransforms(applyTransforms);
+ };$h‍_once.applyTransforms(applyTransforms);
 })
 ,
-// === functors[10] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let WeakSet,apply,immutableObject,proxyRevocable,weaksetAdd,getScopeConstants,createScopeHandler,applyTransforms,mandatoryTransforms,makeEvaluateFactory,assert;$h‍_imports([["./commons.js", [["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["immutableObject", [$h‍_a => (immutableObject = $h‍_a)]],["proxyRevocable", [$h‍_a => (proxyRevocable = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]]]],["./scope-constants.js", [["getScopeConstants", [$h‍_a => (getScopeConstants = $h‍_a)]]]],["./scope-handler.js", [["createScopeHandler", [$h‍_a => (createScopeHandler = $h‍_a)]]]],["./transforms.js", [["applyTransforms", [$h‍_a => (applyTransforms = $h‍_a)]],["mandatoryTransforms", [$h‍_a => (mandatoryTransforms = $h‍_a)]]]],["./make-evaluate-factory.js", [["makeEvaluateFactory", [$h‍_a => (makeEvaluateFactory = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[12] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let apply,freeze,strictScopeTerminator,createSloppyGlobalsScopeTerminator,makeEvalScopeKit,applyTransforms,mandatoryTransforms,makeEvaluate,assert;$h‍_imports([["./commons.js", [["apply", [$h‍_a => (apply = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]]]],["./strict-scope-terminator.js", [["strictScopeTerminator", [$h‍_a => (strictScopeTerminator = $h‍_a)]]]],["./sloppy-globals-scope-terminator.js", [["createSloppyGlobalsScopeTerminator", [$h‍_a => (createSloppyGlobalsScopeTerminator = $h‍_a)]]]],["./eval-scope.js", [["makeEvalScopeKit", [$h‍_a => (makeEvalScopeKit = $h‍_a)]]]],["./transforms.js", [["applyTransforms", [$h‍_a => (applyTransforms = $h‍_a)]],["mandatoryTransforms", [$h‍_a => (mandatoryTransforms = $h‍_a)]]]],["./make-evaluate.js", [["makeEvaluate", [$h‍_a => (makeEvaluate = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -2120,14 +2277,7 @@ const applyTransforms = (source, transforms) => {
 
 
 
-
-
-
-
-
-const { details: d } = assert;
-
-// TODO: rename localObject to scopeObject
+const { Fail}=   assert;
 
 /**
  * makeSafeEvaluator()
@@ -2136,76 +2286,76 @@ const { details: d } = assert;
  *
  * @param {Object} options
  * @param {Object} options.globalObject
- * @param {Object} [options.localObject]
+ * @param {Object} [options.moduleLexicals]
  * @param {Array<Transform>} [options.globalTransforms]
  * @param {bool} [options.sloppyGlobalsMode]
- * @param {WeakSet} [options.knownScopeProxies]
  */
-const makeSafeEvaluator = ({
+const        makeSafeEvaluator=  ({
   globalObject,
-  localObject = {},
-  globalTransforms = [],
-  sloppyGlobalsMode = false,
-  knownScopeProxies = new WeakSet() } =
-{}) => {
-  const {
-    scopeHandler,
-    admitOneUnsafeEvalNext,
-    resetOneUnsafeEvalNext } =
-  createScopeHandler(globalObject, localObject, {
-    sloppyGlobalsMode });
+  moduleLexicals=  {},
+  globalTransforms=  [],
+  sloppyGlobalsMode=  false}=
+    {})=>  {
+  const scopeTerminator=  sloppyGlobalsMode?
+      createSloppyGlobalsScopeTerminator(globalObject):
+      strictScopeTerminator;
+  const evalScopeKit=  makeEvalScopeKit();
+  const { evalScope}=   evalScopeKit;
 
-  const { proxy: scopeProxy, revoke: revokeScopeProxy } = proxyRevocable(
-  immutableObject,
-  scopeHandler);
+  const evaluateContext=  freeze({
+    evalScope,
+    moduleLexicals,
+    globalObject,
+    scopeTerminator});
 
-  weaksetAdd(knownScopeProxies, scopeProxy);
 
   // Defer creating the actual evaluator to first use.
   // Creating a compartment should be possible in no-eval environments
   // It also allows more global constants to be captured by the optimizer
   let evaluate;
-  const makeEvaluate = () => {
-    if (!evaluate) {
-      const constants = getScopeConstants(globalObject, localObject);
-      const evaluateFactory = makeEvaluateFactory(constants);
-      evaluate = apply(evaluateFactory, scopeProxy, []);
-    }
-  };
+  const provideEvaluate=  ()=>  {
+    if( !evaluate) {
+      evaluate=  makeEvaluate(evaluateContext);
+     }
+   };
 
   /**
    * @param {string} source
    * @param {Object} [options]
    * @param {Array<Transform>} [options.localTransforms]
    */
-  const safeEvaluate = (source, { localTransforms = [] } = {}) => {
-    makeEvaluate();
+  const safeEvaluate=  (source, { localTransforms=  []}=   {})=>  {
+    provideEvaluate();
 
     // Execute the mandatory transforms last to ensure that any rewritten code
     // meets those mandatory requirements.
-    source = applyTransforms(source, [
-    ...localTransforms,
-    ...globalTransforms,
-    mandatoryTransforms]);
+    source=  applyTransforms(source, [
+      ...localTransforms,
+      ...globalTransforms,
+      mandatoryTransforms]);
 
 
-    admitOneUnsafeEvalNext();
     let err;
     try {
+      // Allow next reference to eval produce the unsafe FERAL_EVAL.
+      // eslint-disable-next-line @endo/no-polymorphic-call
+      evalScopeKit.allowNextEvalToBeUnsafe();
+
       // Ensure that "this" resolves to the safe global.
       return apply(evaluate, globalObject, [source]);
-    } catch (e) {
+     }catch( e) {
       // stash the child-code error in hopes of debugging the internal failure
-      err = e;
+      err=  e;
       throw e;
-    } finally {
-      if (resetOneUnsafeEvalNext()) {
-        // Barring a defect in the SES shim, the scope proxy should allow the
+     }finally {
+      const unsafeEvalWasStillExposed=( 'eval'in  evalScope);
+      delete evalScope.eval;
+      if( unsafeEvalWasStillExposed) {
+        // Barring a defect in the SES shim, the evalScope should allow the
         // powerful, unsafe  `eval` to be used by `evaluate` exactly once, as the
         // very first name that it attempts to access from the lexical scope.
-        // A defect in the SES shim could throw an exception after our call to
-        // `admitOneUnsafeEvalNext()` and before `evaluate` calls `eval`
-        // internally.
+        // A defect in the SES shim could throw an exception after we set
+        // `evalScope.eval` and before `evaluate` calls `eval` internally.
         // If we get here, SES is very broken.
         // This condition is one where this vat is now hopelessly confused, and
         // the vat as a whole should be aborted.
@@ -2215,21 +2365,20 @@ const makeSafeEvaluator = ({
         // variable resolution via the scopeHandler, and throw an error with
         // diagnostic info including the thrown error if any from evaluating the
         // source code.
-        revokeScopeProxy();
+        evalScopeKit.revoked=  { err};
         // TODO A GOOD PLACE TO PANIC(), i.e., kill the vat incarnation.
         // See https://github.com/Agoric/SES-shim/issues/490
-        // eslint-disable-next-line @endo/no-polymorphic-call
-        assert.fail(d`handler did not reset allowNextEvalToBeUnsafe ${err}`);
-      }
-    }
-  };
+        Fail `handler did not reset allowNextEvalToBeUnsafe ${err}`;
+       }
+     }
+   };
 
-  return { safeEvaluate };
-};$h‍_once.makeSafeEvaluator(makeSafeEvaluator);
+  return { safeEvaluate};
+ };$h‍_once.makeSafeEvaluator(makeSafeEvaluator);
 })
 ,
-// === functors[11] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let TypeError,arrayPush,create,defineProperties,getOwnPropertyDescriptors,evadeHtmlCommentTest,evadeImportExpressionTest,rejectSomeDirectEvalExpressions,makeSafeEvaluator;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]]]],["./transforms.js", [["evadeHtmlCommentTest", [$h‍_a => (evadeHtmlCommentTest = $h‍_a)]],["evadeImportExpressionTest", [$h‍_a => (evadeImportExpressionTest = $h‍_a)]],["rejectSomeDirectEvalExpressions", [$h‍_a => (rejectSomeDirectEvalExpressions = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]]]);   
+// === functors[13] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let TypeError,arrayPush,create,getOwnPropertyDescriptors,evadeHtmlCommentTest,evadeImportExpressionTest,rejectSomeDirectEvalExpressions,makeSafeEvaluator;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]]]],["./transforms.js", [["evadeHtmlCommentTest", [$h‍_a => (evadeHtmlCommentTest = $h‍_a)]],["evadeImportExpressionTest", [$h‍_a => (evadeImportExpressionTest = $h‍_a)]],["rejectSomeDirectEvalExpressions", [$h‍_a => (rejectSomeDirectEvalExpressions = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]]]);   
 
 
 
@@ -2243,30 +2392,23 @@ const makeSafeEvaluator = ({
 
 
 
-
-const provideCompartmentEvaluator = (compartmentFields, options) => {
-  const {
-    sloppyGlobalsMode = false,
-    __moduleShimLexicals__ = undefined } =
-  options;
+const        provideCompartmentEvaluator=  (compartmentFields, options)=>  {
+  const { sloppyGlobalsMode=  false, __moduleShimLexicals__=  undefined}=
+    options;
 
   let safeEvaluate;
 
-  if (__moduleShimLexicals__ === undefined && !sloppyGlobalsMode) {
-    ({ safeEvaluate } = compartmentFields);
-  } else {
+  if( __moduleShimLexicals__===  undefined&&  !sloppyGlobalsMode) {
+    ({ safeEvaluate}=   compartmentFields);
+   }else {
     // The scope proxy or global lexicals are different from the
     // shared evaluator so we need to build a new one
 
-    let { globalTransforms } = compartmentFields;
-    const {
-      globalObject,
-      globalLexicals,
-      knownScopeProxies } =
-    compartmentFields;
+    let { globalTransforms}=   compartmentFields;
+    const { globalObject}=   compartmentFields;
 
-    let localObject = globalLexicals;
-    if (__moduleShimLexicals__ !== undefined) {
+    let moduleLexicals;
+    if( __moduleShimLexicals__!==  undefined) {
       // When using `evaluate` for ESM modules, as should only occur from the
       // module-shim's module-instance.js, we do not reveal the SES-shim's
       // module-to-program translation, as this is not standardizable behavior.
@@ -2275,94 +2417,94 @@ const provideCompartmentEvaluator = (compartmentFields, options) => {
       // hatch so programs designed specifically for the SES-shim
       // implementation may opt-in to use the same transforms for `evaluate`
       // and `import`, at the expense of being tightly coupled to SES-shim.
-      globalTransforms = undefined;
+      globalTransforms=  undefined;
 
-      localObject = create(null, getOwnPropertyDescriptors(globalLexicals));
-      defineProperties(
-      localObject,
-      getOwnPropertyDescriptors(__moduleShimLexicals__));
+      moduleLexicals=  create(
+        null,
+        getOwnPropertyDescriptors(__moduleShimLexicals__));
 
-    }
+     }
 
-    ({ safeEvaluate } = makeSafeEvaluator({
+    ({ safeEvaluate}=   makeSafeEvaluator({
       globalObject,
-      localObject,
+      moduleLexicals,
       globalTransforms,
-      sloppyGlobalsMode,
-      knownScopeProxies }));
+      sloppyGlobalsMode}));
 
-  }
+   }
 
-  return { safeEvaluate };
-};$h‍_once.provideCompartmentEvaluator(provideCompartmentEvaluator);
+  return { safeEvaluate};
+ };$h‍_once.provideCompartmentEvaluator(provideCompartmentEvaluator);
 
-const compartmentEvaluate = (compartmentFields, source, options) => {
-  // Perform this check first to avoid unecessary sanitizing.
+const        compartmentEvaluate=  (compartmentFields, source, options)=>  {
+  // Perform this check first to avoid unnecessary sanitizing.
   // TODO Maybe relax string check and coerce instead:
   // https://github.com/tc39/proposal-dynamic-code-brand-checks
-  if (typeof source !== 'string') {
+  if( typeof source!==  'string') {
     throw new TypeError('first argument of evaluate() must be a string');
-  }
+   }
 
   // Extract options, and shallow-clone transforms.
   const {
-    transforms = [],
-    __evadeHtmlCommentTest__ = false,
-    __evadeImportExpressionTest__ = false,
-    __rejectSomeDirectEvalExpressions__ = true // Note default on
-  } = options;
-  const localTransforms = [...transforms];
-  if (__evadeHtmlCommentTest__ === true) {
+    transforms=  [],
+    __evadeHtmlCommentTest__=  false,
+    __evadeImportExpressionTest__=  false,
+    __rejectSomeDirectEvalExpressions__=  true  // Note default on
+}=    options;
+  const localTransforms=  [...transforms];
+  if( __evadeHtmlCommentTest__===  true) {
     arrayPush(localTransforms, evadeHtmlCommentTest);
-  }
-  if (__evadeImportExpressionTest__ === true) {
+   }
+  if( __evadeImportExpressionTest__===  true) {
     arrayPush(localTransforms, evadeImportExpressionTest);
-  }
-  if (__rejectSomeDirectEvalExpressions__ === true) {
+   }
+  if( __rejectSomeDirectEvalExpressions__===  true) {
     arrayPush(localTransforms, rejectSomeDirectEvalExpressions);
-  }
+   }
 
-  const { safeEvaluate } = provideCompartmentEvaluator(
-  compartmentFields,
-  options);
+  const { safeEvaluate}=   provideCompartmentEvaluator(
+    compartmentFields,
+    options);
 
 
   return safeEvaluate(source, {
-    localTransforms });
+    localTransforms});
 
-};$h‍_once.compartmentEvaluate(compartmentEvaluate);
+ };$h‍_once.compartmentEvaluate(compartmentEvaluate);
 })
 ,
-// === functors[12] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   /*
+// === functors[14] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   /**
  * makeEvalFunction()
  * A safe version of the native eval function which relies on
  * the safety of safeEvaluate for confinement.
+ *
+ * @param {Function} safeEvaluate
  */
-const makeEvalFunction = (safeEvaluate) => {
+const        makeEvalFunction=  (safeEvaluate)=>{
   // We use the the concise method syntax to create an eval without a
   // [[Construct]] behavior (such that the invocation "new eval()" throws
   // TypeError: eval is not a constructor"), but which still accepts a
   // 'this' binding.
-  const newEval = {
+  const newEval=  {
     eval(source) {
-      if (typeof source !== 'string') {
+      if( typeof source!==  'string') {
         // As per the runtime semantic of PerformEval [ECMAScript 18.2.1.1]:
         // If Type(source) is not String, return source.
         // TODO Recent proposals from Mike Samuel may change this non-string
         // rule. Track.
         return source;
-      }
+       }
       return safeEvaluate(source);
-    } }.
-  eval;
+     }}.
+    eval;
 
   return newEval;
-};$h‍_once.makeEvalFunction(makeEvalFunction);
+ };$h‍_once.makeEvalFunction(makeEvalFunction);
 })
 ,
-// === functors[13] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_FUNCTION,arrayJoin,arrayPop,defineProperties,getPrototypeOf,assert;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayPop", [$h‍_a => (arrayPop = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[15] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_FUNCTION,arrayJoin,arrayPop,defineProperties,getPrototypeOf,assert;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayPop", [$h‍_a => (arrayPop = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -2370,20 +2512,22 @@ const makeEvalFunction = (safeEvaluate) => {
 
 
 
+
+const { Fail}=   assert;
 
 /*
  * makeFunctionConstructor()
  * A safe version of the native Function which relies on
  * the safety of safeEvaluate for confinement.
  */
-const makeFunctionConstructor = (safeEvaluate) => {
+const        makeFunctionConstructor=  (safeEvaluate)=>{
   // Define an unused parameter to ensure Function.length === 1
-  const newFunction = function Function(_body) {
+  const newFunction=  function Function(_body) {
     // Sanitize all parameters at the entry point.
     // eslint-disable-next-line prefer-rest-params
-    const bodyText = `${arrayPop(arguments) || ''}`;
+    const bodyText=   `${arrayPop(arguments)|| '' }`;
     // eslint-disable-next-line prefer-rest-params
-    const parameters = `${arrayJoin(arguments, ',')}`;
+    const parameters=   `${arrayJoin(arguments,',') }`;
 
     // Are parameters and bodyText valid code, or is someone
     // attempting an injection attack? This will throw a SyntaxError if:
@@ -2415,9 +2559,9 @@ const makeFunctionConstructor = (safeEvaluate) => {
     // Safe to be combined. Defeat potential trailing comments.
     // TODO: since we create an anonymous function, the 'this' value
     // isn't bound to the global object as per specs, but set as undefined.
-    const src = `(function anonymous(${parameters}\n) {\n${bodyText}\n})`;
+    const src=   `(function anonymous(${parameters}\n) {\n${bodyText}\n})`;
     return safeEvaluate(src);
-  };
+   };
 
   defineProperties(newFunction, {
     // Ensure that any function created in any evaluator in a realm is an
@@ -2426,26 +2570,22 @@ const makeFunctionConstructor = (safeEvaluate) => {
       value: FERAL_FUNCTION.prototype,
       writable: false,
       enumerable: false,
-      configurable: false } });
+      configurable: false}});
 
 
 
   // Assert identity of Function.__proto__ accross all compartments
-  assert(
-  getPrototypeOf(FERAL_FUNCTION) === FERAL_FUNCTION.prototype,
-  'Function prototype is the same accross compartments');
-
-  assert(
-  getPrototypeOf(newFunction) === FERAL_FUNCTION.prototype,
-  'Function constructor prototype is the same accross compartments');
-
+  getPrototypeOf(FERAL_FUNCTION)===  FERAL_FUNCTION.prototype||
+    Fail `Function prototype is the same accross compartments`;
+  getPrototypeOf(newFunction)===  FERAL_FUNCTION.prototype||
+    Fail `Function constructor prototype is the same accross compartments`;
 
   return newFunction;
-};$h‍_once.makeFunctionConstructor(makeFunctionConstructor);
+ };$h‍_once.makeFunctionConstructor(makeFunctionConstructor);
 })
 ,
-// === functors[14] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   /* eslint-disable no-restricted-globals */
+// === functors[16] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   /* eslint-disable no-restricted-globals */
 /**
  * @file Exports {@code whitelist}, a recursively defined
  * JSON record enumerating all intrinsics and their properties
@@ -2463,12 +2603,12 @@ const makeFunctionConstructor = (safeEvaluate) => {
  * Must be powerless.
  * Maps from property name to the actual value
  */
-const constantProperties = {
+const        constantProperties=  {
   // *** Value Properties of the Global Object
 
   Infinity,
   NaN,
-  undefined };$h‍_once.constantProperties(constantProperties);
+  undefined};
 
 
 /**
@@ -2476,8 +2616,8 @@ const constantProperties = {
  * Properties of all global objects.
  * Must be powerless.
  * Maps from property name to the intrinsic name in the whitelist.
- */
-const universalPropertyNames = {
+ */$h‍_once.constantProperties(constantProperties);
+const        universalPropertyNames=  {
   // *** Function Properties of the Global Object
 
   isFinite: 'isFinite',
@@ -2539,8 +2679,8 @@ const universalPropertyNames = {
 
   lockdown: 'lockdown',
   harden: 'harden',
-  HandledPromise: 'HandledPromise' // TODO: Until Promise.delegate (see below).
-};$h‍_once.universalPropertyNames(universalPropertyNames);
+  HandledPromise: 'HandledPromise'  // TODO: Until Promise.delegate (see below).
+};
 
 /**
  * initialGlobalPropertyNames
@@ -2548,8 +2688,8 @@ const universalPropertyNames = {
  * start compartment, as well as any compartments created before lockdown.
  * These may provide much of the power provided by the original.
  * Maps from property name to the intrinsic name in the whitelist.
- */
-const initialGlobalPropertyNames = {
+ */$h‍_once.universalPropertyNames(universalPropertyNames);
+const        initialGlobalPropertyNames=  {
   // *** Constructor Properties of the Global Object
 
   Date: '%InitialDate%',
@@ -2570,15 +2710,15 @@ const initialGlobalPropertyNames = {
   // TODO https://github.com/Agoric/SES-shim/issues/551
   // Need initial WeakRef and FinalizationGroup in
   // start compartment only.
-};$h‍_once.initialGlobalPropertyNames(initialGlobalPropertyNames);
+};
 
 /**
  * sharedGlobalPropertyNames
  * Those found only on the globals of new compartments created after lockdown,
  * which must therefore be powerless.
  * Maps from property name to the intrinsic name in the whitelist.
- */
-const sharedGlobalPropertyNames = {
+ */$h‍_once.initialGlobalPropertyNames(initialGlobalPropertyNames);
+const        sharedGlobalPropertyNames=  {
   // *** Constructor Properties of the Global Object
 
   Date: '%SharedDate%',
@@ -2587,7 +2727,7 @@ const sharedGlobalPropertyNames = {
 
   // *** Other Properties of the Global Object
 
-  Math: '%SharedMath%' };$h‍_once.sharedGlobalPropertyNames(sharedGlobalPropertyNames);
+  Math: '%SharedMath%'};
 
 
 /**
@@ -2596,8 +2736,8 @@ const sharedGlobalPropertyNames = {
  * of the start compartment.
  * Maps from property name to the intrinsic name in the whitelist
  * (which is currently always the same).
- */
-const uniqueGlobalPropertyNames = {
+ */$h‍_once.sharedGlobalPropertyNames(sharedGlobalPropertyNames);
+const        uniqueGlobalPropertyNames=  {
   // *** Value Properties of the Global Object
 
   globalThis: '%UniqueGlobalThis%',
@@ -2617,18 +2757,18 @@ const uniqueGlobalPropertyNames = {
   Compartment: '%UniqueCompartment%'
   // According to current agreements, eventually the Realm constructor too.
   // 'Realm',
-};$h‍_once.uniqueGlobalPropertyNames(uniqueGlobalPropertyNames);
+};
 
 // All the "subclasses" of Error. These are collectively represented in the
 // ECMAScript spec by the meta variable NativeError.
 // TODO Add AggregateError https://github.com/Agoric/SES-shim/issues/550
-const NativeErrors = [
-EvalError,
-RangeError,
-ReferenceError,
-SyntaxError,
-TypeError,
-URIError];$h‍_once.NativeErrors(NativeErrors);
+$h‍_once.uniqueGlobalPropertyNames(uniqueGlobalPropertyNames);const NativeErrors=[
+  EvalError,
+  RangeError,
+  ReferenceError,
+  SyntaxError,
+  TypeError,
+  URIError];
 
 
 /**
@@ -2671,33 +2811,36 @@ URIError];$h‍_once.NativeErrors(NativeErrors);
  *     property definition.
  * <li>"ObjectPrototype" is the default "[[Proto]]" (when not specified).
  * <li>Constants "fn" and "getter" are used to keep the structure DRY.
- * <li>Symbol properties are listed using the "@@name" form.
+ * <li>Symbol properties are listed as follow:
+ *     <li>Well-known symbols use the "@@name" form.
+ *     <li>Registered symbols use the "RegisteredSymbol(key)" form.
+ *     <li>Unique symbols use the "UniqueSymbol(description)" form.
  */
 
 // Function Instances
-const FunctionInstance = {
+$h‍_once.NativeErrors(NativeErrors);const FunctionInstance={
   '[[Proto]]': '%FunctionPrototype%',
   length: 'number',
   name: 'string'
   // Do not specify "prototype" here, since only Function instances that can
   // be used as a constructor have a prototype property. For constructors,
   // since prototype properties are instance-specific, we define it there.
-};$h‍_once.FunctionInstance(FunctionInstance);
+};
 
 // AsyncFunction Instances
-const AsyncFunctionInstance = {
+$h‍_once.FunctionInstance(FunctionInstance);const AsyncFunctionInstance={
   // This property is not mentioned in ECMA 262, but is present in V8 and
   // necessary for lockdown to succeed.
-  '[[Proto]]': '%AsyncFunctionPrototype%' };
+  '[[Proto]]': '%AsyncFunctionPrototype%'};
 
 
 // Aliases
-const fn = FunctionInstance;
-const asyncFn = AsyncFunctionInstance;
+const fn=  FunctionInstance;
+const asyncFn=  AsyncFunctionInstance;
 
-const getter = {
+const getter=  {
   get: fn,
-  set: 'undefined' };
+  set: 'undefined'};
 
 
 // Possible but not encountered in the specs
@@ -2706,25 +2849,25 @@ const getter = {
 //   set: fn,
 // };
 
-const accessor = {
+const accessor=  {
   get: fn,
-  set: fn };
+  set: fn};
 
 
-const isAccessorPermit = (permit) => {
-  return permit === getter || permit === accessor;
-};$h‍_once.isAccessorPermit(isAccessorPermit);
+const        isAccessorPermit=  (permit)=>{
+  return permit===  getter||  permit===  accessor;
+ };
 
 // NativeError Object Structure
-function NativeError(prototype) {
+$h‍_once.isAccessorPermit(isAccessorPermit);function NativeError(prototype){
   return {
     // Properties of the NativeError Constructors
     '[[Proto]]': '%SharedError%',
 
     // NativeError.prototype
-    prototype };
+    prototype};
 
-}
+ }
 
 function NativeErrorPrototype(constructor) {
   return {
@@ -2737,9 +2880,9 @@ function NativeErrorPrototype(constructor) {
     toString: false,
     // Superfluously present in some versions of V8.
     // https://github.com/tc39/notes/blob/master/meetings/2021-10/oct-26.md#:~:text=However%2C%20Chrome%2093,and%20node%2016.11.
-    cause: false };
+    cause: false};
 
-}
+ }
 
 // The TypedArray Constructors
 function TypedArray(prototype) {
@@ -2747,21 +2890,21 @@ function TypedArray(prototype) {
     // Properties of the TypedArray Constructors
     '[[Proto]]': '%TypedArray%',
     BYTES_PER_ELEMENT: 'number',
-    prototype };
+    prototype};
 
-}
+ }
 
 function TypedArrayPrototype(constructor) {
   return {
     // Properties of the TypedArray Prototype Objects
     '[[Proto]]': '%TypedArrayPrototype%',
     BYTES_PER_ELEMENT: 'number',
-    constructor };
+    constructor};
 
-}
+ }
 
 // Without Math.random
-const SharedMath = {
+const SharedMath=  {
   E: 'number',
   LN10: 'number',
   LN2: 'number',
@@ -2816,10 +2959,10 @@ const SharedMath = {
   // See https://github.com/Moddable-OpenSource/moddable/issues/523
   irem: false,
   // See https://github.com/Moddable-OpenSource/moddable/issues/523
-  mod: false };
+  mod: false};
 
 
-const whitelist = {
+const        whitelist=  {
   // ECMA https://tc39.es/ecma262
 
   // The intrinsics object has no prototype to avoid conflicts.
@@ -2865,6 +3008,7 @@ const whitelist = {
     getOwnPropertyNames: fn,
     getOwnPropertySymbols: fn,
     getPrototypeOf: fn,
+    hasOwn: fn,
     is: fn,
     isExtensible: fn,
     isFrozen: fn,
@@ -2874,9 +3018,7 @@ const whitelist = {
     prototype: '%ObjectPrototype%',
     seal: fn,
     setPrototypeOf: fn,
-    values: fn,
-    // See https://github.com/tc39/proposal-accessible-object-hasownproperty
-    hasOwn: fn },
+    values: fn},
 
 
   '%ObjectPrototype%': {
@@ -2898,18 +3040,18 @@ const whitelist = {
     __defineGetter__: fn,
     __defineSetter__: fn,
     __lookupGetter__: fn,
-    __lookupSetter__: fn },
+    __lookupSetter__: fn},
 
 
   '%UniqueFunction%': {
     // Properties of the Function Constructor
     '[[Proto]]': '%FunctionPrototype%',
-    prototype: '%FunctionPrototype%' },
+    prototype: '%FunctionPrototype%'},
 
 
   '%InertFunction%': {
     '[[Proto]]': '%FunctionPrototype%',
-    prototype: '%FunctionPrototype%' },
+    prototype: '%FunctionPrototype%'},
 
 
   '%FunctionPrototype%': {
@@ -2922,19 +3064,19 @@ const whitelist = {
     // proposed but not yet std yet. To be removed if there
     caller: false,
     // proposed but not yet std yet. To be removed if there
-    arguments: false },
+    arguments: false},
 
 
   Boolean: {
     // Properties of the Boolean Constructor
     '[[Proto]]': '%FunctionPrototype%',
-    prototype: '%BooleanPrototype%' },
+    prototype: '%BooleanPrototype%'},
 
 
   '%BooleanPrototype%': {
     constructor: 'Boolean',
     toString: fn,
-    valueOf: fn },
+    valueOf: fn},
 
 
   Symbol: {
@@ -2955,7 +3097,7 @@ const whitelist = {
     split: 'symbol',
     toPrimitive: 'symbol',
     toStringTag: 'symbol',
-    unscopables: 'symbol' },
+    unscopables: 'symbol'},
 
 
   '%SymbolPrototype%': {
@@ -2965,7 +3107,7 @@ const whitelist = {
     toString: fn,
     valueOf: fn,
     '@@toPrimitive': fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%InitialError%': {
@@ -2977,7 +3119,7 @@ const whitelist = {
     // Non standard, v8 only, used by tap, tamed to accessor
     stackTraceLimit: accessor,
     // Non standard, v8 only, used by several, tamed to accessor
-    prepareStackTrace: accessor },
+    prepareStackTrace: accessor},
 
 
   '%SharedError%': {
@@ -2989,7 +3131,7 @@ const whitelist = {
     // Non standard, v8 only, used by tap, tamed to accessor
     stackTraceLimit: accessor,
     // Non standard, v8 only, used by several, tamed to accessor
-    prepareStackTrace: accessor },
+    prepareStackTrace: accessor},
 
 
   '%ErrorPrototype%': {
@@ -3001,10 +3143,10 @@ const whitelist = {
     // Seen on FF Nightly 88.0a1
     at: false,
     // Seen on FF and XS
-    stack: false,
+    stack: accessor,
     // Superfluously present in some versions of V8.
     // https://github.com/tc39/notes/blob/master/meetings/2021-10/oct-26.md#:~:text=However%2C%20Chrome%2093,and%20node%2016.11.
-    cause: false },
+    cause: false},
 
 
   // NativeError
@@ -3042,7 +3184,7 @@ const whitelist = {
     parseFloat: fn,
     parseInt: fn,
     POSITIVE_INFINITY: 'number',
-    prototype: '%NumberPrototype%' },
+    prototype: '%NumberPrototype%'},
 
 
   '%NumberPrototype%': {
@@ -3053,7 +3195,7 @@ const whitelist = {
     toLocaleString: fn,
     toPrecision: fn,
     toString: fn,
-    valueOf: fn },
+    valueOf: fn},
 
 
   BigInt: {
@@ -3065,7 +3207,7 @@ const whitelist = {
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
     bitLength: false,
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
-    fromArrayBuffer: false },
+    fromArrayBuffer: false},
 
 
   '%BigIntPrototype%': {
@@ -3073,13 +3215,13 @@ const whitelist = {
     toLocaleString: fn,
     toString: fn,
     valueOf: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%InitialMath%': {
     ...SharedMath,
     // random is standard but omitted from SharedMath
-    random: fn },
+    random: fn},
 
 
   '%SharedMath%': SharedMath,
@@ -3090,7 +3232,7 @@ const whitelist = {
     now: fn,
     parse: fn,
     prototype: '%DatePrototype%',
-    UTC: fn },
+    UTC: fn},
 
 
   '%SharedDate%': {
@@ -3099,7 +3241,7 @@ const whitelist = {
     now: fn,
     parse: fn,
     prototype: '%DatePrototype%',
-    UTC: fn },
+    UTC: fn},
 
 
   '%DatePrototype%': {
@@ -3152,7 +3294,7 @@ const whitelist = {
     // Annex B: Additional Properties of the Date.prototype Object
     getYear: fn,
     setYear: fn,
-    toGMTString: fn },
+    toGMTString: fn},
 
 
   // Text Processing
@@ -3165,12 +3307,13 @@ const whitelist = {
     prototype: '%StringPrototype%',
     raw: fn,
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
-    fromArrayBuffer: false },
+    fromArrayBuffer: false},
 
 
   '%StringPrototype%': {
     // Properties of the String Prototype Object
     length: 'number',
+    at: fn,
     charAt: fn,
     charCodeAt: fn,
     codePointAt: fn,
@@ -3223,17 +3366,13 @@ const whitelist = {
     trimLeft: fn,
     trimRight: fn,
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
-    compare: false,
-
-    // Stage 3:
-    // https://tc39.es/proposal-relative-indexing-method/
-    at: fn },
+    compare: false},
 
 
   '%StringIteratorPrototype%': {
     '[[Proto]]': '%IteratorPrototype%',
     next: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%InitialRegExp%': {
@@ -3262,14 +3401,14 @@ const whitelist = {
     $6: false,
     $7: false,
     $8: false,
-    $9: false },
+    $9: false},
 
 
   '%SharedRegExp%': {
     // Properties of the RegExp Constructor
     '[[Proto]]': '%FunctionPrototype%',
     prototype: '%RegExpPrototype%',
-    '@@species': getter },
+    '@@species': getter},
 
 
   '%RegExpPrototype%': {
@@ -3296,14 +3435,14 @@ const whitelist = {
     compile: false, // UNSAFE and suppressed.
     // Seen on FF Nightly 88.0a1, Chrome Canary 91.0.4446.0,
     // Safari Tech Preview Release 122 (Safari 14.2, WebKit 16612.1.6.2)
-    hasIndices: false },
+    hasIndices: false},
 
 
   '%RegExpStringIteratorPrototype%': {
     // The %RegExpStringIteratorPrototype% Object
     '[[Proto]]': '%IteratorPrototype%',
     next: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // Indexed Collections
@@ -3319,11 +3458,12 @@ const whitelist = {
 
     // Stage 3:
     // https://tc39.es/proposal-relative-indexing-method/
-    at: fn },
+    at: fn},
 
 
   '%ArrayPrototype%': {
     // Properties of the Array Prototype Object
+    at: fn,
     length: 'number',
     concat: fn,
     constructor: 'Array',
@@ -3372,21 +3512,21 @@ const whitelist = {
       values: 'boolean',
       // Failed tc39 proposal
       // Seen on FF Nightly 88.0a1
-      at: false },
+      at: false,
+      // See https://github.com/tc39/proposal-array-find-from-last
+      findLast: 'boolean',
+      findLastIndex: 'boolean'},
 
-    // Failed tc39 proposal
-    // Seen on FF Nightly 88.0a1
-    at: false,
     // See https://github.com/tc39/proposal-array-find-from-last
     findLast: fn,
-    findLastIndex: fn },
+    findLastIndex: fn},
 
 
   '%ArrayIteratorPrototype%': {
     // The %ArrayIteratorPrototype% Object
     '[[Proto]]': '%IteratorPrototype%',
     next: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // *** TypedArray Objects
@@ -3397,10 +3537,11 @@ const whitelist = {
     from: fn,
     of: fn,
     prototype: '%TypedArrayPrototype%',
-    '@@species': getter },
+    '@@species': getter},
 
 
   '%TypedArrayPrototype%': {
+    at: fn,
     buffer: getter,
     byteLength: getter,
     byteOffset: getter,
@@ -3433,12 +3574,9 @@ const whitelist = {
     values: fn,
     '@@iterator': fn,
     '@@toStringTag': getter,
-    // Failed tc39 proposal
-    // Seen on FF Nightly 88.0a1
-    at: false,
     // See https://github.com/tc39/proposal-array-find-from-last
     findLast: fn,
-    findLastIndex: fn },
+    findLastIndex: fn},
 
 
   // The TypedArray Constructors
@@ -3473,7 +3611,7 @@ const whitelist = {
     // Properties of the Map Constructor
     '[[Proto]]': '%FunctionPrototype%',
     '@@species': getter,
-    prototype: '%MapPrototype%' },
+    prototype: '%MapPrototype%'},
 
 
   '%MapPrototype%': {
@@ -3489,21 +3627,21 @@ const whitelist = {
     size: getter,
     values: fn,
     '@@iterator': fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%MapIteratorPrototype%': {
     // The %MapIteratorPrototype% Object
     '[[Proto]]': '%IteratorPrototype%',
     next: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   Set: {
     // Properties of the Set Constructor
     '[[Proto]]': '%FunctionPrototype%',
     prototype: '%SetPrototype%',
-    '@@species': getter },
+    '@@species': getter},
 
 
   '%SetPrototype%': {
@@ -3518,20 +3656,20 @@ const whitelist = {
     size: getter,
     values: fn,
     '@@iterator': fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%SetIteratorPrototype%': {
     // The %SetIteratorPrototype% Object
     '[[Proto]]': '%IteratorPrototype%',
     next: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   WeakMap: {
     // Properties of the WeakMap Constructor
     '[[Proto]]': '%FunctionPrototype%',
-    prototype: '%WeakMapPrototype%' },
+    prototype: '%WeakMapPrototype%'},
 
 
   '%WeakMapPrototype%': {
@@ -3540,13 +3678,13 @@ const whitelist = {
     get: fn,
     has: fn,
     set: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   WeakSet: {
     // Properties of the WeakSet Constructor
     '[[Proto]]': '%FunctionPrototype%',
-    prototype: '%WeakSetPrototype%' },
+    prototype: '%WeakSetPrototype%'},
 
 
   '%WeakSetPrototype%': {
@@ -3554,7 +3692,7 @@ const whitelist = {
     constructor: 'WeakSet',
     delete: fn,
     has: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // *** Structured Data
@@ -3568,7 +3706,7 @@ const whitelist = {
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
     fromString: false,
     // See https://github.com/Moddable-OpenSource/moddable/issues/523
-    fromBigInt: false },
+    fromBigInt: false},
 
 
   '%ArrayBufferPrototype%': {
@@ -3582,7 +3720,7 @@ const whitelist = {
     transfer: fn,
     resize: fn,
     resizable: getter,
-    maxByteLength: getter },
+    maxByteLength: getter},
 
 
   // SharedArrayBuffer Objects
@@ -3593,7 +3731,7 @@ const whitelist = {
     // Properties of the DataView Constructor
     '[[Proto]]': '%FunctionPrototype%',
     BYTES_PER_ELEMENT: 'number', // Non std but undeletable on Safari.
-    prototype: '%DataViewPrototype%' },
+    prototype: '%DataViewPrototype%'},
 
 
   '%DataViewPrototype%': {
@@ -3621,7 +3759,7 @@ const whitelist = {
     setUint8: fn,
     setUint16: fn,
     setUint32: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // Atomics
@@ -3630,25 +3768,25 @@ const whitelist = {
   JSON: {
     parse: fn,
     stringify: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // *** Control Abstraction Objects
 
   '%IteratorPrototype%': {
     // The %IteratorPrototype% Object
-    '@@iterator': fn },
+    '@@iterator': fn},
 
 
   '%AsyncIteratorPrototype%': {
     // The %AsyncIteratorPrototype% Object
-    '@@asyncIterator': fn },
+    '@@asyncIterator': fn},
 
 
   '%InertGeneratorFunction%': {
     // Properties of the GeneratorFunction Constructor
     '[[Proto]]': '%InertFunction%',
-    prototype: '%Generator%' },
+    prototype: '%Generator%'},
 
 
   '%Generator%': {
@@ -3656,13 +3794,13 @@ const whitelist = {
     '[[Proto]]': '%FunctionPrototype%',
     constructor: '%InertGeneratorFunction%',
     prototype: '%GeneratorPrototype%',
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%InertAsyncGeneratorFunction%': {
     // Properties of the AsyncGeneratorFunction Constructor
     '[[Proto]]': '%InertFunction%',
-    prototype: '%AsyncGenerator%' },
+    prototype: '%AsyncGenerator%'},
 
 
   '%AsyncGenerator%': {
@@ -3670,7 +3808,7 @@ const whitelist = {
     '[[Proto]]': '%FunctionPrototype%',
     constructor: '%InertAsyncGeneratorFunction%',
     prototype: '%AsyncGeneratorPrototype%',
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%GeneratorPrototype%': {
@@ -3680,7 +3818,7 @@ const whitelist = {
     next: fn,
     return: fn,
     throw: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   '%AsyncGeneratorPrototype%': {
@@ -3690,7 +3828,7 @@ const whitelist = {
     next: fn,
     return: fn,
     throw: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // TODO: To be replaced with Promise.delegate
@@ -3711,7 +3849,7 @@ const whitelist = {
     get: fn,
     getSendOnly: fn,
     prototype: '%PromisePrototype%',
-    resolve: fn },
+    resolve: fn},
 
 
   Promise: {
@@ -3726,7 +3864,7 @@ const whitelist = {
     race: fn,
     reject: fn,
     resolve: fn,
-    '@@species': getter },
+    '@@species': getter},
 
 
   '%PromisePrototype%': {
@@ -3735,20 +3873,24 @@ const whitelist = {
     constructor: 'Promise',
     finally: fn,
     then: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string',
+    // Non-standard, used in node to prevent async_hooks from breaking
+    'UniqueSymbol(async_id_symbol)': accessor,
+    'UniqueSymbol(trigger_async_id_symbol)': accessor,
+    'UniqueSymbol(destroyed)': accessor},
 
 
   '%InertAsyncFunction%': {
     // Properties of the AsyncFunction Constructor
     '[[Proto]]': '%InertFunction%',
-    prototype: '%AsyncFunctionPrototype%' },
+    prototype: '%AsyncFunctionPrototype%'},
 
 
   '%AsyncFunctionPrototype%': {
     // Properties of the AsyncFunction Prototype Object
     '[[Proto]]': '%FunctionPrototype%',
     constructor: '%InertAsyncFunction%',
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   // Reflection
@@ -3769,13 +3911,13 @@ const whitelist = {
     preventExtensions: fn,
     set: fn,
     setPrototypeOf: fn,
-    '@@toStringTag': 'string' },
+    '@@toStringTag': 'string'},
 
 
   Proxy: {
     // Properties of the Proxy Constructor
     '[[Proto]]': '%FunctionPrototype%',
-    revocable: fn },
+    revocable: fn},
 
 
   // Appendix B
@@ -3790,13 +3932,13 @@ const whitelist = {
   '%UniqueCompartment%': {
     '[[Proto]]': '%FunctionPrototype%',
     prototype: '%CompartmentPrototype%',
-    toString: fn },
+    toString: fn},
 
 
   '%InertCompartment%': {
     '[[Proto]]': '%FunctionPrototype%',
     prototype: '%CompartmentPrototype%',
-    toString: fn },
+    toString: fn},
 
 
   '%CompartmentPrototype%': {
@@ -3806,24 +3948,62 @@ const whitelist = {
     name: getter,
     // Should this be proposed?
     toString: fn,
-    __isKnownScopeProxy__: fn,
     import: asyncFn,
     load: asyncFn,
     importNow: fn,
-    module: fn },
+    module: fn},
 
 
   lockdown: fn,
   harden: fn,
 
-  '%InitialGetStackString%': fn };$h‍_once.whitelist(whitelist);
+  '%InitialGetStackString%': fn};$h‍_once.whitelist(whitelist);
 })
 ,
-// === functors[15] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let defineProperty,objectHasOwnProperty,entries,makeEvalFunction,makeFunctionConstructor,constantProperties,universalPropertyNames;$h‍_imports([["./commons.js", [["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]]]],["./make-eval-function.js", [["makeEvalFunction", [$h‍_a => (makeEvalFunction = $h‍_a)]]]],["./make-function-constructor.js", [["makeFunctionConstructor", [$h‍_a => (makeFunctionConstructor = $h‍_a)]]]],["./whitelist.js", [["constantProperties", [$h‍_a => (constantProperties = $h‍_a)]],["universalPropertyNames", [$h‍_a => (universalPropertyNames = $h‍_a)]]]]]);   
+// === functors[17] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let TypeError,assign,create,defineProperty,entries,freeze,objectHasOwnProperty,unscopablesSymbol,makeEvalFunction,makeFunctionConstructor,constantProperties,universalPropertyNames;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["unscopablesSymbol", [$h‍_a => (unscopablesSymbol = $h‍_a)]]]],["./make-eval-function.js", [["makeEvalFunction", [$h‍_a => (makeEvalFunction = $h‍_a)]]]],["./make-function-constructor.js", [["makeFunctionConstructor", [$h‍_a => (makeFunctionConstructor = $h‍_a)]]]],["./whitelist.js", [["constantProperties", [$h‍_a => (constantProperties = $h‍_a)]],["universalPropertyNames", [$h‍_a => (universalPropertyNames = $h‍_a)]]]]]);   
 
 
 
+
+
+
+
+
+
+
+
+
+
+/**
+ * The host's ordinary global object is not provided by a `with` block, so
+ * assigning to Symbol.unscopables has no effect.
+ * Since this shim uses `with` blocks to create a confined lexical scope for
+ * guest programs, we cannot emulate the proper behavior.
+ * With this shim, assigning Symbol.unscopables causes the given lexical
+ * names to fall through to the terminal scope proxy.
+ * But, we can install this setter to prevent a program from proceding on
+ * this false assumption.
+ *
+ * @param {Object} globalObject
+ */
+const        setGlobalObjectSymbolUnscopables=  (globalObject)=>{
+  defineProperty(
+    globalObject,
+    unscopablesSymbol,
+    freeze(
+      assign(create(null), {
+        set: freeze(()=>  {
+          throw new TypeError(
+             `Cannot set Symbol.unscopables of a Compartment's globalThis`);
+
+         }),
+        enumerable: false,
+        configurable: false})));
+
+
+
+ };
 
 /**
  * setGlobalObjectConstantProperties()
@@ -3832,17 +4012,17 @@ const whitelist = {
  * `setGlobalObjectMutableProperties`.
  *
  * @param {Object} globalObject
- */
-const setGlobalObjectConstantProperties = (globalObject) => {
-  for (const [name, constant] of entries(constantProperties)) {
+ */$h‍_once.setGlobalObjectSymbolUnscopables(setGlobalObjectSymbolUnscopables);
+const        setGlobalObjectConstantProperties=  (globalObject)=>{
+  for( const [name, constant]of  entries(constantProperties)) {
     defineProperty(globalObject, name, {
       value: constant,
       writable: false,
       enumerable: false,
-      configurable: false });
+      configurable: false});
 
-  }
-};$h‍_once.setGlobalObjectConstantProperties(setGlobalObjectConstantProperties);
+   }
+ };
 
 /**
  * setGlobalObjectMutableProperties()
@@ -3856,71 +4036,102 @@ const setGlobalObjectConstantProperties = (globalObject) => {
  * @param {Object} param1.intrinsics
  * @param {Object} param1.newGlobalPropertyNames
  * @param {Function} param1.makeCompartmentConstructor
- * @param {(string, Object?) => any} param1.safeEvaluate
  * @param {(Object) => void} param1.markVirtualizedNativeFunction
- */
-const setGlobalObjectMutableProperties = (
-globalObject,
-{
-  intrinsics,
-  newGlobalPropertyNames,
-  makeCompartmentConstructor,
-  safeEvaluate,
-  markVirtualizedNativeFunction }) =>
+ */$h‍_once.setGlobalObjectConstantProperties(setGlobalObjectConstantProperties);
+const        setGlobalObjectMutableProperties=  (
+  globalObject,
+  {
+    intrinsics,
+    newGlobalPropertyNames,
+    makeCompartmentConstructor,
+    markVirtualizedNativeFunction})=>
 
-{
-  for (const [name, intrinsicName] of entries(universalPropertyNames)) {
-    if (objectHasOwnProperty(intrinsics, intrinsicName)) {
+     {
+  for( const [name, intrinsicName]of  entries(universalPropertyNames)) {
+    if( objectHasOwnProperty(intrinsics, intrinsicName)) {
       defineProperty(globalObject, name, {
         value: intrinsics[intrinsicName],
         writable: true,
         enumerable: false,
-        configurable: true });
+        configurable: true});
 
-    }
-  }
+     }
+   }
 
-  for (const [name, intrinsicName] of entries(newGlobalPropertyNames)) {
-    if (objectHasOwnProperty(intrinsics, intrinsicName)) {
+  for( const [name, intrinsicName]of  entries(newGlobalPropertyNames)) {
+    if( objectHasOwnProperty(intrinsics, intrinsicName)) {
       defineProperty(globalObject, name, {
         value: intrinsics[intrinsicName],
         writable: true,
         enumerable: false,
-        configurable: true });
+        configurable: true});
 
-    }
-  }
+     }
+   }
 
-  const perCompartmentGlobals = {
-    globalThis: globalObject,
-    eval: makeEvalFunction(safeEvaluate),
-    Function: makeFunctionConstructor(safeEvaluate) };
+  const perCompartmentGlobals=  {
+    globalThis: globalObject};
 
 
-  perCompartmentGlobals.Compartment = makeCompartmentConstructor(
-  makeCompartmentConstructor,
-  intrinsics,
-  markVirtualizedNativeFunction);
+  perCompartmentGlobals.Compartment=  makeCompartmentConstructor(
+    makeCompartmentConstructor,
+    intrinsics,
+    markVirtualizedNativeFunction);
 
 
   // TODO These should still be tamed according to the whitelist before
   // being made available.
-  for (const [name, value] of entries(perCompartmentGlobals)) {
+  for( const [name, value]of  entries(perCompartmentGlobals)) {
     defineProperty(globalObject, name, {
       value,
       writable: true,
       enumerable: false,
-      configurable: true });
+      configurable: true});
 
-    if (typeof value === 'function') {
+    if( typeof value===  'function') {
       markVirtualizedNativeFunction(value);
-    }
-  }
-};$h‍_once.setGlobalObjectMutableProperties(setGlobalObjectMutableProperties);
+     }
+   }
+ };
+
+/**
+ * setGlobalObjectEvaluators()
+ * Set the eval and the Function evaluator on the global object with given evalTaming policy.
+ *
+ * @param {Object} globalObject
+ * @param {Function} evaluator
+ * @param {(Object) => void} markVirtualizedNativeFunction
+ */$h‍_once.setGlobalObjectMutableProperties(setGlobalObjectMutableProperties);
+const        setGlobalObjectEvaluators=  (
+  globalObject,
+  evaluator,
+  markVirtualizedNativeFunction)=>
+     {
+  {
+    const f=  makeEvalFunction(evaluator);
+    markVirtualizedNativeFunction(f);
+    defineProperty(globalObject, 'eval', {
+      value: f,
+      writable: true,
+      enumerable: false,
+      configurable: true});
+
+   }
+  {
+    const f=  makeFunctionConstructor(evaluator);
+    markVirtualizedNativeFunction(f);
+    defineProperty(globalObject, 'Function', {
+      value: f,
+      writable: true,
+      enumerable: false,
+      configurable: true});
+
+   }
+ };$h‍_once.setGlobalObjectEvaluators(setGlobalObjectEvaluators);
 })
 ,
-// === functors[16] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let ReferenceError,TypeError,Map,Set,arrayJoin,arrayMap,arrayPush,create,freeze,mapGet,mapHas,mapSet,setAdd,promiseCatch,promiseThen,values,weakmapGet,assert;$h‍_imports([["./commons.js", [["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["Map", [$h‍_a => (Map = $h‍_a)]],["Set", [$h‍_a => (Set = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["promiseCatch", [$h‍_a => (promiseCatch = $h‍_a)]],["promiseThen", [$h‍_a => (promiseThen = $h‍_a)]],["values", [$h‍_a => (values = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[18] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let ReferenceError,TypeError,Map,Set,arrayJoin,arrayMap,arrayPush,create,freeze,mapGet,mapHas,mapSet,setAdd,promiseCatch,promiseThen,values,weakmapGet,assert;$h‍_imports([["./commons.js", [["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["Map", [$h‍_a => (Map = $h‍_a)]],["Set", [$h‍_a => (Set = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["promiseCatch", [$h‍_a => (promiseCatch = $h‍_a)]],["promiseThen", [$h‍_a => (promiseThen = $h‍_a)]],["values", [$h‍_a => (values = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -3949,9 +4160,9 @@ globalObject,
 
 
 
-const { details: d, quote: q } = assert;
+const { Fail, details: d, quote: q}=   assert;
 
-const noop = () => {};
+const noop=  ()=>  { };
 
 // `makeAlias` constructs compartment specifier tuples for the `aliases`
 // private field of compartments.
@@ -3959,167 +4170,24 @@ const noop = () => {};
 // module specifier in an external compartment, and also to create internal
 // aliases.
 // Both are facilitated by the moduleMap Compartment constructor option.
-const makeAlias = (compartment, specifier) =>
-freeze({
-  compartment,
-  specifier });$h‍_once.makeAlias(makeAlias);
+const        makeAlias=  (compartment, specifier)=>
+  freeze({
+    compartment,
+    specifier});
 
 
 // `resolveAll` pre-computes resolutions of all imports within the compartment
 // in which a module was loaded.
-const resolveAll = (imports, resolveHook, fullReferrerSpecifier) => {
-  const resolvedImports = create(null);
-  for (const importSpecifier of imports) {
-    const fullSpecifier = resolveHook(importSpecifier, fullReferrerSpecifier);
-    resolvedImports[importSpecifier] = fullSpecifier;
-  }
+$h‍_once.makeAlias(makeAlias);const resolveAll=(imports,resolveHook,fullReferrerSpecifier)=>{
+  const resolvedImports=  create(null);
+  for( const importSpecifier of imports) {
+    const fullSpecifier=  resolveHook(importSpecifier, fullReferrerSpecifier);
+    resolvedImports[importSpecifier]=  fullSpecifier;
+   }
   return freeze(resolvedImports);
-};
+ };
 
-const loadRecord = async (
-compartmentPrivateFields,
-moduleAliases,
-compartment,
-moduleSpecifier,
-staticModuleRecord,
-pendingJobs,
-moduleLoads,
-errors) =>
-{
-  const { resolveHook, moduleRecords } = weakmapGet(
-  compartmentPrivateFields,
-  compartment);
-
-
-  // resolve all imports relative to this referrer module.
-  const resolvedImports = resolveAll(
-  staticModuleRecord.imports,
-  resolveHook,
-  moduleSpecifier);
-
-  const moduleRecord = freeze({
-    compartment,
-    staticModuleRecord,
-    moduleSpecifier,
-    resolvedImports });
-
-
-  // Enqueue jobs to load this module's shallow dependencies.
-  for (const fullSpecifier of values(resolvedImports)) {
-    // Behold: recursion.
-    // eslint-disable-next-line no-use-before-define
-    const dependencyLoaded = memoizedLoadWithErrorAnnotation(
-    compartmentPrivateFields,
-    moduleAliases,
-    compartment,
-    fullSpecifier,
-    pendingJobs,
-    moduleLoads,
-    errors);
-
-    setAdd(
-    pendingJobs,
-    promiseThen(dependencyLoaded, noop, (error) => {
-      arrayPush(errors, error);
-    }));
-
-  }
-
-  // Memoize.
-  mapSet(moduleRecords, moduleSpecifier, moduleRecord);
-  return moduleRecord;
-};
-
-const loadWithoutErrorAnnotation = async (
-compartmentPrivateFields,
-moduleAliases,
-compartment,
-moduleSpecifier,
-pendingJobs,
-moduleLoads,
-errors) =>
-{
-  const { importHook, moduleMap, moduleMapHook, moduleRecords } = weakmapGet(
-  compartmentPrivateFields,
-  compartment);
-
-
-  // Follow moduleMap, or moduleMapHook if present.
-  let aliasNamespace = moduleMap[moduleSpecifier];
-  if (aliasNamespace === undefined && moduleMapHook !== undefined) {
-    aliasNamespace = moduleMapHook(moduleSpecifier);
-  }
-  if (typeof aliasNamespace === 'string') {
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    assert.fail(
-    d`Cannot map module ${q(moduleSpecifier)} to ${q(
-    aliasNamespace)
-    } in parent compartment, not yet implemented`,
-    TypeError);
-
-  } else if (aliasNamespace !== undefined) {
-    const alias = weakmapGet(moduleAliases, aliasNamespace);
-    if (alias === undefined) {
-      // eslint-disable-next-line @endo/no-polymorphic-call
-      assert.fail(
-      d`Cannot map module ${q(
-      moduleSpecifier)
-      } because the value is not a module exports namespace, or is from another realm`,
-      ReferenceError);
-
-    }
-    // Behold: recursion.
-    // eslint-disable-next-line no-use-before-define
-    const aliasRecord = await memoizedLoadWithErrorAnnotation(
-    compartmentPrivateFields,
-    moduleAliases,
-    alias.compartment,
-    alias.specifier,
-    pendingJobs,
-    moduleLoads,
-    errors);
-
-    mapSet(moduleRecords, moduleSpecifier, aliasRecord);
-    return aliasRecord;
-  }
-
-  if (mapHas(moduleRecords, moduleSpecifier)) {
-    return mapGet(moduleRecords, moduleSpecifier);
-  }
-
-  const staticModuleRecord = await importHook(moduleSpecifier);
-
-  if (staticModuleRecord === null || typeof staticModuleRecord !== 'object') {
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    assert.fail(
-    d`importHook must return a promise for an object, for module ${q(
-    moduleSpecifier)
-    } in compartment ${q(compartment.name)}`);
-
-  }
-
-  if (staticModuleRecord.record !== undefined) {
-    const {
-      compartment: aliasCompartment = compartment,
-      specifier: aliasSpecifier = moduleSpecifier,
-      record: aliasModuleRecord } =
-    staticModuleRecord;
-
-    const aliasRecord = await loadRecord(
-    compartmentPrivateFields,
-    moduleAliases,
-    aliasCompartment,
-    aliasSpecifier,
-    aliasModuleRecord,
-    pendingJobs,
-    moduleLoads,
-    errors);
-
-    mapSet(moduleRecords, moduleSpecifier, aliasRecord);
-    return aliasRecord;
-  }
-
-  return loadRecord(
+const loadRecord=  (
   compartmentPrivateFields,
   moduleAliases,
   compartment,
@@ -4127,61 +4195,242 @@ errors) =>
   staticModuleRecord,
   pendingJobs,
   moduleLoads,
-  errors);
-
-};
-
-const memoizedLoadWithErrorAnnotation = async (
-compartmentPrivateFields,
-moduleAliases,
-compartment,
-moduleSpecifier,
-pendingJobs,
-moduleLoads,
-errors) =>
-{
-  const { name: compartmentName } = weakmapGet(
-  compartmentPrivateFields,
-  compartment);
+  errors,
+  importMeta)=>
+     {
+  const { resolveHook, moduleRecords}=   weakmapGet(
+    compartmentPrivateFields,
+    compartment);
 
 
-  // Prevent data-lock from recursion into branches visited in dependent loads.
-  let compartmentLoading = mapGet(moduleLoads, compartment);
-  if (compartmentLoading === undefined) {
-    compartmentLoading = new Map();
-    mapSet(moduleLoads, compartment, compartmentLoading);
-  }
-  let moduleLoading = mapGet(compartmentLoading, moduleSpecifier);
-  if (moduleLoading !== undefined) {
-    return moduleLoading;
-  }
+  // resolve all imports relative to this referrer module.
+  const resolvedImports=  resolveAll(
+    staticModuleRecord.imports,
+    resolveHook,
+    moduleSpecifier);
 
-  moduleLoading = promiseCatch(
-  loadWithoutErrorAnnotation(
+  const moduleRecord=  freeze({
+    compartment,
+    staticModuleRecord,
+    moduleSpecifier,
+    resolvedImports,
+    importMeta});
+
+
+  // Enqueue jobs to load this module's shallow dependencies.
+  for( const fullSpecifier of values(resolvedImports)) {
+    // Behold: recursion.
+    // eslint-disable-next-line no-use-before-define
+    const dependencyLoaded=  memoizedLoadWithErrorAnnotation(
+      compartmentPrivateFields,
+      moduleAliases,
+      compartment,
+      fullSpecifier,
+      pendingJobs,
+      moduleLoads,
+      errors);
+
+    setAdd(
+      pendingJobs,
+      promiseThen(dependencyLoaded, noop, (error)=>{
+        arrayPush(errors, error);
+       }));
+
+   }
+
+  // Memoize.
+  mapSet(moduleRecords, moduleSpecifier, moduleRecord);
+  return moduleRecord;
+ };
+
+const loadWithoutErrorAnnotation=  async(
   compartmentPrivateFields,
   moduleAliases,
   compartment,
   moduleSpecifier,
   pendingJobs,
   moduleLoads,
-  errors),
+  errors)=>
+     {
+  const { importHook, moduleMap, moduleMapHook, moduleRecords}=   weakmapGet(
+    compartmentPrivateFields,
+    compartment);
 
-  (error) => {
+
+  // Follow moduleMap, or moduleMapHook if present.
+  let aliasNamespace=  moduleMap[moduleSpecifier];
+  if( aliasNamespace===  undefined&&  moduleMapHook!==  undefined) {
+    aliasNamespace=  moduleMapHook(moduleSpecifier);
+   }
+  if( typeof aliasNamespace===  'string') {
     // eslint-disable-next-line @endo/no-polymorphic-call
-    assert.note(
-    error,
-    d`${error.message}, loading ${q(moduleSpecifier)} in compartment ${q(
-    compartmentName)
-    }`);
+    assert.fail(
+      d `Cannot map module ${q(moduleSpecifier)} to ${q(
+        aliasNamespace)
+        } in parent compartment, not yet implemented`,
+      TypeError);
 
-    throw error;
-  });
+   }else if( aliasNamespace!==  undefined) {
+    const alias=  weakmapGet(moduleAliases, aliasNamespace);
+    if( alias===  undefined) {
+      // eslint-disable-next-line @endo/no-polymorphic-call
+      assert.fail(
+        d `Cannot map module ${q(
+          moduleSpecifier)
+          } because the value is not a module exports namespace, or is from another realm`,
+        ReferenceError);
+
+     }
+    // Behold: recursion.
+    // eslint-disable-next-line no-use-before-define
+    const aliasRecord=  await memoizedLoadWithErrorAnnotation(
+      compartmentPrivateFields,
+      moduleAliases,
+      alias.compartment,
+      alias.specifier,
+      pendingJobs,
+      moduleLoads,
+      errors);
+
+    mapSet(moduleRecords, moduleSpecifier, aliasRecord);
+    return aliasRecord;
+   }
+
+  if( mapHas(moduleRecords, moduleSpecifier)) {
+    return mapGet(moduleRecords, moduleSpecifier);
+   }
+
+  const staticModuleRecord=  await importHook(moduleSpecifier);
+
+  if( staticModuleRecord===  null||  typeof staticModuleRecord!==  'object') {
+    Fail `importHook must return a promise for an object, for module ${q(
+      moduleSpecifier)
+      } in compartment ${q(compartment.name)}`;
+   }
+
+  // check if record is a RedirectStaticModuleInterface
+  if( staticModuleRecord.specifier!==  undefined) {
+    // check if this redirect with an explicit record
+    if( staticModuleRecord.record!==  undefined) {
+      // ensure expected record shape
+      if( staticModuleRecord.compartment!==  undefined) {
+        throw new TypeError(
+          'Cannot redirect to an explicit record with a specified compartment');
+
+       }
+      const {
+        compartment: aliasCompartment=  compartment,
+        specifier: aliasSpecifier=  moduleSpecifier,
+        record: aliasModuleRecord,
+        importMeta}=
+          staticModuleRecord;
+
+      const aliasRecord=  loadRecord(
+        compartmentPrivateFields,
+        moduleAliases,
+        aliasCompartment,
+        aliasSpecifier,
+        aliasModuleRecord,
+        pendingJobs,
+        moduleLoads,
+        errors,
+        importMeta);
+
+      mapSet(moduleRecords, moduleSpecifier, aliasRecord);
+      return aliasRecord;
+     }
+
+    // check if this redirect with an explicit compartment
+    if( staticModuleRecord.compartment!==  undefined) {
+      // ensure expected record shape
+      if( staticModuleRecord.importMeta!==  undefined) {
+        throw new TypeError(
+          'Cannot redirect to an implicit record with a specified importMeta');
+
+       }
+      // Behold: recursion.
+      // eslint-disable-next-line no-use-before-define
+      const aliasRecord=  await memoizedLoadWithErrorAnnotation(
+        compartmentPrivateFields,
+        moduleAliases,
+        staticModuleRecord.compartment,
+        staticModuleRecord.specifier,
+        pendingJobs,
+        moduleLoads,
+        errors);
+
+      mapSet(moduleRecords, moduleSpecifier, aliasRecord);
+      return aliasRecord;
+     }
+
+    throw new TypeError(
+      'Unnexpected RedirectStaticModuleInterface record shape');
+
+   }
+
+  return loadRecord(
+    compartmentPrivateFields,
+    moduleAliases,
+    compartment,
+    moduleSpecifier,
+    staticModuleRecord,
+    pendingJobs,
+    moduleLoads,
+    errors);
+
+ };
+
+const memoizedLoadWithErrorAnnotation=  async(
+  compartmentPrivateFields,
+  moduleAliases,
+  compartment,
+  moduleSpecifier,
+  pendingJobs,
+  moduleLoads,
+  errors)=>
+     {
+  const { name: compartmentName}=   weakmapGet(
+    compartmentPrivateFields,
+    compartment);
+
+
+  // Prevent data-lock from recursion into branches visited in dependent loads.
+  let compartmentLoading=  mapGet(moduleLoads, compartment);
+  if( compartmentLoading===  undefined) {
+    compartmentLoading=  new Map();
+    mapSet(moduleLoads, compartment, compartmentLoading);
+   }
+  let moduleLoading=  mapGet(compartmentLoading, moduleSpecifier);
+  if( moduleLoading!==  undefined) {
+    return moduleLoading;
+   }
+
+  moduleLoading=  promiseCatch(
+    loadWithoutErrorAnnotation(
+      compartmentPrivateFields,
+      moduleAliases,
+      compartment,
+      moduleSpecifier,
+      pendingJobs,
+      moduleLoads,
+      errors),
+
+    (error)=>{
+      // eslint-disable-next-line @endo/no-polymorphic-call
+      assert.note(
+        error,
+        d `${error.message}, loading ${q(moduleSpecifier)} in compartment ${q(
+          compartmentName)
+          }`);
+
+      throw error;
+     });
 
 
   mapSet(compartmentLoading, moduleSpecifier, moduleLoading);
 
   return moduleLoading;
-};
+ };
 
 /*
  * `load` asynchronously gathers the `StaticModuleRecord`s for a module and its
@@ -4190,65 +4439,65 @@ errors) =>
  * compartment and the specifier of the module within its own compartment.
  * This graph is then ready to be synchronously linked and executed.
  */
-const load = async (
-compartmentPrivateFields,
-moduleAliases,
-compartment,
-moduleSpecifier) =>
-{
-  const { name: compartmentName } = weakmapGet(
-  compartmentPrivateFields,
-  compartment);
-
-
-  /** @type {Set<Promise<undefined>>} */
-  const pendingJobs = new Set();
-  /** @type {Map<Object, Map<string, Promise<Record>>} */
-  const moduleLoads = new Map();
-  /** @type {Array<Error>} */
-  const errors = [];
-
-  const dependencyLoaded = memoizedLoadWithErrorAnnotation(
+const        load=  async(
   compartmentPrivateFields,
   moduleAliases,
   compartment,
-  moduleSpecifier,
-  pendingJobs,
-  moduleLoads,
-  errors);
+  moduleSpecifier)=>
+     {
+  const { name: compartmentName}=   weakmapGet(
+    compartmentPrivateFields,
+    compartment);
+
+
+  /** @type {Set<Promise<undefined>>} */
+  const pendingJobs=  new Set();
+  /** @type {Map<Object, Map<string, Promise<Record>>} */
+  const moduleLoads=  new Map();
+  /** @type {Array<Error>} */
+  const errors=  [];
+
+  const dependencyLoaded=  memoizedLoadWithErrorAnnotation(
+    compartmentPrivateFields,
+    moduleAliases,
+    compartment,
+    moduleSpecifier,
+    pendingJobs,
+    moduleLoads,
+    errors);
 
   setAdd(
-  pendingJobs,
-  promiseThen(dependencyLoaded, noop, (error) => {
-    arrayPush(errors, error);
-  }));
+    pendingJobs,
+    promiseThen(dependencyLoaded, noop, (error)=>{
+      arrayPush(errors, error);
+     }));
 
 
   // Drain pending jobs queue.
   // Each job is a promise for undefined, regardless of success or failure.
   // Before we add a job to the queue, we catch any error and push it into the
   // `errors` accumulator.
-  for (const job of pendingJobs) {
+  for( const job of pendingJobs) {
     // eslint-disable-next-line no-await-in-loop
     await job;
-  }
+   }
 
   // Throw an aggregate error if there were any errors.
-  if (errors.length > 0) {
+  if( errors.length>  0) {
     throw new TypeError(
-    `Failed to load module ${q(moduleSpecifier)} in package ${q(
-    compartmentName)
-    } (${errors.length} underlying failures: ${arrayJoin(
-    arrayMap(errors, (error) => error.message),
-    ', ')
-    }`);
+       `Failed to load module ${q(moduleSpecifier)} in package ${q(
+        compartmentName)
+        } (${errors.length} underlying failures: ${arrayJoin(
+        arrayMap(errors, (error)=>error.message),
+        ', ')
+        }`);
 
-  }
-};$h‍_once.load(load);
+   }
+ };$h‍_once.load(load);
 })
 ,
-// === functors[17] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let makeAlias,Proxy,TypeError,create,freeze,mapGet,mapHas,mapSet,ownKeys,reflectGet,reflectGetOwnPropertyDescriptor,reflectHas,reflectIsExtensible,reflectPreventExtensions,weakmapSet,assert;$h‍_imports([["./module-load.js", [["makeAlias", [$h‍_a => (makeAlias = $h‍_a)]]]],["./commons.js", [["Proxy", [$h‍_a => (Proxy = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["reflectGet", [$h‍_a => (reflectGet = $h‍_a)]],["reflectGetOwnPropertyDescriptor", [$h‍_a => (reflectGetOwnPropertyDescriptor = $h‍_a)]],["reflectHas", [$h‍_a => (reflectHas = $h‍_a)]],["reflectIsExtensible", [$h‍_a => (reflectIsExtensible = $h‍_a)]],["reflectPreventExtensions", [$h‍_a => (reflectPreventExtensions = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[19] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let makeAlias,Proxy,TypeError,create,freeze,mapGet,mapHas,mapSet,ownKeys,reflectGet,reflectGetOwnPropertyDescriptor,reflectHas,reflectIsExtensible,reflectPreventExtensions,weakmapSet,assert;$h‍_imports([["./module-load.js", [["makeAlias", [$h‍_a => (makeAlias = $h‍_a)]]]],["./commons.js", [["Proxy", [$h‍_a => (Proxy = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["reflectGet", [$h‍_a => (reflectGet = $h‍_a)]],["reflectGetOwnPropertyDescriptor", [$h‍_a => (reflectGetOwnPropertyDescriptor = $h‍_a)]],["reflectHas", [$h‍_a => (reflectHas = $h‍_a)]],["reflectIsExtensible", [$h‍_a => (reflectIsExtensible = $h‍_a)]],["reflectPreventExtensions", [$h‍_a => (reflectPreventExtensions = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -4279,7 +4528,7 @@ moduleSpecifier) =>
 
 
 
-const { quote: q } = assert;
+const { quote: q}=   assert;
 
 // `deferExports` creates a module's exports proxy, proxied exports, and
 // activator.
@@ -4299,131 +4548,131 @@ const { quote: q } = assert;
 //
 // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
 //
-const deferExports = () => {
-  let active = false;
-  const proxiedExports = create(null);
+const        deferExports=  ()=>  {
+  let active=  false;
+  const proxiedExports=  create(null);
   return freeze({
     activate() {
-      active = true;
-    },
+      active=  true;
+     },
     proxiedExports,
     exportsProxy: new Proxy(proxiedExports, {
       get(_target, name, receiver) {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          `Cannot get property ${q(
-          name)
-          } of module exports namespace, the module has not yet begun to execute`);
+             `Cannot get property ${q(
+              name)
+              } of module exports namespace, the module has not yet begun to execute`);
 
-        }
+         }
         return reflectGet(proxiedExports, name, receiver);
-      },
+       },
       set(_target, name, _value) {
         throw new TypeError(
-        `Cannot set property ${q(name)} of module exports namespace`);
+           `Cannot set property ${q(name)} of module exports namespace`);
 
-      },
+       },
       has(_target, name) {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          `Cannot check property ${q(
-          name)
-          }, the module has not yet begun to execute`);
+             `Cannot check property ${q(
+              name)
+              }, the module has not yet begun to execute`);
 
-        }
+         }
         return reflectHas(proxiedExports, name);
-      },
+       },
       deleteProperty(_target, name) {
         throw new TypeError(
-        `Cannot delete property ${q(name)}s of module exports namespace`);
+           `Cannot delete property ${q(name)}s of module exports namespace`);
 
-      },
+       },
       ownKeys(_target) {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          'Cannot enumerate keys, the module has not yet begun to execute');
+            'Cannot enumerate keys, the module has not yet begun to execute');
 
-        }
+         }
         return ownKeys(proxiedExports);
-      },
+       },
       getOwnPropertyDescriptor(_target, name) {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          `Cannot get own property descriptor ${q(
-          name)
-          }, the module has not yet begun to execute`);
+             `Cannot get own property descriptor ${q(
+              name)
+              }, the module has not yet begun to execute`);
 
-        }
+         }
         return reflectGetOwnPropertyDescriptor(proxiedExports, name);
-      },
+       },
       preventExtensions(_target) {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          'Cannot prevent extensions of module exports namespace, the module has not yet begun to execute');
+            'Cannot prevent extensions of module exports namespace, the module has not yet begun to execute');
 
-        }
+         }
         return reflectPreventExtensions(proxiedExports);
-      },
+       },
       isExtensible() {
-        if (!active) {
+        if( !active) {
           throw new TypeError(
-          'Cannot check extensibility of module exports namespace, the module has not yet begun to execute');
+            'Cannot check extensibility of module exports namespace, the module has not yet begun to execute');
 
-        }
+         }
         return reflectIsExtensible(proxiedExports);
-      },
+       },
       getPrototypeOf(_target) {
         return null;
-      },
+       },
       setPrototypeOf(_target, _proto) {
         throw new TypeError('Cannot set prototype of module exports namespace');
-      },
+       },
       defineProperty(_target, name, _descriptor) {
         throw new TypeError(
-        `Cannot define property ${q(name)} of module exports namespace`);
+           `Cannot define property ${q(name)} of module exports namespace`);
 
-      },
+       },
       apply(_target, _thisArg, _args) {
         throw new TypeError(
-        'Cannot call module exports namespace, it is not a function');
+          'Cannot call module exports namespace, it is not a function');
 
-      },
+       },
       construct(_target, _args) {
         throw new TypeError(
-        'Cannot construct module exports namespace, it is not a constructor');
+          'Cannot construct module exports namespace, it is not a constructor');
 
-      } }) });
+       }})});
 
 
-};$h‍_once.deferExports(deferExports);
+ };
 
 // `getDeferredExports` memoizes the creation of a deferred module exports
 // namespace proxy for any abritrary full specifier in a compartment.
 // It also records the compartment and specifier affiliated with that module
 // exports namespace proxy so it can be used as an alias into another
 // compartment when threaded through a compartment's `moduleMap` argument.
-const getDeferredExports = (
-compartment,
-compartmentPrivateFields,
-moduleAliases,
-specifier) =>
-{
-  const { deferredExports } = compartmentPrivateFields;
-  if (!mapHas(deferredExports, specifier)) {
-    const deferred = deferExports();
+$h‍_once.deferExports(deferExports);const getDeferredExports=(
+  compartment,
+  compartmentPrivateFields,
+  moduleAliases,
+  specifier)=>
+     {
+  const { deferredExports}=   compartmentPrivateFields;
+  if( !mapHas(deferredExports, specifier)) {
+    const deferred=  deferExports();
     weakmapSet(
-    moduleAliases,
-    deferred.exportsProxy,
-    makeAlias(compartment, specifier));
+      moduleAliases,
+      deferred.exportsProxy,
+      makeAlias(compartment, specifier));
 
     mapSet(deferredExports, specifier, deferred);
-  }
+   }
   return mapGet(deferredExports, specifier);
-};$h‍_once.getDeferredExports(getDeferredExports);
+ };$h‍_once.getDeferredExports(getDeferredExports);
 })
 ,
-// === functors[18] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let assert,getDeferredExports,ReferenceError,SyntaxError,TypeError,arrayForEach,arrayIncludes,arrayPush,arraySome,arraySort,create,defineProperty,entries,freeze,isArray,keys,mapGet,weakmapGet,compartmentEvaluate;$h‍_imports([["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./module-proxy.js", [["getDeferredExports", [$h‍_a => (getDeferredExports = $h‍_a)]]]],["./commons.js", [["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["arraySome", [$h‍_a => (arraySome = $h‍_a)]],["arraySort", [$h‍_a => (arraySort = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["isArray", [$h‍_a => (isArray = $h‍_a)]],["keys", [$h‍_a => (keys = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]]]],["./compartment-evaluate.js", [["compartmentEvaluate", [$h‍_a => (compartmentEvaluate = $h‍_a)]]]]]);   
+// === functors[20] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let assert,getDeferredExports,ReferenceError,SyntaxError,TypeError,arrayForEach,arrayIncludes,arrayPush,arraySome,arraySort,create,defineProperty,entries,freeze,isArray,keys,mapGet,weakmapGet,reflectHas,assign,compartmentEvaluate;$h‍_imports([["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./module-proxy.js", [["getDeferredExports", [$h‍_a => (getDeferredExports = $h‍_a)]]]],["./commons.js", [["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["arraySome", [$h‍_a => (arraySome = $h‍_a)]],["arraySort", [$h‍_a => (arraySort = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["isArray", [$h‍_a => (isArray = $h‍_a)]],["keys", [$h‍_a => (keys = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["reflectHas", [$h‍_a => (reflectHas = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]]]],["./compartment-evaluate.js", [["compartmentEvaluate", [$h‍_a => (compartmentEvaluate = $h‍_a)]]]]]);   
 
 
 
@@ -4445,79 +4694,95 @@ specifier) =>
 
 
 
-const { quote: q } = assert;
 
-const makeThirdPartyModuleInstance = (
-compartmentPrivateFields,
-staticModuleRecord,
-compartment,
-moduleAliases,
-moduleSpecifier,
-resolvedImports) =>
-{
-  const { exportsProxy, proxiedExports, activate } = getDeferredExports(
+
+const { quote: q}=   assert;
+
+const        makeThirdPartyModuleInstance=  (
+  compartmentPrivateFields,
+  staticModuleRecord,
   compartment,
-  weakmapGet(compartmentPrivateFields, compartment),
   moduleAliases,
-  moduleSpecifier);
+  moduleSpecifier,
+  resolvedImports)=>
+     {
+  const { exportsProxy, proxiedExports, activate}=   getDeferredExports(
+    compartment,
+    weakmapGet(compartmentPrivateFields, compartment),
+    moduleAliases,
+    moduleSpecifier);
 
 
-  const notifiers = create(null);
+  const notifiers=  create(null);
 
-  if (staticModuleRecord.exports) {
-    if (
-    !isArray(staticModuleRecord.exports) ||
-    arraySome(staticModuleRecord.exports, (name) => typeof name !== 'string'))
-    {
+  if( staticModuleRecord.exports) {
+    if(
+      !isArray(staticModuleRecord.exports)||
+      arraySome(staticModuleRecord.exports, (name)=>typeof name!==  'string'))
+      {
       throw new TypeError(
-      `SES third-party static module record "exports" property must be an array of strings for module ${moduleSpecifier}`);
+         `SES third-party static module record "exports" property must be an array of strings for module ${moduleSpecifier}`);
 
-    }
-    arrayForEach(staticModuleRecord.exports, (name) => {
-      let value = proxiedExports[name];
-      const updaters = [];
+     }
+    arrayForEach(staticModuleRecord.exports, (name)=>{
+      let value=  proxiedExports[name];
+      const updaters=  [];
 
-      const get = () => value;
+      const get=  ()=>  value;
 
-      const set = (newValue) => {
-        value = newValue;
-        for (const updater of updaters) {
+      const set=  (newValue)=>{
+        value=  newValue;
+        for( const updater of updaters) {
           updater(newValue);
-        }
-      };
+         }
+       };
 
       defineProperty(proxiedExports, name, {
         get,
         set,
         enumerable: true,
-        configurable: false });
+        configurable: false});
 
 
-      notifiers[name] = (update) => {
+      notifiers[name]=  (update)=>{
         arrayPush(updaters, update);
         update(value);
-      };
-    });
-  }
+       };
+     });
+    // This is enough to support import * from cjs - the '*' field doesn't need to be in exports nor proxiedExports because import will only ever access it via notifiers
+    notifiers['*']=  (update)=>{
+      update(proxiedExports);
+     };
+   }
 
-  let activated = false;
+  const localState=  {
+    activated: false};
+
   return freeze({
     notifiers,
     exportsProxy,
     execute() {
-      if (!activated) {
+      if( reflectHas(localState, 'errorFromExecute')) {
+        throw localState.errorFromExecute;
+       }
+      if( !localState.activated) {
         activate();
-        activated = true;
-        // eslint-disable-next-line @endo/no-polymorphic-call
-        staticModuleRecord.execute(
-        proxiedExports,
-        compartment,
-        resolvedImports);
+        localState.activated=  true;
+        try {
+          // eslint-disable-next-line @endo/no-polymorphic-call
+          staticModuleRecord.execute(
+            proxiedExports,
+            compartment,
+            resolvedImports);
 
-      }
-    } });
+         }catch( err) {
+          localState.errorFromExecute=  err;
+          throw err;
+         }
+       }
+     }});
 
-};$h‍_once.makeThirdPartyModuleInstance(makeThirdPartyModuleInstance);
+ };
 
 // `makeModuleInstance` takes a module's compartment record, the live import
 // namespace, and a global object; and produces a module instance.
@@ -4526,221 +4791,236 @@ resolvedImports) =>
 // an idempotent execute function.
 // The module exports namespace is a proxy to the proxied exports namespace
 // that the execution of the module instance populates.
-const makeModuleInstance = (
-privateFields,
-moduleAliases,
-moduleRecord,
-importedInstances) =>
-{
-  const { compartment, moduleSpecifier, staticModuleRecord } = moduleRecord;
-  const {
-    reexports: exportAlls = [],
-    __syncModuleProgram__: functorSource,
-    __fixedExportMap__: fixedExportMap = {},
-    __liveExportMap__: liveExportMap = {} } =
-  staticModuleRecord;
-
-  const compartmentFields = weakmapGet(privateFields, compartment);
-
-  const { __shimTransforms__ } = compartmentFields;
-
-  const { exportsProxy, proxiedExports, activate } = getDeferredExports(
-  compartment,
-  compartmentFields,
+$h‍_once.makeThirdPartyModuleInstance(makeThirdPartyModuleInstance);const makeModuleInstance=(
+  privateFields,
   moduleAliases,
-  moduleSpecifier);
+  moduleRecord,
+  importedInstances)=>
+     {
+  const {
+    compartment,
+    moduleSpecifier,
+    staticModuleRecord,
+    importMeta: moduleRecordMeta}=
+      moduleRecord;
+  const {
+    reexports: exportAlls=  [],
+    __syncModuleProgram__: functorSource,
+    __fixedExportMap__: fixedExportMap=  {},
+    __liveExportMap__: liveExportMap=  {},
+    __reexportMap__: reexportMap=  {},
+    __needsImportMeta__: needsImportMeta=  false}=
+      staticModuleRecord;
+
+  const compartmentFields=  weakmapGet(privateFields, compartment);
+
+  const { __shimTransforms__, importMetaHook}=   compartmentFields;
+
+  const { exportsProxy, proxiedExports, activate}=   getDeferredExports(
+    compartment,
+    compartmentFields,
+    moduleAliases,
+    moduleSpecifier);
 
 
   // {_exportName_: getter} module exports namespace
   // object (eventually proxied).
-  const exportsProps = create(null);
+  const exportsProps=  create(null);
 
-  // {_localName_: accessor} proxy traps for globalLexicals and live bindings.
-  // The globalLexicals object is frozen and the corresponding properties of
-  // localLexicals must be immutable, so we copy the descriptors.
-  const localLexicals = create(null);
+  // {_localName_: accessor} proxy traps for moduleLexicals and live bindings.
+  // The moduleLexicals object is frozen and the corresponding properties of
+  // moduleLexicals must be immutable, so we copy the descriptors.
+  const moduleLexicals=  create(null);
 
   // {_localName_: init(initValue) -> initValue} used by the
   // rewritten code to initialize exported fixed bindings.
-  const onceVar = create(null);
+  const onceVar=  create(null);
 
   // {_localName_: update(newValue)} used by the rewritten code to
   // both initialize and update live bindings.
-  const liveVar = create(null);
+  const liveVar=  create(null);
+
+  const importMeta=  create(null);
+  if( moduleRecordMeta) {
+    assign(importMeta, moduleRecordMeta);
+   }
+  if( needsImportMeta&&  importMetaHook) {
+    importMetaHook(moduleSpecifier, importMeta);
+   }
 
   // {_localName_: [{get, set, notify}]} used to merge all the export updaters.
-  const localGetNotify = create(null);
+  const localGetNotify=  create(null);
 
   // {[importName: string]: notify(update(newValue))} Used by code that imports
   // one of this module's exports, so that their update function will
   // be notified when this binding is initialized or updated.
-  const notifiers = create(null);
+  const notifiers=  create(null);
 
-  arrayForEach(entries(fixedExportMap), ([fixedExportName, [localName]]) => {
-    let fixedGetNotify = localGetNotify[localName];
-    if (!fixedGetNotify) {
+  arrayForEach(entries(fixedExportMap), ([fixedExportName, [localName]])=>  {
+    let fixedGetNotify=  localGetNotify[localName];
+    if( !fixedGetNotify) {
       // fixed binding state
       let value;
-      let tdz = true;
-      let optUpdaters = [];
+      let tdz=  true;
+      let optUpdaters=  [];
 
       // tdz sensitive getter
-      const get = () => {
-        if (tdz) {
+      const get=  ()=>  {
+        if( tdz) {
           throw new ReferenceError(
-          `binding ${q(localName)} not yet initialized`);
+             `binding ${q(localName)} not yet initialized`);
 
-        }
+         }
         return value;
-      };
+       };
 
       // leave tdz once
-      const init = freeze((initValue) => {
+      const init=  freeze((initValue)=>{
         // init with initValue of a declared const binding, and return
         // it.
-        if (!tdz) {
+        if( !tdz) {
           throw new TypeError(
-          `Internal: binding ${q(localName)} already initialized`);
+             `Internal: binding ${q(localName)} already initialized`);
 
-        }
-        value = initValue;
-        const updaters = optUpdaters;
-        optUpdaters = null;
-        tdz = false;
-        for (const updater of updaters) {
+         }
+        value=  initValue;
+        const updaters=  optUpdaters;
+        optUpdaters=  null;
+        tdz=  false;
+        for( const updater of updaters) {
           updater(initValue);
-        }
+         }
         return initValue;
-      });
+       });
 
       // If still tdz, register update for notification later.
       // Otherwise, update now.
-      const notify = (updater) => {
-        if (updater === init) {
+      const notify=  (updater)=>{
+        if( updater===  init) {
           // Prevent recursion.
           return;
-        }
-        if (tdz) {
+         }
+        if( tdz) {
           arrayPush(optUpdaters, updater);
-        } else {
+         }else {
           updater(value);
-        }
-      };
+         }
+       };
 
       // Need these for additional exports of the local variable.
-      fixedGetNotify = {
+      fixedGetNotify=  {
         get,
-        notify };
+        notify};
 
-      localGetNotify[localName] = fixedGetNotify;
-      onceVar[localName] = init;
-    }
+      localGetNotify[localName]=  fixedGetNotify;
+      onceVar[localName]=  init;
+     }
 
-    exportsProps[fixedExportName] = {
+    exportsProps[fixedExportName]=  {
       get: fixedGetNotify.get,
       set: undefined,
       enumerable: true,
-      configurable: false };
+      configurable: false};
 
 
-    notifiers[fixedExportName] = fixedGetNotify.notify;
-  });
+    notifiers[fixedExportName]=  fixedGetNotify.notify;
+   });
 
   arrayForEach(
-  entries(liveExportMap),
-  ([liveExportName, [localName, setProxyTrap]]) => {
-    let liveGetNotify = localGetNotify[localName];
-    if (!liveGetNotify) {
-      // live binding state
-      let value;
-      let tdz = true;
-      const updaters = [];
+    entries(liveExportMap),
+    ([liveExportName, [localName, setProxyTrap]])=>  {
+      let liveGetNotify=  localGetNotify[localName];
+      if( !liveGetNotify) {
+        // live binding state
+        let value;
+        let tdz=  true;
+        const updaters=  [];
 
-      // tdz sensitive getter
-      const get = () => {
-        if (tdz) {
-          throw new ReferenceError(
-          `binding ${q(liveExportName)} not yet initialized`);
+        // tdz sensitive getter
+        const get=  ()=>  {
+          if( tdz) {
+            throw new ReferenceError(
+               `binding ${q(liveExportName)} not yet initialized`);
 
-        }
-        return value;
-      };
+           }
+          return value;
+         };
 
-      // This must be usable locally for the translation of initializing
-      // a declared local live binding variable.
-      //
-      // For reexported variable, this is also an update function to
-      // register for notification with the downstream import, which we
-      // must assume to be live. Thus, it can be called independent of
-      // tdz but always leaves tdz. Such reexporting creates a tree of
-      // bindings. This lets the tree be hooked up even if the imported
-      // module instance isn't initialized yet, as may happen in cycles.
-      const update = freeze((newValue) => {
-        value = newValue;
-        tdz = false;
-        for (const updater of updaters) {
-          updater(newValue);
-        }
-      });
+        // This must be usable locally for the translation of initializing
+        // a declared local live binding variable.
+        //
+        // For reexported variable, this is also an update function to
+        // register for notification with the downstream import, which we
+        // must assume to be live. Thus, it can be called independent of
+        // tdz but always leaves tdz. Such reexporting creates a tree of
+        // bindings. This lets the tree be hooked up even if the imported
+        // module instance isn't initialized yet, as may happen in cycles.
+        const update=  freeze((newValue)=>{
+          value=  newValue;
+          tdz=  false;
+          for( const updater of updaters) {
+            updater(newValue);
+           }
+         });
 
-      // tdz sensitive setter
-      const set = (newValue) => {
-        if (tdz) {
-          throw new ReferenceError(
-          `binding ${q(localName)} not yet initialized`);
+        // tdz sensitive setter
+        const set=  (newValue)=>{
+          if( tdz) {
+            throw new ReferenceError(
+               `binding ${q(localName)} not yet initialized`);
 
-        }
-        value = newValue;
-        for (const updater of updaters) {
-          updater(newValue);
-        }
-      };
+           }
+          value=  newValue;
+          for( const updater of updaters) {
+            updater(newValue);
+           }
+         };
 
-      // Always register the updater function.
-      // If not in tdz, also update now.
-      const notify = (updater) => {
-        if (updater === update) {
-          // Prevent recursion.
-          return;
-        }
-        arrayPush(updaters, updater);
-        if (!tdz) {
-          updater(value);
-        }
-      };
+        // Always register the updater function.
+        // If not in tdz, also update now.
+        const notify=  (updater)=>{
+          if( updater===  update) {
+            // Prevent recursion.
+            return;
+           }
+          arrayPush(updaters, updater);
+          if( !tdz) {
+            updater(value);
+           }
+         };
 
-      liveGetNotify = {
-        get,
-        notify };
-
-
-      localGetNotify[localName] = liveGetNotify;
-      if (setProxyTrap) {
-        defineProperty(localLexicals, localName, {
+        liveGetNotify=  {
           get,
-          set,
-          enumerable: true,
-          configurable: false });
-
-      }
-      liveVar[localName] = update;
-    }
-
-    exportsProps[liveExportName] = {
-      get: liveGetNotify.get,
-      set: undefined,
-      enumerable: true,
-      configurable: false };
+          notify};
 
 
-    notifiers[liveExportName] = liveGetNotify.notify;
-  });
+        localGetNotify[localName]=  liveGetNotify;
+        if( setProxyTrap) {
+          defineProperty(moduleLexicals, localName, {
+            get,
+            set,
+            enumerable: true,
+            configurable: false});
+
+         }
+        liveVar[localName]=  update;
+       }
+
+      exportsProps[liveExportName]=  {
+        get: liveGetNotify.get,
+        set: undefined,
+        enumerable: true,
+        configurable: false};
 
 
-  const notifyStar = (update) => {
+      notifiers[liveExportName]=  liveGetNotify.notify;
+     });
+
+
+  const notifyStar=  (update)=>{
     update(proxiedExports);
-  };
-  notifiers['*'] = notifyStar;
+   };
+  notifiers['*']=  notifyStar;
 
   // Per the calling convention for the moduleFunctor generated from
   // an ESM, the `imports` function gets called once up front
@@ -4758,59 +5038,68 @@ importedInstances) =>
     // notifiers = { [importName: string]: notify(update(newValue))}
 
     // export * cannot export default.
-    const candidateAll = create(null);
-    candidateAll.default = false;
-    for (const [specifier, importUpdaters] of updateRecord) {
-      const instance = mapGet(importedInstances, specifier);
+    const candidateAll=  create(null);
+    candidateAll.default=  false;
+    for( const [specifier, importUpdaters]of  updateRecord) {
+      const instance=  mapGet(importedInstances, specifier);
       // The module instance object is an internal literal, does not bind this,
       // and never revealed outside the SES shim.
       // There are two instantiation sites for instances and they are both in
       // this module.
       // eslint-disable-next-line @endo/no-polymorphic-call
       instance.execute(); // bottom up cycle tolerant
-      const { notifiers: importNotifiers } = instance;
-      for (const [importName, updaters] of importUpdaters) {
-        const importNotify = importNotifiers[importName];
-        if (!importNotify) {
+      const { notifiers: importNotifiers}=   instance;
+      for( const [importName, updaters]of  importUpdaters) {
+        const importNotify=  importNotifiers[importName];
+        if( !importNotify) {
           throw SyntaxError(
-          `The requested module '${specifier}' does not provide an export named '${importName}'`);
+             `The requested module '${specifier}' does not provide an export named '${importName}'`);
 
-        }
-        for (const updater of updaters) {
+         }
+        for( const updater of updaters) {
           importNotify(updater);
-        }
-      }
-      if (arrayIncludes(exportAlls, specifier)) {
+         }
+       }
+      if( arrayIncludes(exportAlls, specifier)) {
         // Make all these imports candidates.
-        for (const [importName, importNotify] of entries(importNotifiers)) {
-          if (candidateAll[importName] === undefined) {
-            candidateAll[importName] = importNotify;
-          } else {
+        // Note names don't change in reexporting all
+        for( const [importAndExportName, importNotify]of  entries(
+          importNotifiers))
+           {
+          if( candidateAll[importAndExportName]===  undefined) {
+            candidateAll[importAndExportName]=  importNotify;
+           }else {
             // Already a candidate: remove ambiguity.
-            candidateAll[importName] = false;
-          }
-        }
-      }
-    }
+            candidateAll[importAndExportName]=  false;
+           }
+         }
+       }
+      if( reexportMap[specifier]) {
+        // Make named reexports candidates too.
+        for( const [localName, exportedName]of  reexportMap[specifier]) {
+          candidateAll[exportedName]=  importNotifiers[localName];
+         }
+       }
+     }
 
-    for (const [importName, notify] of entries(candidateAll)) {
-      if (!notifiers[importName] && notify !== false) {
-        notifiers[importName] = notify;
+    for( const [exportName, notify]of  entries(candidateAll)) {
+      if( !notifiers[exportName]&&  notify!==  false) {
+        notifiers[exportName]=  notify;
 
         // exported live binding state
         let value;
-        const update = (newValue) => value = newValue;
+        const update=  (newValue)=> value=  newValue;
         notify(update);
-        exportsProps[importName] = {
+        exportsProps[exportName]=  {
           get() {
             return value;
-          },
+           },
           set: undefined,
           enumerable: true,
-          configurable: false };
+          configurable: false};
 
-      }
-    }
+       }
+     }
 
     // Sort the module exports namespace as per spec.
     // The module exports namespace will be wrapped in a module namespace
@@ -4821,56 +5110,57 @@ importedInstances) =>
     // since all properties of the exports namespace must be keyed by a string
     // and the string must correspond to a valid identifier, sorting these
     // properties works for this specific case.
-    arrayForEach(arraySort(keys(exportsProps)), (k) =>
-    defineProperty(proxiedExports, k, exportsProps[k]));
+    arrayForEach(arraySort(keys(exportsProps)), (k)=>
+      defineProperty(proxiedExports, k, exportsProps[k]));
 
 
     freeze(proxiedExports);
     activate();
-  }
+   }
 
-  let optFunctor = compartmentEvaluate(compartmentFields, functorSource, {
+  let optFunctor=  compartmentEvaluate(compartmentFields, functorSource, {
     globalObject: compartment.globalThis,
     transforms: __shimTransforms__,
-    __moduleShimLexicals__: localLexicals });
+    __moduleShimLexicals__: moduleLexicals});
 
-  let didThrow = false;
+  let didThrow=  false;
   let thrownError;
   function execute() {
-    if (optFunctor) {
+    if( optFunctor) {
       // uninitialized
-      const functor = optFunctor;
-      optFunctor = null;
+      const functor=  optFunctor;
+      optFunctor=  null;
       // initializing - call with `this` of `undefined`.
       try {
         functor(
-        freeze({
-          imports: freeze(imports),
-          onceVar: freeze(onceVar),
-          liveVar: freeze(liveVar) }));
+          freeze({
+            imports: freeze(imports),
+            onceVar: freeze(onceVar),
+            liveVar: freeze(liveVar),
+            importMeta}));
 
 
-      } catch (e) {
-        didThrow = true;
-        thrownError = e;
-      }
+       }catch( e) {
+        didThrow=  true;
+        thrownError=  e;
+       }
       // initialized
-    }
-    if (didThrow) {
+     }
+    if( didThrow) {
       throw thrownError;
-    }
-  }
+     }
+   }
 
   return freeze({
     notifiers,
     exportsProxy,
-    execute });
+    execute});
 
-};$h‍_once.makeModuleInstance(makeModuleInstance);
+ };$h‍_once.makeModuleInstance(makeModuleInstance);
 })
 ,
-// === functors[19] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let assert,makeModuleInstance,makeThirdPartyModuleInstance,Map,ReferenceError,TypeError,entries,isArray,isObject,mapGet,mapHas,mapSet,weakmapGet;$h‍_imports([["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./module-instance.js", [["makeModuleInstance", [$h‍_a => (makeModuleInstance = $h‍_a)]],["makeThirdPartyModuleInstance", [$h‍_a => (makeThirdPartyModuleInstance = $h‍_a)]]]],["./commons.js", [["Map", [$h‍_a => (Map = $h‍_a)]],["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["isArray", [$h‍_a => (isArray = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]]]]]);   
+// === functors[21] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let assert,makeModuleInstance,makeThirdPartyModuleInstance,Map,ReferenceError,TypeError,entries,isArray,isObject,mapGet,mapHas,mapSet,weakmapGet;$h‍_imports([["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./module-instance.js", [["makeModuleInstance", [$h‍_a => (makeModuleInstance = $h‍_a)]],["makeThirdPartyModuleInstance", [$h‍_a => (makeThirdPartyModuleInstance = $h‍_a)]]]],["./commons.js", [["Map", [$h‍_a => (Map = $h‍_a)]],["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["isArray", [$h‍_a => (isArray = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]]]]]);   
 
 
 
@@ -4898,7 +5188,7 @@ importedInstances) =>
 
 
 
-const { quote: q } = assert;
+const { Fail, quote: q}=   assert;
 
 // `link` creates `ModuleInstances` and `ModuleNamespaces` for a module and its
 // transitive dependencies and connects their imports and exports.
@@ -4906,169 +5196,151 @@ const { quote: q } = assert;
 // The linker only concerns itself with module namespaces that are objects with
 // property descriptors for their exports, which the Compartment proxies with
 // the actual `ModuleNamespace`.
-const link = (
-compartmentPrivateFields,
-moduleAliases,
-compartment,
-moduleSpecifier) =>
-{
-  const { name: compartmentName, moduleRecords } = weakmapGet(
+const        link=  (
   compartmentPrivateFields,
-  compartment);
+  moduleAliases,
+  compartment,
+  moduleSpecifier)=>
+     {
+  const { name: compartmentName, moduleRecords}=   weakmapGet(
+    compartmentPrivateFields,
+    compartment);
 
 
-  const moduleRecord = mapGet(moduleRecords, moduleSpecifier);
-  if (moduleRecord === undefined) {
+  const moduleRecord=  mapGet(moduleRecords, moduleSpecifier);
+  if( moduleRecord===  undefined) {
     throw new ReferenceError(
-    `Missing link to module ${q(moduleSpecifier)} from compartment ${q(
-    compartmentName)
-    }`);
+       `Missing link to module ${q(moduleSpecifier)} from compartment ${q(
+        compartmentName)
+        }`);
 
-  }
+   }
 
   // Mutual recursion so there's no confusion about which
   // compartment is in context: the module record may be in another
   // compartment, denoted by moduleRecord.compartment.
   // eslint-disable-next-line no-use-before-define
   return instantiate(compartmentPrivateFields, moduleAliases, moduleRecord);
-};$h‍_once.link(link);
+ };$h‍_once.link(link);
 
 function isPrecompiled(staticModuleRecord) {
-  return typeof staticModuleRecord.__syncModuleProgram__ === 'string';
-}
+  return typeof staticModuleRecord.__syncModuleProgram__===  'string';
+ }
 
 function validatePrecompiledStaticModuleRecord(
-staticModuleRecord,
-moduleSpecifier)
-{
-  const { __fixedExportMap__, __liveExportMap__ } = staticModuleRecord;
-  assert(
-  isObject(__fixedExportMap__),
-  `Property '__fixedExportMap__' of a precompiled module record must be an object, got ${q(
-  __fixedExportMap__)
-  }, for module ${q(moduleSpecifier)}`);
-
-  assert(
-  isObject(__liveExportMap__),
-  `Property '__liveExportMap__' of a precompiled module record must be an object, got ${q(
-  __liveExportMap__)
-  }, for module ${q(moduleSpecifier)}`);
-
-}
+  staticModuleRecord,
+  moduleSpecifier)
+  {
+  const { __fixedExportMap__, __liveExportMap__}=   staticModuleRecord;
+  isObject(__fixedExportMap__)||
+    Fail `Property '__fixedExportMap__' of a precompiled module record must be an object, got ${q(
+      __fixedExportMap__)
+      }, for module ${q(moduleSpecifier)}`;
+  isObject(__liveExportMap__)||
+    Fail `Property '__liveExportMap__' of a precompiled module record must be an object, got ${q(
+      __liveExportMap__)
+      }, for module ${q(moduleSpecifier)}`;
+ }
 
 function isThirdParty(staticModuleRecord) {
-  return typeof staticModuleRecord.execute === 'function';
-}
+  return typeof staticModuleRecord.execute===  'function';
+ }
 
 function validateThirdPartyStaticModuleRecord(
-staticModuleRecord,
-moduleSpecifier)
-{
-  const { exports } = staticModuleRecord;
-  assert(
-  isArray(exports),
-  `Property 'exports' of a third-party static module record must be an array, got ${q(
-  exports)
-  }, for module ${q(moduleSpecifier)}`);
-
-}
+  staticModuleRecord,
+  moduleSpecifier)
+  {
+  const { exports}=   staticModuleRecord;
+  isArray(exports)||
+    Fail `Property 'exports' of a third-party static module record must be an array, got ${q(
+      exports)
+      }, for module ${q(moduleSpecifier)}`;
+ }
 
 function validateStaticModuleRecord(staticModuleRecord, moduleSpecifier) {
-  assert(
-  isObject(staticModuleRecord),
-  `Static module records must be of type object, got ${q(
-  staticModuleRecord)
-  }, for module ${q(moduleSpecifier)}`);
+  isObject(staticModuleRecord)||
+    Fail `Static module records must be of type object, got ${q(
+      staticModuleRecord)
+      }, for module ${q(moduleSpecifier)}`;
+  const { imports, exports, reexports=  []}=   staticModuleRecord;
+  isArray(imports)||
+    Fail `Property 'imports' of a static module record must be an array, got ${q(
+      imports)
+      }, for module ${q(moduleSpecifier)}`;
+  isArray(exports)||
+    Fail `Property 'exports' of a precompiled module record must be an array, got ${q(
+      exports)
+      }, for module ${q(moduleSpecifier)}`;
+  isArray(reexports)||
+    Fail `Property 'reexports' of a precompiled module record must be an array if present, got ${q(
+      reexports)
+      }, for module ${q(moduleSpecifier)}`;
+ }
 
-  const { imports, exports, reexports = [] } = staticModuleRecord;
-  assert(
-  isArray(imports),
-  `Property 'imports' of a static module record must be an array, got ${q(
-  imports)
-  }, for module ${q(moduleSpecifier)}`);
-
-  assert(
-  isArray(exports),
-  `Property 'exports' of a precompiled module record must be an array, got ${q(
-  exports)
-  }, for module ${q(moduleSpecifier)}`);
-
-  assert(
-  isArray(reexports),
-  `Property 'reexports' of a precompiled module record must be an array if present, got ${q(
-  reexports)
-  }, for module ${q(moduleSpecifier)}`);
-
-}
-
-const instantiate = (
-compartmentPrivateFields,
-moduleAliases,
-moduleRecord) =>
-{
-  const {
-    compartment,
-    moduleSpecifier,
-    resolvedImports,
-    staticModuleRecord } =
-  moduleRecord;
-  const { instances } = weakmapGet(compartmentPrivateFields, compartment);
+const        instantiate=  (
+  compartmentPrivateFields,
+  moduleAliases,
+  moduleRecord)=>
+     {
+  const { compartment, moduleSpecifier, resolvedImports, staticModuleRecord}=
+    moduleRecord;
+  const { instances}=   weakmapGet(compartmentPrivateFields, compartment);
 
   // Memoize.
-  if (mapHas(instances, moduleSpecifier)) {
+  if( mapHas(instances, moduleSpecifier)) {
     return mapGet(instances, moduleSpecifier);
-  }
+   }
 
   validateStaticModuleRecord(staticModuleRecord, moduleSpecifier);
 
-  const importedInstances = new Map();
+  const importedInstances=  new Map();
   let moduleInstance;
-  if (isPrecompiled(staticModuleRecord)) {
+  if( isPrecompiled(staticModuleRecord)) {
     validatePrecompiledStaticModuleRecord(staticModuleRecord, moduleSpecifier);
-    moduleInstance = makeModuleInstance(
-    compartmentPrivateFields,
-    moduleAliases,
-    moduleRecord,
-    importedInstances);
+    moduleInstance=  makeModuleInstance(
+      compartmentPrivateFields,
+      moduleAliases,
+      moduleRecord,
+      importedInstances);
 
-  } else if (isThirdParty(staticModuleRecord)) {
+   }else if( isThirdParty(staticModuleRecord)) {
     validateThirdPartyStaticModuleRecord(staticModuleRecord, moduleSpecifier);
-    moduleInstance = makeThirdPartyModuleInstance(
-    compartmentPrivateFields,
-    staticModuleRecord,
-    compartment,
-    moduleAliases,
-    moduleSpecifier,
-    resolvedImports);
+    moduleInstance=  makeThirdPartyModuleInstance(
+      compartmentPrivateFields,
+      staticModuleRecord,
+      compartment,
+      moduleAliases,
+      moduleSpecifier,
+      resolvedImports);
 
-  } else {
+   }else {
     throw new TypeError(
-    `importHook must return a static module record, got ${q(
-    staticModuleRecord)
-    }`);
+       `importHook must return a static module record, got ${q(
+        staticModuleRecord)
+        }`);
 
-  }
+   }
 
   // Memoize.
   mapSet(instances, moduleSpecifier, moduleInstance);
 
   // Link dependency modules.
-  for (const [importSpecifier, resolvedSpecifier] of entries(resolvedImports)) {
-    const importedInstance = link(
-    compartmentPrivateFields,
-    moduleAliases,
-    compartment,
-    resolvedSpecifier);
+  for( const [importSpecifier, resolvedSpecifier]of  entries(resolvedImports)) {
+    const importedInstance=  link(
+      compartmentPrivateFields,
+      moduleAliases,
+      compartment,
+      resolvedSpecifier);
 
     mapSet(importedInstances, importSpecifier, importedInstance);
-  }
+   }
 
   return moduleInstance;
-};$h‍_once.instantiate(instantiate);
+ };$h‍_once.instantiate(instantiate);
 })
 ,
-// === functors[20] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Map,ReferenceError,TypeError,WeakMap,WeakSet,arrayFilter,arrayJoin,assign,defineProperties,entries,freeze,getOwnPropertyNames,promiseThen,weakmapGet,weakmapSet,weaksetHas,setGlobalObjectConstantProperties,setGlobalObjectMutableProperties,isValidIdentifierName,sharedGlobalPropertyNames,load,link,getDeferredExports,assert,compartmentEvaluate,makeSafeEvaluator;$h‍_imports([["./commons.js", [["Map", [$h‍_a => (Map = $h‍_a)]],["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["promiseThen", [$h‍_a => (promiseThen = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./global-object.js", [["setGlobalObjectConstantProperties", [$h‍_a => (setGlobalObjectConstantProperties = $h‍_a)]],["setGlobalObjectMutableProperties", [$h‍_a => (setGlobalObjectMutableProperties = $h‍_a)]]]],["./scope-constants.js", [["isValidIdentifierName", [$h‍_a => (isValidIdentifierName = $h‍_a)]]]],["./whitelist.js", [["sharedGlobalPropertyNames", [$h‍_a => (sharedGlobalPropertyNames = $h‍_a)]]]],["./module-load.js", [["load", [$h‍_a => (load = $h‍_a)]]]],["./module-link.js", [["link", [$h‍_a => (link = $h‍_a)]]]],["./module-proxy.js", [["getDeferredExports", [$h‍_a => (getDeferredExports = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./compartment-evaluate.js", [["compartmentEvaluate", [$h‍_a => (compartmentEvaluate = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]]]);   
+// === functors[22] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Map,ReferenceError,TypeError,WeakMap,assign,defineProperties,entries,promiseThen,weakmapGet,weakmapSet,setGlobalObjectSymbolUnscopables,setGlobalObjectConstantProperties,setGlobalObjectMutableProperties,setGlobalObjectEvaluators,sharedGlobalPropertyNames,load,link,getDeferredExports,assert,compartmentEvaluate,makeSafeEvaluator;$h‍_imports([["./commons.js", [["Map", [$h‍_a => (Map = $h‍_a)]],["ReferenceError", [$h‍_a => (ReferenceError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["promiseThen", [$h‍_a => (promiseThen = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]]]],["./global-object.js", [["setGlobalObjectSymbolUnscopables", [$h‍_a => (setGlobalObjectSymbolUnscopables = $h‍_a)]],["setGlobalObjectConstantProperties", [$h‍_a => (setGlobalObjectConstantProperties = $h‍_a)]],["setGlobalObjectMutableProperties", [$h‍_a => (setGlobalObjectMutableProperties = $h‍_a)]],["setGlobalObjectEvaluators", [$h‍_a => (setGlobalObjectEvaluators = $h‍_a)]]]],["./whitelist.js", [["sharedGlobalPropertyNames", [$h‍_a => (sharedGlobalPropertyNames = $h‍_a)]]]],["./module-load.js", [["load", [$h‍_a => (load = $h‍_a)]]]],["./module-link.js", [["link", [$h‍_a => (link = $h‍_a)]]]],["./module-proxy.js", [["getDeferredExports", [$h‍_a => (getDeferredExports = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]],["./compartment-evaluate.js", [["compartmentEvaluate", [$h‍_a => (compartmentEvaluate = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]]]);   
 
 
 
@@ -5098,12 +5370,7 @@ moduleRecord) =>
 
 
 
-
-
-
-
-
-const { quote: q } = assert;
+const { quote: q}=   assert;
 
 // moduleAliases associates every public module exports namespace with its
 // corresponding compartment and specifier so they can be used to link modules
@@ -5111,10 +5378,10 @@ const { quote: q } = assert;
 // The mechanism to thread an alias is to use the compartment.module function
 // to obtain the exports namespace of a foreign module and pass it into another
 // compartment's moduleMap constructor option.
-const moduleAliases = new WeakMap();
+const moduleAliases=  new WeakMap();
 
 // privateFields captures the private state for each compartment.
-const privateFields = new WeakMap();
+const privateFields=  new WeakMap();
 
 /**
  * @typedef {(source: string) => string} Transform
@@ -5124,50 +5391,50 @@ const privateFields = new WeakMap();
 // as a vessel for evaluating programs.
 // However, any method that operates the module system will throw an exception
 // if these hooks are not available.
-const assertModuleHooks = (compartment) => {
-  const { importHook, resolveHook } = weakmapGet(privateFields, compartment);
-  if (typeof importHook !== 'function' || typeof resolveHook !== 'function') {
+const assertModuleHooks=  (compartment)=>{
+  const { importHook, resolveHook}=   weakmapGet(privateFields, compartment);
+  if( typeof importHook!==  'function'||  typeof resolveHook!==  'function') {
     throw new TypeError(
-    'Compartment must be constructed with an importHook and a resolveHook for it to be able to load modules');
+      'Compartment must be constructed with an importHook and a resolveHook for it to be able to load modules');
 
-  }
-};
+   }
+ };
 
-const InertCompartment = function Compartment(
-_endowments = {},
-_modules = {},
-_options = {})
-{
+const        InertCompartment=  function Compartment(
+  _endowments=  {},
+  _modules=  {},
+  _options=  {})
+  {
   throw new TypeError(
-  'Compartment.prototype.constructor is not a valid constructor.');
+    'Compartment.prototype.constructor is not a valid constructor.');
 
-};$h‍_once.InertCompartment(InertCompartment);
+ };
 
 /**
  * @param {Compartment} compartment
  * @param {string} specifier
- */
-const compartmentImportNow = (compartment, specifier) => {
-  const { execute, exportsProxy } = link(
-  privateFields,
-  moduleAliases,
-  compartment,
-  specifier);
+ */$h‍_once.InertCompartment(InertCompartment);
+const compartmentImportNow=  (compartment, specifier)=>  {
+  const { execute, exportsProxy}=   link(
+    privateFields,
+    moduleAliases,
+    compartment,
+    specifier);
 
   execute();
   return exportsProxy;
-};
+ };
 
-const CompartmentPrototype = {
+const        CompartmentPrototype=  {
   constructor: InertCompartment,
 
   get globalThis() {
     return weakmapGet(privateFields, this).globalObject;
-  },
+   },
 
   get name() {
     return weakmapGet(privateFields, this).name;
-  },
+   },
 
   /**
    * @param {string} source is a JavaScript program grammar construction.
@@ -5179,79 +5446,76 @@ const CompartmentPrototype = {
    * @param {boolean} [options.__evadeImportExpressionTest__]
    * @param {boolean} [options.__rejectSomeDirectEvalExpressions__]
    */
-  evaluate(source, options = {}) {
-    const compartmentFields = weakmapGet(privateFields, this);
+  evaluate(source, options=  {}) {
+    const compartmentFields=  weakmapGet(privateFields, this);
     return compartmentEvaluate(compartmentFields, source, options);
-  },
+   },
 
   toString() {
     return '[object Compartment]';
-  },
-
-  /* eslint-disable-next-line no-underscore-dangle */
-  __isKnownScopeProxy__(value) {
-    const { knownScopeProxies } = weakmapGet(privateFields, this);
-    return weaksetHas(knownScopeProxies, value);
-  },
+   },
 
   module(specifier) {
-    if (typeof specifier !== 'string') {
+    if( typeof specifier!==  'string') {
       throw new TypeError('first argument of module() must be a string');
-    }
+     }
 
     assertModuleHooks(this);
 
-    const { exportsProxy } = getDeferredExports(
-    this,
-    weakmapGet(privateFields, this),
-    moduleAliases,
-    specifier);
+    const { exportsProxy}=   getDeferredExports(
+      this,
+      weakmapGet(privateFields, this),
+      moduleAliases,
+      specifier);
 
 
     return exportsProxy;
-  },
+   },
 
-  async import(specifier) {
-    if (typeof specifier !== 'string') {
+        async import(specifier){
+    if( typeof specifier!==  'string') {
       throw new TypeError('first argument of import() must be a string');
-    }
+     }
 
     assertModuleHooks(this);
 
     return promiseThen(
-    load(privateFields, moduleAliases, this, specifier),
-    () => {
-      // The namespace box is a contentious design and likely to be a breaking
-      // change in an appropriately numbered future version.
-      const namespace = compartmentImportNow(this, specifier);
-      return { namespace };
-    });
+      load(privateFields, moduleAliases, this, specifier),
+      ()=>  {
+        // The namespace box is a contentious design and likely to be a breaking
+        // change in an appropriately numbered future version.
+        const namespace=  compartmentImportNow(
+          /** @type {Compartment} */  this,
+          specifier);
 
-  },
+        return { namespace};
+       });
 
-  async load(specifier) {
-    if (typeof specifier !== 'string') {
+   },
+
+        async load(specifier){
+    if( typeof specifier!==  'string') {
       throw new TypeError('first argument of load() must be a string');
-    }
+     }
 
     assertModuleHooks(this);
 
     return load(privateFields, moduleAliases, this, specifier);
-  },
+   },
 
   importNow(specifier) {
-    if (typeof specifier !== 'string') {
+    if( typeof specifier!==  'string') {
       throw new TypeError('first argument of importNow() must be a string');
-    }
+     }
 
     assertModuleHooks(this);
 
-    return compartmentImportNow(this, specifier);
-  } };$h‍_once.CompartmentPrototype(CompartmentPrototype);
+    return compartmentImportNow(/** @type {Compartment} */  this,  specifier);
+   }};$h‍_once.CompartmentPrototype(CompartmentPrototype);
 
 
 defineProperties(InertCompartment, {
-  prototype: { value: CompartmentPrototype } });
+  prototype: { value: CompartmentPrototype}});
 
 
 /**
@@ -5263,84 +5527,64 @@ defineProperties(InertCompartment, {
  */
 
 /** @type {MakeCompartmentConstructor} */
-const makeCompartmentConstructor = (
-targetMakeCompartmentConstructor,
-intrinsics,
-markVirtualizedNativeFunction) =>
-{
-  function Compartment(endowments = {}, moduleMap = {}, options = {}) {
-    if (new.target === undefined) {
+const        makeCompartmentConstructor=  (
+  targetMakeCompartmentConstructor,
+  intrinsics,
+  markVirtualizedNativeFunction)=>
+     {
+  function Compartment(endowments=  {}, moduleMap=  {}, options=  {}) {
+    if( new.target===  undefined) {
       throw new TypeError(
-      "Class constructor Compartment cannot be invoked without 'new'");
+        "Class constructor Compartment cannot be invoked without 'new'");
 
-    }
+     }
 
     // Extract options, and shallow-clone transforms.
     const {
-      name = '<unknown>',
-      transforms = [],
-      __shimTransforms__ = [],
-      globalLexicals: globalLexicalsOption = {},
+      name=  '<unknown>',
+      transforms=  [],
+      __shimTransforms__=  [],
       resolveHook,
       importHook,
-      moduleMapHook } =
-    options;
-    const globalTransforms = [...transforms, ...__shimTransforms__];
+      moduleMapHook,
+      importMetaHook}=
+        options;
+    const globalTransforms=  [...transforms, ...__shimTransforms__];
 
     // Map<FullSpecifier, ModuleCompartmentRecord>
-    const moduleRecords = new Map();
+    const moduleRecords=  new Map();
     // Map<FullSpecifier, ModuleInstance>
-    const instances = new Map();
+    const instances=  new Map();
     // Map<FullSpecifier, {ExportsProxy, ProxiedExports, activate()}>
-    const deferredExports = new Map();
+    const deferredExports=  new Map();
 
     // Validate given moduleMap.
     // The module map gets translated on-demand in module-load.js and the
     // moduleMap can be invalid in ways that cannot be detected in the
     // constructor, but these checks allow us to throw early for a better
     // developer experience.
-    for (const [specifier, aliasNamespace] of entries(moduleMap || {})) {
-      if (typeof aliasNamespace === 'string') {
+    for( const [specifier, aliasNamespace]of  entries(moduleMap||  {})) {
+      if( typeof aliasNamespace===  'string') {
         // TODO implement parent module record retrieval.
         throw new TypeError(
-        `Cannot map module ${q(specifier)} to ${q(
-        aliasNamespace)
-        } in parent compartment`);
+           `Cannot map module ${q(specifier)} to ${q(
+            aliasNamespace)
+            } in parent compartment`);
 
-      } else if (weakmapGet(moduleAliases, aliasNamespace) === undefined) {
+       }else if( weakmapGet(moduleAliases, aliasNamespace)===  undefined) {
         // TODO create and link a synthetic module instance from the given
         // namespace object.
         throw ReferenceError(
-        `Cannot map module ${q(
-        specifier)
-        } because it has no known compartment in this realm`);
+           `Cannot map module ${q(
+            specifier)
+            } because it has no known compartment in this realm`);
 
-      }
-    }
+       }
+     }
 
-    const invalidNames = arrayFilter(
-    getOwnPropertyNames(globalLexicalsOption),
-    (identifier) => !isValidIdentifierName(identifier));
+    const globalObject=  {};
 
-    if (invalidNames.length) {
-      throw new TypeError(
-      `Cannot create compartment with invalid names for global lexicals: ${arrayJoin(
-      invalidNames,
-      ', ')
-      }; these names would not be lexically mentionable`);
-
-    }
-    // The caller continues to own the globalLexicals object they passed to
-    // the compartment constructor, but the compartment only respects the
-    // original values and they are constants in the scope of evaluated
-    // programs and executed modules.
-    // This shallow copy captures only the values of enumerable own
-    // properties, erasing accessors.
-    // The snapshot is frozen to ensure that the properties are immutable
-    // when transferred-by-property-descriptor onto local scope objects.
-    const globalLexicals = freeze({ ...globalLexicalsOption });
-
-    const globalObject = {};
+    setGlobalObjectSymbolUnscopables(globalObject);
 
     // We must initialize all constant properties first because
     // `makeSafeEvaluator` may use them to create optimized bindings
@@ -5349,51 +5593,53 @@ markVirtualizedNativeFunction) =>
     // evaluator is no longer eagerly created
     setGlobalObjectConstantProperties(globalObject);
 
-    const knownScopeProxies = new WeakSet();
-    const { safeEvaluate } = makeSafeEvaluator({
+    const { safeEvaluate}=   makeSafeEvaluator({
       globalObject,
-      localObject: globalLexicals,
       globalTransforms,
-      sloppyGlobalsMode: false,
-      knownScopeProxies });
+      sloppyGlobalsMode: false});
 
 
     setGlobalObjectMutableProperties(globalObject, {
       intrinsics,
       newGlobalPropertyNames: sharedGlobalPropertyNames,
       makeCompartmentConstructor: targetMakeCompartmentConstructor,
+      markVirtualizedNativeFunction});
+
+
+    // TODO: maybe add evalTaming to the Compartment constructor 3rd options?
+    setGlobalObjectEvaluators(
+      globalObject,
       safeEvaluate,
-      markVirtualizedNativeFunction });
+      markVirtualizedNativeFunction);
 
 
     assign(globalObject, endowments);
 
     weakmapSet(privateFields, this, {
-      name,
+      name:  `${name}`,
       globalTransforms,
       globalObject,
-      knownScopeProxies,
-      globalLexicals,
       safeEvaluate,
       resolveHook,
       importHook,
       moduleMap,
       moduleMapHook,
+      importMetaHook,
       moduleRecords,
       __shimTransforms__,
       deferredExports,
-      instances });
+      instances});
 
-  }
+   }
 
-  Compartment.prototype = CompartmentPrototype;
+  Compartment.prototype=  CompartmentPrototype;
 
   return Compartment;
-};$h‍_once.makeCompartmentConstructor(makeCompartmentConstructor);
+ };$h‍_once.makeCompartmentConstructor(makeCompartmentConstructor);
 })
 ,
-// === functors[21] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let TypeError,WeakSet,arrayFilter,defineProperty,entries,freeze,getOwnPropertyDescriptor,getOwnPropertyDescriptors,globalThis,is,isObject,objectHasOwnProperty,values,weaksetHas,constantProperties,sharedGlobalPropertyNames,universalPropertyNames,whitelist;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["values", [$h‍_a => (values = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./whitelist.js", [["constantProperties", [$h‍_a => (constantProperties = $h‍_a)]],["sharedGlobalPropertyNames", [$h‍_a => (sharedGlobalPropertyNames = $h‍_a)]],["universalPropertyNames", [$h‍_a => (universalPropertyNames = $h‍_a)]],["whitelist", [$h‍_a => (whitelist = $h‍_a)]]]]]);   
+// === functors[23] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let TypeError,WeakSet,arrayFilter,defineProperty,entries,freeze,getOwnPropertyDescriptor,getOwnPropertyDescriptors,globalThis,is,isObject,objectHasOwnProperty,values,weaksetHas,constantProperties,sharedGlobalPropertyNames,universalPropertyNames,whitelist;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["values", [$h‍_a => (values = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./whitelist.js", [["constantProperties", [$h‍_a => (constantProperties = $h‍_a)]],["sharedGlobalPropertyNames", [$h‍_a => (sharedGlobalPropertyNames = $h‍_a)]],["universalPropertyNames", [$h‍_a => (universalPropertyNames = $h‍_a)]],["whitelist", [$h‍_a => (whitelist = $h‍_a)]]]]]);   
 
 
 
@@ -5417,7 +5663,7 @@ markVirtualizedNativeFunction) =>
 
 
 
-const isFunction = (obj) => typeof obj === 'function';
+const isFunction=  (obj)=>typeof obj===  'function';
 
 // Like defineProperty, but throws if it would modify an existing property.
 // We use this to ensure that two conflicting attempts to define the same
@@ -5426,115 +5672,115 @@ const isFunction = (obj) => typeof obj === 'function';
 // get masked as one overwrites the other. Accordingly, the thrown error
 // complains of a "Conflicting definition".
 function initProperty(obj, name, desc) {
-  if (objectHasOwnProperty(obj, name)) {
-    const preDesc = getOwnPropertyDescriptor(obj, name);
-    if (
-    !is(preDesc.value, desc.value) ||
-    preDesc.get !== desc.get ||
-    preDesc.set !== desc.set ||
-    preDesc.writable !== desc.writable ||
-    preDesc.enumerable !== desc.enumerable ||
-    preDesc.configurable !== desc.configurable)
-    {
-      throw new TypeError(`Conflicting definitions of ${name}`);
-    }
-  }
+  if( objectHasOwnProperty(obj, name)) {
+    const preDesc=  getOwnPropertyDescriptor(obj, name);
+    if(
+      !is(preDesc.value, desc.value)||
+      preDesc.get!==  desc.get||
+      preDesc.set!==  desc.set||
+      preDesc.writable!==  desc.writable||
+      preDesc.enumerable!==  desc.enumerable||
+      preDesc.configurable!==  desc.configurable)
+      {
+      throw new TypeError( `Conflicting definitions of ${name}`);
+     }
+   }
   defineProperty(obj, name, desc);
-}
+ }
 
 // Like defineProperties, but throws if it would modify an existing property.
 // This ensures that the intrinsics added to the intrinsics collector object
 // graph do not overlap.
 function initProperties(obj, descs) {
-  for (const [name, desc] of entries(descs)) {
+  for( const [name, desc]of  entries(descs)) {
     initProperty(obj, name, desc);
-  }
-}
+   }
+ }
 
 // sampleGlobals creates an intrinsics object, suitable for
 // interinsicsCollector.addIntrinsics, from the named properties of a global
 // object.
 function sampleGlobals(globalObject, newPropertyNames) {
-  const newIntrinsics = { __proto__: null };
-  for (const [globalName, intrinsicName] of entries(newPropertyNames)) {
-    if (objectHasOwnProperty(globalObject, globalName)) {
-      newIntrinsics[intrinsicName] = globalObject[globalName];
-    }
-  }
+  const newIntrinsics=  { __proto__: null};
+  for( const [globalName, intrinsicName]of  entries(newPropertyNames)) {
+    if( objectHasOwnProperty(globalObject, globalName)) {
+      newIntrinsics[intrinsicName]=  globalObject[globalName];
+     }
+   }
   return newIntrinsics;
-}
+ }
 
-const makeIntrinsicsCollector = () => {
-  const intrinsics = { __proto__: null };
+const        makeIntrinsicsCollector=  ()=>  {
+  const intrinsics=  { __proto__: null};
   let pseudoNatives;
 
-  const addIntrinsics = (newIntrinsics) => {
+  const addIntrinsics=  (newIntrinsics)=>{
     initProperties(intrinsics, getOwnPropertyDescriptors(newIntrinsics));
-  };
+   };
   freeze(addIntrinsics);
 
   // For each intrinsic, if it has a `.prototype` property, use the
   // whitelist to find out the intrinsic name for that prototype and add it
   // to the intrinsics.
-  const completePrototypes = () => {
-    for (const [name, intrinsic] of entries(intrinsics)) {
-      if (!isObject(intrinsic)) {
+  const completePrototypes=  ()=>  {
+    for( const [name, intrinsic]of  entries(intrinsics)) {
+      if( !isObject(intrinsic)) {
         // eslint-disable-next-line no-continue
         continue;
-      }
-      if (!objectHasOwnProperty(intrinsic, 'prototype')) {
+       }
+      if( !objectHasOwnProperty(intrinsic, 'prototype')) {
         // eslint-disable-next-line no-continue
         continue;
-      }
-      const permit = whitelist[name];
-      if (typeof permit !== 'object') {
-        throw new TypeError(`Expected permit object at whitelist.${name}`);
-      }
-      const namePrototype = permit.prototype;
-      if (!namePrototype) {
-        throw new TypeError(`${name}.prototype property not whitelisted`);
-      }
-      if (
-      typeof namePrototype !== 'string' ||
-      !objectHasOwnProperty(whitelist, namePrototype))
-      {
-        throw new TypeError(`Unrecognized ${name}.prototype whitelist entry`);
-      }
-      const intrinsicPrototype = intrinsic.prototype;
-      if (objectHasOwnProperty(intrinsics, namePrototype)) {
-        if (intrinsics[namePrototype] !== intrinsicPrototype) {
-          throw new TypeError(`Conflicting bindings of ${namePrototype}`);
-        }
+       }
+      const permit=  whitelist[name];
+      if( typeof permit!==  'object') {
+        throw new TypeError( `Expected permit object at whitelist.${name}`);
+       }
+      const namePrototype=  permit.prototype;
+      if( !namePrototype) {
+        throw new TypeError( `${name}.prototype property not whitelisted`);
+       }
+      if(
+        typeof namePrototype!==  'string'||
+        !objectHasOwnProperty(whitelist, namePrototype))
+        {
+        throw new TypeError( `Unrecognized ${name}.prototype whitelist entry`);
+       }
+      const intrinsicPrototype=  intrinsic.prototype;
+      if( objectHasOwnProperty(intrinsics, namePrototype)) {
+        if( intrinsics[namePrototype]!==  intrinsicPrototype) {
+          throw new TypeError( `Conflicting bindings of ${namePrototype}`);
+         }
         // eslint-disable-next-line no-continue
         continue;
-      }
-      intrinsics[namePrototype] = intrinsicPrototype;
-    }
-  };
+       }
+      intrinsics[namePrototype]=  intrinsicPrototype;
+     }
+   };
   freeze(completePrototypes);
 
-  const finalIntrinsics = () => {
+  const finalIntrinsics=  ()=>  {
     freeze(intrinsics);
-    pseudoNatives = new WeakSet(arrayFilter(values(intrinsics), isFunction));
+    pseudoNatives=  new WeakSet(arrayFilter(values(intrinsics), isFunction));
     return intrinsics;
-  };
+   };
   freeze(finalIntrinsics);
 
-  const isPseudoNative = (obj) => {
-    if (!pseudoNatives) {
+  const isPseudoNative=  (obj)=>{
+    if( !pseudoNatives) {
       throw new TypeError(
-      'isPseudoNative can only be called after finalIntrinsics');
+        'isPseudoNative can only be called after finalIntrinsics');
 
-    }
+     }
     return weaksetHas(pseudoNatives, obj);
-  };
+   };
   freeze(isPseudoNative);
 
-  const intrinsicsCollector = {
+  const intrinsicsCollector=  {
     addIntrinsics,
     completePrototypes,
     finalIntrinsics,
-    isPseudoNative };
+    isPseudoNative};
 
   freeze(intrinsicsCollector);
 
@@ -5542,7 +5788,7 @@ const makeIntrinsicsCollector = () => {
   addIntrinsics(sampleGlobals(globalThis, universalPropertyNames));
 
   return intrinsicsCollector;
-};$h‍_once.makeIntrinsicsCollector(makeIntrinsicsCollector);
+ };
 
 /**
  * getGlobalIntrinsics()
@@ -5556,18 +5802,18 @@ const makeIntrinsicsCollector = () => {
  * *original* unsafe (feral, untamed) bindings of these global variables.
  *
  * @param {Object} globalObject
- */
-const getGlobalIntrinsics = (globalObject) => {
-  const { addIntrinsics, finalIntrinsics } = makeIntrinsicsCollector();
+ */$h‍_once.makeIntrinsicsCollector(makeIntrinsicsCollector);
+const        getGlobalIntrinsics=  (globalObject)=>{
+  const { addIntrinsics, finalIntrinsics}=   makeIntrinsicsCollector();
 
   addIntrinsics(sampleGlobals(globalObject, sharedGlobalPropertyNames));
 
   return finalIntrinsics();
-};$h‍_once.getGlobalIntrinsics(getGlobalIntrinsics);
+ };$h‍_once.getGlobalIntrinsics(getGlobalIntrinsics);
 })
 ,
-// === functors[22] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   $h‍_imports([]);   /**
+// === functors[24] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   $h‍_imports([]);   /**
  * @file Exports {@code enablements}, a recursively defined
  * JSON record defining the optimum set of intrinsics properties
  * that need to be "repaired" before hardening is applied on
@@ -5631,33 +5877,33 @@ const getGlobalIntrinsics = (globalObject) => {
  * step into the override mistake, except for the following pervasive
  * cases.
  */
-const minEnablements = {
+const        minEnablements=  {
   '%ObjectPrototype%': {
-    toString: true },
+    toString: true},
 
 
   '%FunctionPrototype%': {
-    toString: true // set by "rollup"
-  },
+    toString: true  // set by "rollup"
+},
 
   '%ErrorPrototype%': {
-    name: true // set by "precond", "ava", "node-fetch"
-  } };$h‍_once.minEnablements(minEnablements);
+    name: true  // set by "precond", "ava", "node-fetch"
+}};
 
 
 /**
  * Moderate enablements are usually good enough for legacy compat.
- */
-const moderateEnablements = {
+ */$h‍_once.minEnablements(minEnablements);
+const        moderateEnablements=  {
   '%ObjectPrototype%': {
     toString: true,
-    valueOf: true },
+    valueOf: true},
 
 
   '%ArrayPrototype%': {
     toString: true,
-    push: true // set by "Google Analytics"
-  },
+    push: true  // set by "Google Analytics"
+},
 
   // Function.prototype has no 'prototype' property to enable.
   // Function instances have their own 'name' and 'length' properties
@@ -5666,61 +5912,61 @@ const moderateEnablements = {
   '%FunctionPrototype%': {
     constructor: true, // set by "regenerator-runtime"
     bind: true, // set by "underscore", "express"
-    toString: true // set by "rollup"
-  },
+    toString: true  // set by "rollup"
+},
 
   '%ErrorPrototype%': {
     constructor: true, // set by "fast-json-patch", "node-fetch"
     message: true,
     name: true, // set by "precond", "ava", "node-fetch", "node 14"
-    toString: true // set by "bluebird"
-  },
+    toString: true  // set by "bluebird"
+},
 
   '%TypeErrorPrototype%': {
     constructor: true, // set by "readable-stream"
     message: true, // set by "tape"
-    name: true // set by "readable-stream", "node 14"
-  },
+    name: true  // set by "readable-stream", "node 14"
+},
 
   '%SyntaxErrorPrototype%': {
     message: true, // to match TypeErrorPrototype.message
-    name: true // set by "node 14"
-  },
+    name: true  // set by "node 14"
+},
 
   '%RangeErrorPrototype%': {
     message: true, // to match TypeErrorPrototype.message
-    name: true // set by "node 14"
-  },
+    name: true  // set by "node 14"
+},
 
   '%URIErrorPrototype%': {
     message: true, // to match TypeErrorPrototype.message
-    name: true // set by "node 14"
-  },
+    name: true  // set by "node 14"
+},
 
   '%EvalErrorPrototype%': {
     message: true, // to match TypeErrorPrototype.message
-    name: true // set by "node 14"
-  },
+    name: true  // set by "node 14"
+},
 
   '%ReferenceErrorPrototype%': {
     message: true, // to match TypeErrorPrototype.message
-    name: true // set by "node 14"
-  },
+    name: true  // set by "node 14"
+},
 
   '%PromisePrototype%': {
-    constructor: true // set by "core-js"
-  },
+    constructor: true  // set by "core-js"
+},
 
   '%TypedArrayPrototype%': '*', // set by https://github.com/feross/buffer
 
   '%Generator%': {
     constructor: true,
     name: true,
-    toString: true },
+    toString: true},
 
 
   '%IteratorPrototype%': {
-    toString: true } };$h‍_once.moderateEnablements(moderateEnablements);
+    toString: true}};
 
 
 
@@ -5729,27 +5975,32 @@ const moderateEnablements = {
  * https://github.com/endojs/endo/issues/576
  *
  * They are like the `moderate` enablements except for the entries below.
- */
-const severeEnablements = {
+ */$h‍_once.moderateEnablements(moderateEnablements);
+const        severeEnablements=  {
   ...moderateEnablements,
 
   /**
-   * Rollup(as used at least by vega) and webpack
+   * Rollup (as used at least by vega) and webpack
    * (as used at least by regenerator) both turn exports into assignments
    * to a big `exports` object that inherits directly from
-   * `Object.prototype`.Some of the exported names we've seen include
+   * `Object.prototype`. Some of the exported names we've seen include
    * `hasOwnProperty`, `constructor`, and `toString`. But the strategy used
-   * by rollup and webpack means potentionally turns any exported name
-   * into an assignment rejected by the override mistake.That's why
-   * we take the extreme step of enabling everything on`Object.prototype`.
+   * by rollup and webpack potentionally turns any exported name
+   * into an assignment rejected by the override mistake. That's why
+   * the `severe` enablements takes the extreme step of enabling
+   * everything on `Object.prototype`.
    *
    * In addition, code doing inheritance manually will often override
    * the `constructor` property on the new prototype by assignment. We've
    * seen this several times.
    *
    * The cost of enabling all these is that they create a miserable debugging
-   * experience. https://github.com/Agoric/agoric-sdk/issues/2324 explains
-   * how it confused the Node console.
+   * experience specifically on Node.
+   * https://github.com/Agoric/agoric-sdk/issues/2324
+   * explains how it confused the Node console.
+   *
+   * (TODO Reexamine the vscode situation. I think it may have improved
+   * since the following paragraph was written.)
    *
    * The vscode debugger's object inspector shows the own data properties of
    * an object, which is typically what you want, but also shows both getter
@@ -5766,14 +6017,14 @@ const severeEnablements = {
    * The widely used Buffer defined at https://github.com/feross/buffer
    * on initialization, manually creates the equivalent of a subclass of
    * `TypedArray`, which it then initializes by assignment. These assignments
-   * include enough of the `TypeArray` methods that here, we just enable
-   * them all.
+   * include enough of the `TypeArray` methods that here, the `severe`
+   * enablements just enable them all.
    */
-  '%TypedArrayPrototype%': '*' };$h‍_once.severeEnablements(severeEnablements);
+  '%TypedArrayPrototype%': '*'};$h‍_once.severeEnablements(severeEnablements);
 })
 ,
-// === functors[23] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Set,String,TypeError,arrayForEach,defineProperty,getOwnPropertyDescriptor,getOwnPropertyDescriptors,getOwnPropertyNames,isObject,objectHasOwnProperty,ownKeys,setHas,minEnablements,moderateEnablements,severeEnablements;$h‍_imports([["./commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]]]],["./enablements.js", [["minEnablements", [$h‍_a => (minEnablements = $h‍_a)]],["moderateEnablements", [$h‍_a => (moderateEnablements = $h‍_a)]],["severeEnablements", [$h‍_a => (severeEnablements = $h‍_a)]]]]]);   
+// === functors[25] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Set,String,TypeError,arrayForEach,defineProperty,getOwnPropertyDescriptor,getOwnPropertyDescriptors,getOwnPropertyNames,isObject,objectHasOwnProperty,ownKeys,setHas,minEnablements,moderateEnablements,severeEnablements;$h‍_imports([["./commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]]]],["./enablements.js", [["minEnablements", [$h‍_a => (minEnablements = $h‍_a)]],["moderateEnablements", [$h‍_a => (moderateEnablements = $h‍_a)]],["severeEnablements", [$h‍_a => (severeEnablements = $h‍_a)]]]]]);   
 
 
 
@@ -5853,141 +6104,141 @@ const severeEnablements = {
  * @param {'min' | 'moderate' | 'severe'} overrideTaming
  * @param {Iterable<string | symbol>} [overrideDebug]
  */
-function enablePropertyOverrides(
-intrinsics,
-overrideTaming,
-overrideDebug = [])
-{
-  const debugProperties = new Set(overrideDebug);
+function                enablePropertyOverrides(
+  intrinsics,
+  overrideTaming,
+  overrideDebug=  [])
+  {
+  const debugProperties=  new Set(overrideDebug);
   function enable(path, obj, prop, desc) {
-    if ('value' in desc && desc.configurable) {
-      const { value } = desc;
+    if( 'value'in  desc&&  desc.configurable) {
+      const { value}=   desc;
 
       function getter() {
         return value;
-      }
+       }
       defineProperty(getter, 'originalValue', {
         value,
         writable: false,
         enumerable: false,
-        configurable: false });
+        configurable: false});
 
 
-      const isDebug = setHas(debugProperties, prop);
+      const isDebug=  setHas(debugProperties, prop);
 
       function setter(newValue) {
-        if (obj === this) {
+        if( obj===  this) {
           throw new TypeError(
-          `Cannot assign to read only property '${String(
-          prop)
-          }' of '${path}'`);
+             `Cannot assign to read only property '${String(
+              prop)
+              }' of '${path}'`);
 
-        }
-        if (objectHasOwnProperty(this, prop)) {
-          this[prop] = newValue;
-        } else {
-          if (isDebug) {
+         }
+        if( objectHasOwnProperty(this, prop)) {
+          this[prop]=  newValue;
+         }else {
+          if( isDebug) {
             // eslint-disable-next-line @endo/no-polymorphic-call
-            console.error(new TypeError(`Override property ${prop}`));
-          }
+            console.error(new TypeError( `Override property ${prop}`));
+           }
           defineProperty(this, prop, {
             value: newValue,
             writable: true,
             enumerable: true,
-            configurable: true });
+            configurable: true});
 
-        }
-      }
+         }
+       }
 
       defineProperty(obj, prop, {
         get: getter,
         set: setter,
         enumerable: desc.enumerable,
-        configurable: desc.configurable });
+        configurable: desc.configurable});
 
-    }
-  }
+     }
+   }
 
   function enableProperty(path, obj, prop) {
-    const desc = getOwnPropertyDescriptor(obj, prop);
-    if (!desc) {
+    const desc=  getOwnPropertyDescriptor(obj, prop);
+    if( !desc) {
       return;
-    }
+     }
     enable(path, obj, prop, desc);
-  }
+   }
 
   function enableAllProperties(path, obj) {
-    const descs = getOwnPropertyDescriptors(obj);
-    if (!descs) {
+    const descs=  getOwnPropertyDescriptors(obj);
+    if( !descs) {
       return;
-    }
+     }
     // TypeScript does not allow symbols to be used as indexes because it
     // cannot recokon types of symbolized properties.
     // @ts-ignore
-    arrayForEach(ownKeys(descs), (prop) => enable(path, obj, prop, descs[prop]));
-  }
+    arrayForEach(ownKeys(descs), (prop)=>enable(path, obj, prop, descs[prop]));
+   }
 
   function enableProperties(path, obj, plan) {
-    for (const prop of getOwnPropertyNames(plan)) {
-      const desc = getOwnPropertyDescriptor(obj, prop);
-      if (!desc || desc.get || desc.set) {
+    for( const prop of getOwnPropertyNames(plan)) {
+      const desc=  getOwnPropertyDescriptor(obj, prop);
+      if( !desc||  desc.get||  desc.set) {
         // No not a value property, nothing to do.
         // eslint-disable-next-line no-continue
         continue;
-      }
+       }
 
       // Plan has no symbol keys and we use getOwnPropertyNames()
       // so `prop` cannot only be a string, not a symbol. We coerce it in place
       // with `String(..)` anyway just as good hygiene, since these paths are just
       // for diagnostic purposes.
-      const subPath = `${path}.${String(prop)}`;
-      const subPlan = plan[prop];
+      const subPath=   `${path}.${String(prop)}`;
+      const subPlan=  plan[prop];
 
-      if (subPlan === true) {
+      if( subPlan===  true) {
         enableProperty(subPath, obj, prop);
-      } else if (subPlan === '*') {
+       }else if( subPlan===  '*') {
         enableAllProperties(subPath, desc.value);
-      } else if (isObject(subPlan)) {
+       }else if( isObject(subPlan)) {
         enableProperties(subPath, desc.value, subPlan);
-      } else {
-        throw new TypeError(`Unexpected override enablement plan ${subPath}`);
-      }
-    }
-  }
+       }else {
+        throw new TypeError( `Unexpected override enablement plan ${subPath}`);
+       }
+     }
+   }
 
   let plan;
-  switch (overrideTaming) {
-    case 'min':{
-        plan = minEnablements;
-        break;
-      }
-    case 'moderate':{
-        plan = moderateEnablements;
-        break;
-      }
-    case 'severe':{
-        plan = severeEnablements;
-        break;
-      }
-    default:{
-        throw new TypeError(`unrecognized overrideTaming ${overrideTaming}`);
-      }}
+  switch( overrideTaming){
+    case 'min': {
+      plan=  minEnablements;
+      break;
+     }
+    case 'moderate': {
+      plan=  moderateEnablements;
+      break;
+     }
+    case 'severe': {
+      plan=  severeEnablements;
+      break;
+     }
+    default: {
+      throw new TypeError( `unrecognized overrideTaming ${overrideTaming}`);
+     }}
 
 
   // Do the repair.
   enableProperties('root', intrinsics, plan);
-}$h‍_once.default(enablePropertyOverrides);
+ }$h‍_once.default(     enablePropertyOverrides);
 })
 ,
-// === functors[24] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let arrayPush,arraySlice,freeze,assert;$h‍_imports([["./commons.js", [["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["arraySlice", [$h‍_a => (arraySlice = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[26] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let arrayPush,freeze,assert;$h‍_imports([["./commons.js", [["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
 
 
 
-const { details: X, quote: q } = assert;
+const { details: X, Fail, quote: q}=   assert;
 
 /**
  * JavaScript module semantics resists attempts to parameterize a module's
@@ -6022,8 +6273,8 @@ const { details: X, quote: q } = assert;
  * global `process` object holding an `env` object,
  * optionally holding a property named for the `optionName` whose value is the
  * configuration setting of that option. For example, for the optionName
- * `ALLOW_IMPLICIT_REMOTABLES` it would look in
- * `globalThis.process.env.ALLOW_IMPLICIT_REMOTABLES`.
+ * `FOO_BAR` it would look in
+ * `globalThis.process.env.FOO_BAR`.
  *
  * If setting is either absent or `undefined`, that indicates that
  * this configuration option should have its default behavior, whatever that is.
@@ -6039,8 +6290,8 @@ const { details: X, quote: q } = assert;
  *
  * @param {Object} aGlobal
  */
-const makeEnvironmentCaptor = (aGlobal) => {
-  const capturedEnvironmentOptionNames = [];
+const        makeEnvironmentCaptor=  (aGlobal)=>{
+  const capturedEnvironmentOptionNames=  [];
 
   /**
    * Gets an environment option by name and returns the option value or the
@@ -6050,65 +6301,66 @@ const makeEnvironmentCaptor = (aGlobal) => {
    * @param {string} defaultSetting
    * @returns {string}
    */
-  const getEnvironmentOption = (optionName, defaultSetting) => {
+  const getEnvironmentOption=  (optionName, defaultSetting)=>  {
     // eslint-disable-next-line @endo/no-polymorphic-call
     assert.typeof(
-    optionName,
-    'string',
-    X`Environment option name ${q(optionName)} must be a string.`);
+      optionName,
+      'string',
+      X `Environment option name ${q(optionName)} must be a string.`);
 
     // eslint-disable-next-line @endo/no-polymorphic-call
     assert.typeof(
-    defaultSetting,
-    'string',
-    X`Environment option default setting ${q(
-    defaultSetting)
-    } must be a string.`);
+      defaultSetting,
+      'string',
+      X `Environment option default setting ${q(
+        defaultSetting)
+        } must be a string.`);
 
 
     /** @type {string} */
-    let setting = defaultSetting;
-    const globalProcess = aGlobal.process;
-    if (globalProcess && typeof globalProcess === 'object') {
-      const globalEnv = globalProcess.env;
-      if (globalEnv && typeof globalEnv === 'object') {
-        if (optionName in globalEnv) {
+    let setting=  defaultSetting;
+    const globalProcess=  aGlobal.process;
+    if( globalProcess&&  typeof globalProcess===  'object') {
+      const globalEnv=  globalProcess.env;
+      if( globalEnv&&  typeof globalEnv===  'object') {
+        if( optionName in globalEnv) {
           arrayPush(capturedEnvironmentOptionNames, optionName);
-          const optionValue = globalEnv[optionName];
+          const optionValue=  globalEnv[optionName];
           // eslint-disable-next-line @endo/no-polymorphic-call
           assert.typeof(
-          optionValue,
-          'string',
-          X`Environment option named ${q(
-          optionName)
-          }, if present, must have a corresponding string value, got ${q(
-          optionValue)
-          }`);
+            optionValue,
+            'string',
+            X `Environment option named ${q(
+              optionName)
+              }, if present, must have a corresponding string value, got ${q(
+              optionValue)
+              }`);
 
-          setting = optionValue;
-        }
-      }
-    }
-    assert(
-    setting === undefined || typeof setting === 'string',
-    X`Environment option value ${q(setting)}, if present, must be a string.`);
-
+          setting=  optionValue;
+         }
+       }
+     }
+    setting===  undefined||
+      typeof setting===  'string'||
+      Fail `Environment option value ${q(
+        setting)
+        }, if present, must be a string.`;
     return setting;
-  };
+   };
   freeze(getEnvironmentOption);
 
-  const getCapturedEnvironmentOptionNames = () => {
-    return freeze(arraySlice(capturedEnvironmentOptionNames));
-  };
+  const getCapturedEnvironmentOptionNames=  ()=>  {
+    return freeze([...capturedEnvironmentOptionNames]);
+   };
   freeze(getCapturedEnvironmentOptionNames);
 
-  return { getEnvironmentOption, getCapturedEnvironmentOptionNames };
-};$h‍_once.makeEnvironmentCaptor(makeEnvironmentCaptor);
+  return freeze({ getEnvironmentOption, getCapturedEnvironmentOptionNames});
+ };$h‍_once.makeEnvironmentCaptor(makeEnvironmentCaptor);
 freeze(makeEnvironmentCaptor);
 })
 ,
-// === functors[25] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let WeakSet,arrayFilter,arrayMap,arrayPush,defineProperty,freeze,fromEntries,isError,stringEndsWith,weaksetAdd,weaksetHas;$h‍_imports([["../commons.js", [["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["fromEntries", [$h‍_a => (fromEntries = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["stringEndsWith", [$h‍_a => (stringEndsWith = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
+// === functors[27] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let WeakSet,arrayFilter,arrayMap,arrayPush,defineProperty,freeze,fromEntries,isError,stringEndsWith,weaksetAdd,weaksetHas;$h‍_imports([["../commons.js", [["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arrayPush", [$h‍_a => (arrayPush = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["fromEntries", [$h‍_a => (fromEntries = $h‍_a)]],["isError", [$h‍_a => (isError = $h‍_a)]],["stringEndsWith", [$h‍_a => (stringEndsWith = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
 
 
 
@@ -6157,47 +6409,47 @@ freeze(makeEnvironmentCaptor);
 /** @typedef {keyof VirtualConsole | 'profile' | 'profileEnd'} ConsoleProps */
 
 /** @type {readonly [ConsoleProps, LogSeverity | undefined][]} */
-const consoleLevelMethods = freeze([
-['debug', 'debug'], // (fmt?, ...args) verbose level on Chrome
-['log', 'log'], // (fmt?, ...args) info level on Chrome
-['info', 'info'], // (fmt?, ...args)
-['warn', 'warn'], // (fmt?, ...args)
-['error', 'error'], // (fmt?, ...args)
+const consoleLevelMethods=  freeze([
+  ['debug', 'debug'], // (fmt?, ...args) verbose level on Chrome
+  ['log', 'log'], // (fmt?, ...args) info level on Chrome
+  ['info', 'info'], // (fmt?, ...args)
+  ['warn', 'warn'], // (fmt?, ...args)
+  ['error', 'error'], // (fmt?, ...args)
 
-['trace', 'log'], // (fmt?, ...args)
-['dirxml', 'log'], // (fmt?, ...args)
-['group', 'log'], // (fmt?, ...args)
-['groupCollapsed', 'log'] // (fmt?, ...args)
+  ['trace', 'log'], // (fmt?, ...args)
+  ['dirxml', 'log'], // (fmt?, ...args)
+  ['group', 'log'], // (fmt?, ...args)
+  ['groupCollapsed', 'log']  // (fmt?, ...args)
 ]);
 
 /** @type {readonly [ConsoleProps, LogSeverity | undefined][]} */
-const consoleOtherMethods = freeze([
-['assert', 'error'], // (value, fmt?, ...args)
-['timeLog', 'log'], // (label?, ...args) no fmt string
+const consoleOtherMethods=  freeze([
+  ['assert', 'error'], // (value, fmt?, ...args)
+  ['timeLog', 'log'], // (label?, ...args) no fmt string
 
-// Insensitive to whether any argument is an error. All arguments can pass
-// thru to baseConsole as is.
-['clear', undefined], // ()
-['count', 'info'], // (label?)
-['countReset', undefined], // (label?)
-['dir', 'log'], // (item, options?)
-['groupEnd', 'log'], // ()
-// In theory tabular data may be or contain an error. However, we currently
-// do not detect these and may never.
-['table', 'log'], // (tabularData, properties?)
-['time', 'info'], // (label?)
-['timeEnd', 'info'], // (label?)
+  // Insensitive to whether any argument is an error. All arguments can pass
+  // thru to baseConsole as is.
+  ['clear', undefined], // ()
+  ['count', 'info'], // (label?)
+  ['countReset', undefined], // (label?)
+  ['dir', 'log'], // (item, options?)
+  ['groupEnd', 'log'], // ()
+  // In theory tabular data may be or contain an error. However, we currently
+  // do not detect these and may never.
+  ['table', 'log'], // (tabularData, properties?)
+  ['time', 'info'], // (label?)
+  ['timeEnd', 'info'], // (label?)
 
-// Node Inspector only, MDN, and TypeScript, but not whatwg
-['profile', undefined], // (label?)
-['profileEnd', undefined], // (label?)
-['timeStamp', undefined] // (label?)
+  // Node Inspector only, MDN, and TypeScript, but not whatwg
+  ['profile', undefined], // (label?)
+  ['profileEnd', undefined], // (label?)
+  ['timeStamp', undefined]  // (label?)
 ]);
 
 /** @type {readonly [ConsoleProps, LogSeverity | undefined][]} */
-const consoleWhitelist = freeze([
-...consoleLevelMethods,
-...consoleOtherMethods]);$h‍_once.consoleWhitelist(consoleWhitelist);
+const        consoleWhitelist=  freeze([
+  ...consoleLevelMethods,
+  ...consoleOtherMethods]);
 
 
 /**
@@ -6229,269 +6481,394 @@ const consoleWhitelist = freeze([
 
 // /////////////////////////////////////////////////////////////////////////////
 
-/** @type {MakeLoggingConsoleKit} */
-const makeLoggingConsoleKit = (
-loggedErrorHandler,
-{ shouldResetForDebugging = false } = {}) =>
-{
-  if (shouldResetForDebugging) {
+/** @type {MakeLoggingConsoleKit} */$h‍_once.consoleWhitelist(consoleWhitelist);
+const makeLoggingConsoleKit=  (
+  loggedErrorHandler,
+  { shouldResetForDebugging=  false}=   {})=>
+     {
+  if( shouldResetForDebugging) {
     // eslint-disable-next-line @endo/no-polymorphic-call
     loggedErrorHandler.resetErrorTagNum();
-  }
+   }
 
   // Not frozen!
-  let logArray = [];
+  let logArray=  [];
 
-  const loggingConsole = fromEntries(
-  arrayMap(consoleWhitelist, ([name, _]) => {
-    // Use an arrow function so that it doesn't come with its own name in
-    // its printed form. Instead, we're hoping that tooling uses only
-    // the `.name` property set below.
-    /**
-     * @param {...any} args
-     */
-    const method = (...args) => {
-      arrayPush(logArray, [name, ...args]);
-    };
-    defineProperty(method, 'name', { value: name });
-    return [name, freeze(method)];
-  }));
+  const loggingConsole=  fromEntries(
+    arrayMap(consoleWhitelist, ([name, _])=>  {
+      // Use an arrow function so that it doesn't come with its own name in
+      // its printed form. Instead, we're hoping that tooling uses only
+      // the `.name` property set below.
+      /**
+       * @param {...any} args
+       */
+      const method=  (...args)=>  {
+        arrayPush(logArray, [name, ...args]);
+       };
+      defineProperty(method, 'name', { value: name});
+      return [name, freeze(method)];
+     }));
 
   freeze(loggingConsole);
 
-  const takeLog = () => {
-    const result = freeze(logArray);
-    logArray = [];
+  const takeLog=  ()=>  {
+    const result=  freeze(logArray);
+    logArray=  [];
     return result;
-  };
+   };
   freeze(takeLog);
 
-  const typedLoggingConsole = /** @type {VirtualConsole} */loggingConsole;
+  const typedLoggingConsole=  /** @type {VirtualConsole} */  loggingConsole;
 
-  return freeze({ loggingConsole: typedLoggingConsole, takeLog });
-};$h‍_once.makeLoggingConsoleKit(makeLoggingConsoleKit);
+  return freeze({ loggingConsole: typedLoggingConsole, takeLog});
+ };$h‍_once.makeLoggingConsoleKit(makeLoggingConsoleKit);
 freeze(makeLoggingConsoleKit);
 
 
 // /////////////////////////////////////////////////////////////////////////////
 
 /** @type {ErrorInfo} */
-const ErrorInfo = {
+const ErrorInfo=  {
   NOTE: 'ERROR_NOTE:',
-  MESSAGE: 'ERROR_MESSAGE:' };
+  MESSAGE: 'ERROR_MESSAGE:'};
 
 freeze(ErrorInfo);
 
-/**
- * The error annotations are sent to the baseConsole by calling some level
- * method. The 'debug' level seems best, because the Chrome console classifies
- * `debug` as verbose and does not show it by default. But we keep it symbolic
- * so we can change our mind. (On Node, `debug`, `log`, and `info` are aliases
- * for the same function and so will behave the same there.)
- */
-const BASE_CONSOLE_LEVEL = 'debug';$h‍_once.BASE_CONSOLE_LEVEL(BASE_CONSOLE_LEVEL);
-
 /** @type {MakeCausalConsole} */
-const makeCausalConsole = (baseConsole, loggedErrorHandler) => {
-  const {
-    getStackString,
-    tagError,
-    takeMessageLogArgs,
-    takeNoteLogArgsArray } =
-  loggedErrorHandler;
+const makeCausalConsole=  (baseConsole, loggedErrorHandler)=>  {
+  const { getStackString, tagError, takeMessageLogArgs, takeNoteLogArgsArray}=
+    loggedErrorHandler;
 
   /**
    * @param {ReadonlyArray<any>} logArgs
    * @param {Array<any>} subErrorsSink
    * @returns {any}
    */
-  const extractErrorArgs = (logArgs, subErrorsSink) => {
-    const argTags = arrayMap(logArgs, (arg) => {
-      if (isError(arg)) {
+  const extractErrorArgs=  (logArgs, subErrorsSink)=>  {
+    const argTags=  arrayMap(logArgs, (arg)=>{
+      if( isError(arg)) {
         arrayPush(subErrorsSink, arg);
-        return `(${tagError(arg)})`;
-      }
+        return  `(${tagError(arg)})`;
+       }
       return arg;
-    });
+     });
     return argTags;
-  };
+   };
 
   /**
+   * @param {LogSeverity} severity
    * @param {Error} error
    * @param {ErrorInfoKind} kind
    * @param {readonly any[]} logArgs
    * @param {Array<Error>} subErrorsSink
    */
-  const logErrorInfo = (error, kind, logArgs, subErrorsSink) => {
-    const errorTag = tagError(error);
-    const errorName =
-    kind === ErrorInfo.MESSAGE ? `${errorTag}:` : `${errorTag} ${kind}`;
-    const argTags = extractErrorArgs(logArgs, subErrorsSink);
+  const logErrorInfo=  (severity, error, kind, logArgs, subErrorsSink)=>  {
+    const errorTag=  tagError(error);
+    const errorName=
+      kind===  ErrorInfo.MESSAGE?   `${errorTag}:`:  `${errorTag} ${kind}`;
+    const argTags=  extractErrorArgs(logArgs, subErrorsSink);
     // eslint-disable-next-line @endo/no-polymorphic-call
-    baseConsole[BASE_CONSOLE_LEVEL](errorName, ...argTags);
-  };
+    baseConsole[severity](errorName, ...argTags);
+   };
 
   /**
    * Logs the `subErrors` within a group name mentioning `optTag`.
    *
+   * @param {LogSeverity} severity
    * @param {Error[]} subErrors
    * @param {string | undefined} optTag
    * @returns {void}
    */
-  const logSubErrors = (subErrors, optTag = undefined) => {
-    if (subErrors.length === 0) {
+  const logSubErrors=  (severity, subErrors, optTag=  undefined)=>  {
+    if( subErrors.length===  0) {
       return;
-    }
-    if (subErrors.length === 1 && optTag === undefined) {
+     }
+    if( subErrors.length===  1&&  optTag===  undefined) {
       // eslint-disable-next-line no-use-before-define
-      logError(subErrors[0]);
+      logError(severity, subErrors[0]);
       return;
-    }
+     }
     let label;
-    if (subErrors.length === 1) {
-      label = `Nested error`;
-    } else {
-      label = `Nested ${subErrors.length} errors`;
-    }
-    if (optTag !== undefined) {
-      label = `${label} under ${optTag}`;
-    }
+    if( subErrors.length===  1) {
+      label=   `Nested error`;
+     }else {
+      label=   `Nested ${subErrors.length} errors`;
+     }
+    if( optTag!==  undefined) {
+      label=   `${label} under ${optTag}`;
+     }
     // eslint-disable-next-line @endo/no-polymorphic-call
     baseConsole.group(label);
     try {
-      for (const subError of subErrors) {
+      for( const subError of subErrors) {
         // eslint-disable-next-line no-use-before-define
-        logError(subError);
-      }
-    } finally {
+        logError(severity, subError);
+       }
+     }finally {
       // eslint-disable-next-line @endo/no-polymorphic-call
       baseConsole.groupEnd();
-    }
-  };
+     }
+   };
 
-  const errorsLogged = new WeakSet();
+  const errorsLogged=  new WeakSet();
 
-  /** @type {NoteCallback} */
-  const noteCallback = (error, noteLogArgs) => {
-    const subErrors = [];
+  /** @type {(severity: LogSeverity) => NoteCallback} */
+  const makeNoteCallback=  (severity)=>(error, noteLogArgs)=>  {
+    const subErrors=  [];
     // Annotation arrived after the error has already been logged,
     // so just log the annotation immediately, rather than remembering it.
-    logErrorInfo(error, ErrorInfo.NOTE, noteLogArgs, subErrors);
-    logSubErrors(subErrors, tagError(error));
-  };
+    logErrorInfo(severity, error, ErrorInfo.NOTE, noteLogArgs, subErrors);
+    logSubErrors(severity, subErrors, tagError(error));
+   };
 
   /**
+   * @param {LogSeverity} severity
    * @param {Error} error
    */
-  const logError = (error) => {
-    if (weaksetHas(errorsLogged, error)) {
+  const logError=  (severity, error)=>  {
+    if( weaksetHas(errorsLogged, error)) {
       return;
-    }
-    const errorTag = tagError(error);
+     }
+    const errorTag=  tagError(error);
     weaksetAdd(errorsLogged, error);
-    const subErrors = [];
-    const messageLogArgs = takeMessageLogArgs(error);
-    const noteLogArgsArray = takeNoteLogArgsArray(error, noteCallback);
+    const subErrors=  [];
+    const messageLogArgs=  takeMessageLogArgs(error);
+    const noteLogArgsArray=  takeNoteLogArgsArray(
+      error,
+      makeNoteCallback(severity));
+
     // Show the error's most informative error message
-    if (messageLogArgs === undefined) {
+    if( messageLogArgs===  undefined) {
       // If there is no message log args, then just show the message that
       // the error itself carries.
       // eslint-disable-next-line @endo/no-polymorphic-call
-      baseConsole[BASE_CONSOLE_LEVEL](`${errorTag}:`, error.message);
-    } else {
+      baseConsole[severity]( `${errorTag}:`,error.message);
+     }else {
       // If there is one, we take it to be strictly more informative than the
       // message string carried by the error, so show it *instead*.
-      logErrorInfo(error, ErrorInfo.MESSAGE, messageLogArgs, subErrors);
-    }
-    // After the message but before any other annotations, show the stack.
-    let stackString = getStackString(error);
-    if (
-    typeof stackString === 'string' &&
-    stackString.length >= 1 &&
-    !stringEndsWith(stackString, '\n'))
-    {
-      stackString += '\n';
-    }
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    baseConsole[BASE_CONSOLE_LEVEL](stackString);
-    // Show the other annotations on error
-    for (const noteLogArgs of noteLogArgsArray) {
-      logErrorInfo(error, ErrorInfo.NOTE, noteLogArgs, subErrors);
-    }
-    // explain all the errors seen in the messages already emitted.
-    logSubErrors(subErrors, errorTag);
-  };
+      logErrorInfo(
+        severity,
+        error,
+        ErrorInfo.MESSAGE,
+        messageLogArgs,
+        subErrors);
 
-  const levelMethods = arrayMap(consoleLevelMethods, ([level, _]) => {
+     }
+    // After the message but before any other annotations, show the stack.
+    let stackString=  getStackString(error);
+    if(
+      typeof stackString===  'string'&&
+      stackString.length>=  1&&
+      !stringEndsWith(stackString, '\n'))
+      {
+      stackString+=  '\n';
+     }
+    // eslint-disable-next-line @endo/no-polymorphic-call
+    baseConsole[severity](stackString);
+    // Show the other annotations on error
+    for( const noteLogArgs of noteLogArgsArray) {
+      logErrorInfo(severity, error, ErrorInfo.NOTE, noteLogArgs, subErrors);
+     }
+    // explain all the errors seen in the messages already emitted.
+    logSubErrors(severity, subErrors, errorTag);
+   };
+
+  const levelMethods=  arrayMap(consoleLevelMethods, ([level, _])=>  {
     /**
      * @param {...any} logArgs
      */
-    const levelMethod = (...logArgs) => {
-      const subErrors = [];
-      const argTags = extractErrorArgs(logArgs, subErrors);
-      // @ts-ignore
+    const levelMethod=  (...logArgs)=>  {
+      const subErrors=  [];
+      const argTags=  extractErrorArgs(logArgs, subErrors);
       // eslint-disable-next-line @endo/no-polymorphic-call
       baseConsole[level](...argTags);
-      logSubErrors(subErrors);
-    };
-    defineProperty(levelMethod, 'name', { value: level });
+      // @ts-expect-error ConsoleProp vs LogSeverity mismatch
+      logSubErrors(level, subErrors);
+     };
+    defineProperty(levelMethod, 'name', { value: level});
     return [level, freeze(levelMethod)];
-  });
-  const otherMethodNames = arrayFilter(
-  consoleOtherMethods,
-  ([name, _]) => name in baseConsole);
+   });
+  const otherMethodNames=  arrayFilter(
+    consoleOtherMethods,
+    ([name, _])=>  name in baseConsole);
 
-  const otherMethods = arrayMap(otherMethodNames, ([name, _]) => {
+  const otherMethods=  arrayMap(otherMethodNames, ([name, _])=>  {
     /**
      * @param {...any} args
      */
-    const otherMethod = (...args) => {
+    const otherMethod=  (...args)=>  {
       // @ts-ignore
       // eslint-disable-next-line @endo/no-polymorphic-call
       baseConsole[name](...args);
       return undefined;
-    };
-    defineProperty(otherMethod, 'name', { value: name });
+     };
+    defineProperty(otherMethod, 'name', { value: name});
     return [name, freeze(otherMethod)];
-  });
+   });
 
-  const causalConsole = fromEntries([...levelMethods, ...otherMethods]);
-  return (/** @type {VirtualConsole} */freeze(causalConsole));
-};$h‍_once.makeCausalConsole(makeCausalConsole);
+  const causalConsole=  fromEntries([...levelMethods, ...otherMethods]);
+  return (/** @type {VirtualConsole} */ freeze(causalConsole));
+ };$h‍_once.makeCausalConsole(makeCausalConsole);
 freeze(makeCausalConsole);
 
 
 // /////////////////////////////////////////////////////////////////////////////
 
 /** @type {FilterConsole} */
-const filterConsole = (baseConsole, filter, _topic = undefined) => {
+const filterConsole=  (baseConsole, filter, _topic=  undefined)=>  {
   // TODO do something with optional topic string
-  const whitelist = arrayFilter(
-  consoleWhitelist,
-  ([name, _]) => name in baseConsole);
+  const whitelist=  arrayFilter(
+    consoleWhitelist,
+    ([name, _])=>  name in baseConsole);
 
-  const methods = arrayMap(whitelist, ([name, severity]) => {
+  const methods=  arrayMap(whitelist, ([name, severity])=>  {
     /**
      * @param {...any} args
      */
-    const method = (...args) => {
+    const method=  (...args)=>  {
       // eslint-disable-next-line @endo/no-polymorphic-call
-      if (severity === undefined || filter.canLog(severity)) {
+      if( severity===  undefined||  filter.canLog(severity)) {
         // @ts-ignore
         // eslint-disable-next-line @endo/no-polymorphic-call
         baseConsole[name](...args);
-      }
-    };
+       }
+     };
     return [name, freeze(method)];
-  });
-  const filteringConsole = fromEntries(methods);
-  return (/** @type {VirtualConsole} */freeze(filteringConsole));
-};$h‍_once.filterConsole(filterConsole);
+   });
+  const filteringConsole=  fromEntries(methods);
+  return (/** @type {VirtualConsole} */ freeze(filteringConsole));
+ };$h‍_once.filterConsole(filterConsole);
 freeze(filterConsole);
 })
 ,
-// === functors[26] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let TypeError,globalThis,defaultHandler,makeCausalConsole;$h‍_imports([["../commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]]]],["./assert.js", [["loggedErrorHandler", [$h‍_a => (defaultHandler = $h‍_a)]]]],["./console.js", [["makeCausalConsole", [$h‍_a => (makeCausalConsole = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
+// === functors[28] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FinalizationRegistry,Map,mapGet,mapDelete,WeakMap,mapSet,finalizationRegistryRegister,weakmapSet,weakmapGet,mapEntries,mapHas;$h‍_imports([["../commons.js", [["FinalizationRegistry", [$h‍_a => (FinalizationRegistry = $h‍_a)]],["Map", [$h‍_a => (Map = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["mapDelete", [$h‍_a => (mapDelete = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["mapSet", [$h‍_a => (mapSet = $h‍_a)]],["finalizationRegistryRegister", [$h‍_a => (finalizationRegistryRegister = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["mapEntries", [$h‍_a => (mapEntries = $h‍_a)]],["mapHas", [$h‍_a => (mapHas = $h‍_a)]]]]]);   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Create rejection-tracking machinery compatible with Node.js and browsers.
+ *
+ * Note that modern browsers *prevent* access to the 'unhandledrejection' and
+ * 'rejectionhandled' events needed:
+ * - in cross-origin mode, like when served from file://
+ * - in the browser console (interactively typed-in code)
+ * - in the debugger
+ *
+ * Then, they just look like: `Uncaught (in promise) Error: ...` and don't
+ * implement the machinery.
+ *
+ * The solution is to serve your web page from an http:// or https:// web server
+ * and execute actual code.
+ *
+ * @param {(reason: unknown) => void} reportReason report the reason for an
+ * unhandled rejection.
+ */
+const        makeRejectionHandlers=  (reportReason)=>{
+  if( FinalizationRegistry===  undefined) {
+    return undefined;
+   }
+
+  /** @typedef {number} ReasonId */
+  let lastReasonId=  0;
+
+  /** @type {Map<ReasonId, unknown>} */
+  const idToReason=  new Map();
+
+  /** @type {(() => void) | undefined} */
+  let cancelChecking;
+
+  const removeReasonId=  (reasonId)=>{
+    mapDelete(idToReason, reasonId);
+    if( cancelChecking&&  idToReason.size===  0) {
+      // No more unhandled rejections to check, just cancel the check.
+      cancelChecking();
+      cancelChecking=  undefined;
+     }
+   };
+
+  /** @type {WeakMap<Promise, ReasonId>} */
+  const promiseToReasonId=  new WeakMap();
+
+  /**
+   * Clean up and report the reason for a GCed unhandled rejection.
+   *
+   * @param {ReasonId} heldReasonId
+   */
+  const finalizeDroppedPromise=  (heldReasonId)=>{
+    if( mapHas(idToReason, heldReasonId)) {
+      const reason=  mapGet(idToReason, heldReasonId);
+      removeReasonId(heldReasonId);
+      reportReason(reason);
+     }
+   };
+
+  /** @type {FinalizationRegistry<ReasonId>} */
+  const promiseToReason=  new FinalizationRegistry(finalizeDroppedPromise);
+
+  /**
+   * Track a rejected promise and its corresponding reason if there is no
+   * rejection handler synchronously attached.
+   *
+   * @param {unknown} reason
+   * @param {Promise} pr
+   */
+  const unhandledRejectionHandler=  (reason, pr)=>  {
+    lastReasonId+=  1;
+    const reasonId=  lastReasonId;
+
+    // Update bookkeeping.
+    mapSet(idToReason, reasonId, reason);
+    weakmapSet(promiseToReasonId, pr, reasonId);
+    finalizationRegistryRegister(promiseToReason, pr, reasonId, pr);
+   };
+
+  /**
+   * Deal with the addition of a handler to a previously rejected promise.
+   *
+   * Just remove it from our list.  Let the FinalizationRegistry or
+   * processTermination report any GCed unhandled rejected promises.
+   *
+   * @param {Promise} pr
+   */
+  const rejectionHandledHandler=  (pr)=>{
+    const reasonId=  weakmapGet(promiseToReasonId, pr);
+    removeReasonId(reasonId);
+   };
+
+  /**
+   * Report all the unhandled rejections, now that we are abruptly terminating
+   * the agent cluster.
+   */
+  const processTerminationHandler=  ()=>  {
+    for( const [reasonId, reason]of  mapEntries(idToReason)) {
+      removeReasonId(reasonId);
+      reportReason(reason);
+     }
+   };
+
+  return {
+    rejectionHandledHandler,
+    unhandledRejectionHandler,
+    processTerminationHandler};
+
+ };$h‍_once.makeRejectionHandlers(makeRejectionHandlers);
+})
+,
+// === functors[29] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let TypeError,globalThis,defaultHandler,makeCausalConsole,makeRejectionHandlers;$h‍_imports([["../commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]]]],["./assert.js", [["loggedErrorHandler", [$h‍_a => (defaultHandler = $h‍_a)]]]],["./console.js", [["makeCausalConsole", [$h‍_a => (makeCausalConsole = $h‍_a)]]]],["./unhandled-rejection.js", [["makeRejectionHandlers", [$h‍_a => (makeRejectionHandlers = $h‍_a)]]]],["./types.js", []],["./internal-types.js", []]]);   
+
 
 
 
@@ -6500,7 +6877,7 @@ freeze(filterConsole);
 
 
 // eslint-disable-next-line no-restricted-globals
-const originalConsole = console;
+const originalConsole=  console;
 
 /**
  * Wrap console unless suppressed.
@@ -6510,30 +6887,32 @@ const originalConsole = console;
  *
  * @param {"safe" | "unsafe"} consoleTaming
  * @param {"platform" | "exit" | "abort" | "report" | "none"} [errorTrapping]
+ * @param {"report" | "none"} [unhandledRejectionTrapping]
  * @param {GetStackString=} optGetStackString
  */
-const tameConsole = (
-consoleTaming = 'safe',
-errorTrapping = 'platform',
-optGetStackString = undefined) =>
-{
-  if (consoleTaming !== 'safe' && consoleTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized consoleTaming ${consoleTaming}`);
-  }
+const        tameConsole=  (
+  consoleTaming=  'safe',
+  errorTrapping=  'platform',
+  unhandledRejectionTrapping=  'report',
+  optGetStackString=  undefined)=>
+     {
+  if( consoleTaming!==  'safe'&&  consoleTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized consoleTaming ${consoleTaming}`);
+   }
 
-  if (consoleTaming === 'unsafe') {
-    return { console: originalConsole };
-  }
   let loggedErrorHandler;
-  if (optGetStackString === undefined) {
-    loggedErrorHandler = defaultHandler;
-  } else {
-    loggedErrorHandler = {
+  if( optGetStackString===  undefined) {
+    loggedErrorHandler=  defaultHandler;
+   }else {
+    loggedErrorHandler=  {
       ...defaultHandler,
-      getStackString: optGetStackString };
+      getStackString: optGetStackString};
 
-  }
-  const causalConsole = makeCausalConsole(originalConsole, loggedErrorHandler);
+   }
+  const ourConsole=
+    consoleTaming===  'unsafe'?
+        originalConsole:
+        makeCausalConsole(originalConsole, loggedErrorHandler);
 
   // Attach platform-specific error traps such that any error that gets thrown
   // at top-of-turn (the bottom of stack) will get logged by our causal
@@ -6546,48 +6925,92 @@ optGetStackString = undefined) =>
   // utter that. That unnecessary shim forces the whole bundle into sloppy mode,
   // which in turn breaks SES's strict mode invariant.
 
+  // Disable the polymorphic check for the rest of this file.  It's too noisy
+  // when dealing with platform APIs.
+  /* eslint-disable @endo/no-polymorphic-call */
+
   // Node.js
-  if (errorTrapping !== 'none' && globalThis.process !== undefined) {
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    globalThis.process.on('uncaughtException', (error) => {
+  if( errorTrapping!==  'none'&&  globalThis.process!==  undefined) {
+    globalThis.process.on('uncaughtException', (error)=>{
       // causalConsole is born frozen so not vulnerable to method tampering.
-      // eslint-disable-next-line @endo/no-polymorphic-call
-      causalConsole.error(error);
-      if (errorTrapping === 'platform' || errorTrapping === 'exit') {
-        // eslint-disable-next-line @endo/no-polymorphic-call
-        globalThis.process.exit(globalThis.process.exitCode || -1);
-      } else if (errorTrapping === 'abort') {
-        // eslint-disable-next-line @endo/no-polymorphic-call
+      ourConsole.error(error);
+      if( errorTrapping===  'platform'||  errorTrapping===  'exit') {
+        globalThis.process.exit(globalThis.process.exitCode||  -1);
+       }else if( errorTrapping===  'abort') {
         globalThis.process.abort();
-      }
-    });
-  }
+       }
+     });
+   }
+
+  if(
+    unhandledRejectionTrapping!==  'none'&&
+    globalThis.process!==  undefined)
+    {
+    const handleRejection=  (reason)=>{
+      // 'platform' and 'report' just log the reason.
+      ourConsole.error('SES_UNHANDLED_REJECTION:', reason);
+     };
+    // Maybe track unhandled promise rejections.
+    const h=  makeRejectionHandlers(handleRejection);
+    if( h) {
+      // Rejection handlers are supported.
+      globalThis.process.on('unhandledRejection', h.unhandledRejectionHandler);
+      globalThis.process.on('rejectionHandled', h.rejectionHandledHandler);
+      globalThis.process.on('exit', h.processTerminationHandler);
+     }
+   }
 
   // Browser
-  if (
-  errorTrapping !== 'none' &&
-  globalThis.window !== undefined &&
-  globalThis.window.addEventListener !== undefined)
-  {
-    // eslint-disable-next-line @endo/no-polymorphic-call
-    globalThis.window.addEventListener('error', (event) => {
-      // eslint-disable-next-line @endo/no-polymorphic-call
+  if(
+    errorTrapping!==  'none'&&
+    globalThis.window!==  undefined&&
+    globalThis.window.addEventListener!==  undefined)
+    {
+    globalThis.window.addEventListener('error', (event)=>{
       event.preventDefault();
-      // eslint-disable-next-line @endo/no-polymorphic-call
-      causalConsole.error(event.error);
-      if (errorTrapping === 'exit' || errorTrapping === 'abort') {
-        globalThis.window.location.href = `about:blank`;
-      }
-    });
-  }
+      // 'platform' and 'report' just log the reason.
+      ourConsole.error(event.error);
+      if( errorTrapping===  'exit'||  errorTrapping===  'abort') {
+        globalThis.window.location.href=   `about:blank`;
+       }
+     });
+   }
 
-  return { console: causalConsole };
-};$h‍_once.tameConsole(tameConsole);
+  if(
+    unhandledRejectionTrapping!==  'none'&&
+    globalThis.window!==  undefined&&
+    globalThis.window.addEventListener!==  undefined)
+    {
+    const handleRejection=  (reason)=>{
+      ourConsole.error('SES_UNHANDLED_REJECTION:', reason);
+     };
+
+    const h=  makeRejectionHandlers(handleRejection);
+    if( h) {
+      // Rejection handlers are supported.
+      globalThis.window.addEventListener('unhandledrejection', (event)=>{
+        event.preventDefault();
+        h.unhandledRejectionHandler(event.reason, event.promise);
+       });
+
+      globalThis.window.addEventListener('rejectionhandled', (event)=>{
+        event.preventDefault();
+        h.rejectionHandledHandler(event.promise);
+       });
+
+      globalThis.window.addEventListener('beforeunload', (_event)=>{
+        h.processTerminationHandler();
+       });
+     }
+   }
+  /* eslint-enable @endo/no-polymorphic-call */
+
+  return { console: ourConsole};
+ };$h‍_once.tameConsole(tameConsole);
 })
 ,
-// === functors[27] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let WeakMap,WeakSet,apply,arrayFilter,arrayJoin,arrayMap,arraySlice,create,defineProperties,fromEntries,reflectSet,regexpExec,regexpTest,weakmapGet,weakmapHas,weakmapSet,weaksetAdd,weaksetHas;$h‍_imports([["../commons.js", [["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arraySlice", [$h‍_a => (arraySlice = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["fromEntries", [$h‍_a => (fromEntries = $h‍_a)]],["reflectSet", [$h‍_a => (reflectSet = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]],["regexpTest", [$h‍_a => (regexpTest = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapHas", [$h‍_a => (weakmapHas = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]]]);   
-
+// === functors[30] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let WeakMap,WeakSet,apply,arrayFilter,arrayJoin,arrayMap,arraySlice,create,defineProperties,fromEntries,reflectSet,regexpExec,regexpTest,weakmapGet,weakmapSet,weaksetAdd,weaksetHas;$h‍_imports([["../commons.js", [["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayJoin", [$h‍_a => (arrayJoin = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["arraySlice", [$h‍_a => (arraySlice = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["fromEntries", [$h‍_a => (fromEntries = $h‍_a)]],["reflectSet", [$h‍_a => (reflectSet = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]],["regexpTest", [$h‍_a => (regexpTest = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]]]);   
 
 
 
@@ -6610,93 +7033,93 @@ optGetStackString = undefined) =>
 // Whitelist names from https://v8.dev/docs/stack-trace-api
 // Whitelisting only the names used by error-stack-shim/src/v8StackFrames
 // callSiteToFrame to shim the error stack proposal.
-const safeV8CallSiteMethodNames = [
-// suppress 'getThis' definitely
-'getTypeName',
-// suppress 'getFunction' definitely
-'getFunctionName',
-'getMethodName',
-'getFileName',
-'getLineNumber',
-'getColumnNumber',
-'getEvalOrigin',
-'isToplevel',
-'isEval',
-'isNative',
-'isConstructor',
-'isAsync',
-// suppress 'isPromiseAll' for now
-// suppress 'getPromiseIndex' for now
+const safeV8CallSiteMethodNames=  [
+  // suppress 'getThis' definitely
+  'getTypeName',
+  // suppress 'getFunction' definitely
+  'getFunctionName',
+  'getMethodName',
+  'getFileName',
+  'getLineNumber',
+  'getColumnNumber',
+  'getEvalOrigin',
+  'isToplevel',
+  'isEval',
+  'isNative',
+  'isConstructor',
+  'isAsync',
+  // suppress 'isPromiseAll' for now
+  // suppress 'getPromiseIndex' for now
 
-// Additional names found by experiment, absent from
-// https://v8.dev/docs/stack-trace-api
-'getPosition',
-'getScriptNameOrSourceURL',
+  // Additional names found by experiment, absent from
+  // https://v8.dev/docs/stack-trace-api
+  'getPosition',
+  'getScriptNameOrSourceURL',
 
-'toString' // TODO replace to use only whitelisted info
+  'toString'  // TODO replace to use only whitelisted info
 ];
 
 // TODO this is a ridiculously expensive way to attenuate callsites.
 // Before that matters, we should switch to a reasonable representation.
-const safeV8CallSiteFacet = (callSite) => {
-  const methodEntry = (name) => {
-    const method = callSite[name];
-    return [name, () => apply(method, callSite, [])];
-  };
-  const o = fromEntries(arrayMap(safeV8CallSiteMethodNames, methodEntry));
+const safeV8CallSiteFacet=  (callSite)=>{
+  const methodEntry=  (name)=>{
+    const method=  callSite[name];
+    return [name, ()=>  apply(method, callSite, [])];
+   };
+  const o=  fromEntries(arrayMap(safeV8CallSiteMethodNames, methodEntry));
   return create(o, {});
-};
+ };
 
-const safeV8SST = (sst) => arrayMap(sst, safeV8CallSiteFacet);
+const safeV8SST=  (sst)=>arrayMap(sst, safeV8CallSiteFacet);
 
 // If it has `/node_modules/` anywhere in it, on Node it is likely
 // to be a dependent package of the current package, and so to
 // be an infrastructure frame to be dropped from concise stack traces.
-const FILENAME_NODE_DEPENDENTS_CENSOR = /\/node_modules\//;
+const FILENAME_NODE_DEPENDENTS_CENSOR=  /\/node_modules\//;
 
 // If it begins with `internal/` or `node:internal` then it is likely
 // part of the node infrustructre itself, to be dropped from concise
 // stack traces.
-const FILENAME_NODE_INTERNALS_CENSOR = /^(?:node:)?internal\//;
+const FILENAME_NODE_INTERNALS_CENSOR=  /^(?:node:)?internal\//;
 
 // Frames within the `assert.js` package should be dropped from
 // concise stack traces, as these are just steps towards creating the
 // error object in question.
-const FILENAME_ASSERT_CENSOR = /\/packages\/ses\/src\/error\/assert.js$/;
+const FILENAME_ASSERT_CENSOR=  /\/packages\/ses\/src\/error\/assert.js$/;
 
 // Frames within the `eventual-send` shim should be dropped so that concise
 // deep stacks omit the internals of the eventual-sending mechanism causing
 // asynchronous messages to be sent.
 // Note that the eventual-send package will move from agoric-sdk to
 // Endo, so this rule will be of general interest.
-const FILENAME_EVENTUAL_SEND_CENSOR = /\/packages\/eventual-send\/src\//;
+const FILENAME_EVENTUAL_SEND_CENSOR=  /\/packages\/eventual-send\/src\//;
 
 // Any stack frame whose `fileName` matches any of these censor patterns
 // will be omitted from concise stacks.
 // TODO Enable users to configure FILENAME_CENSORS via `lockdown` options.
-const FILENAME_CENSORS = [
-FILENAME_NODE_DEPENDENTS_CENSOR,
-FILENAME_NODE_INTERNALS_CENSOR,
-FILENAME_ASSERT_CENSOR,
-FILENAME_EVENTUAL_SEND_CENSOR];
+const FILENAME_CENSORS=  [
+  FILENAME_NODE_DEPENDENTS_CENSOR,
+  FILENAME_NODE_INTERNALS_CENSOR,
+  FILENAME_ASSERT_CENSOR,
+  FILENAME_EVENTUAL_SEND_CENSOR];
 
 
 // Should a stack frame with this as its fileName be included in a concise
 // stack trace?
 // Exported only so it can be unit tested.
 // TODO Move so that it applies not just to v8.
-const filterFileName = (fileName) => {
-  if (!fileName) {
+const        filterFileName=  (fileName)=>{
+  if( !fileName) {
     // Stack frames with no fileName should appear in concise stack traces.
     return true;
-  }
-  for (const filter of FILENAME_CENSORS) {
-    if (regexpTest(filter, fileName)) {
+   }
+  for( const filter of FILENAME_CENSORS) {
+    if( regexpTest(filter, fileName)) {
       return false;
-    }
-  }
+     }
+   }
   return true;
-};$h‍_once.filterFileName(filterFileName);
+ };
 
 // The ad-hoc rule of the current pattern is that any likely-file-path or
 // likely url-path prefix, ending in a `/.../` should get dropped.
@@ -6708,7 +7131,7 @@ const filterFileName = (fileName) => {
 //
 // See thread starting at
 // https://github.com/Agoric/agoric-sdk/issues/2326#issuecomment-773020389
-const CALLSITE_ELLIPSES_PATTERN = /^((?:.*[( ])?)[:/\w_-]*\/\.\.\.\/(.+)$/;
+$h‍_once.filterFileName(filterFileName);const CALLSITE_ELLIPSES_PATTERN=/^((?:.*[( ])?)[:/\w_-]*\/\.\.\.\/(.+)$/;
 
 // The ad-hoc rule of the current pattern is that any likely-file-path or
 // likely url-path prefix, ending in a `/` and prior to `package/` should get
@@ -6720,16 +7143,16 @@ const CALLSITE_ELLIPSES_PATTERN = /^((?:.*[( ])?)[:/\w_-]*\/\.\.\.\/(.+)$/;
 // `'Object.bar (packages/eventual-send/test/test-deep-send.js:13:21)'`.
 // Note that `/packages/` is a convention for monorepos encouraged by
 // lerna.
-const CALLSITE_PACKAGES_PATTERN = /^((?:.*[( ])?)[:/\w_-]*\/(packages\/.+)$/;
+const CALLSITE_PACKAGES_PATTERN=  /^((?:.*[( ])?)[:/\w_-]*\/(packages\/.+)$/;
 
 // The use of these callSite patterns below assumes that any match will bind
 // capture groups containing the parts of the original string we want
 // to keep. The parts outside those capture groups will be dropped from concise
 // stacks.
 // TODO Enable users to configure CALLSITE_PATTERNS via `lockdown` options.
-const CALLSITE_PATTERNS = [
-CALLSITE_ELLIPSES_PATTERN,
-CALLSITE_PACKAGES_PATTERN];
+const CALLSITE_PATTERNS=  [
+  CALLSITE_ELLIPSES_PATTERN,
+  CALLSITE_PACKAGES_PATTERN];
 
 
 // For a stack frame that should be included in a concise stack trace, if
@@ -6737,89 +7160,124 @@ CALLSITE_PACKAGES_PATTERN];
 // possibly-shorter stringified stack frame that should be shown instead.
 // Exported only so it can be unit tested.
 // TODO Move so that it applies not just to v8.
-const shortenCallSiteString = (callSiteString) => {
-  for (const filter of CALLSITE_PATTERNS) {
-    const match = regexpExec(filter, callSiteString);
-    if (match) {
+const        shortenCallSiteString=  (callSiteString)=>{
+  for( const filter of CALLSITE_PATTERNS) {
+    const match=  regexpExec(filter, callSiteString);
+    if( match) {
       return arrayJoin(arraySlice(match, 1), '');
-    }
-  }
+     }
+   }
   return callSiteString;
-};$h‍_once.shortenCallSiteString(shortenCallSiteString);
+ };$h‍_once.shortenCallSiteString(shortenCallSiteString);
 
-const tameV8ErrorConstructor = (
-OriginalError,
-InitialError,
-errorTaming,
-stackFiltering) =>
-{
-  const originalCaptureStackTrace = OriginalError.captureStackTrace;
+const        tameV8ErrorConstructor=  (
+  OriginalError,
+  InitialError,
+  errorTaming,
+  stackFiltering)=>
+     {
+  // TODO: Proper CallSite types
+  /** @typedef {{}} CallSite */
+
+  const originalCaptureStackTrace=  OriginalError.captureStackTrace;
 
   // const callSiteFilter = _callSite => true;
-  const callSiteFilter = (callSite) => {
-    if (stackFiltering === 'verbose') {
+  const callSiteFilter=  (callSite)=>{
+    if( stackFiltering===  'verbose') {
       return true;
-    }
+     }
     // eslint-disable-next-line @endo/no-polymorphic-call
     return filterFileName(callSite.getFileName());
-  };
+   };
 
-  const callSiteStringifier = (callSite) => {
-    let callSiteString = `${callSite}`;
-    if (stackFiltering === 'concise') {
-      callSiteString = shortenCallSiteString(callSiteString);
-    }
-    return `\n  at ${callSiteString}`;
-  };
+  const callSiteStringifier=  (callSite)=>{
+    let callSiteString=   `${callSite}`;
+    if( stackFiltering===  'concise') {
+      callSiteString=  shortenCallSiteString(callSiteString);
+     }
+    return  `\n  at ${callSiteString}`;
+   };
 
-  const stackStringFromSST = (_error, sst) =>
-  arrayJoin(
-  arrayMap(arrayFilter(sst, callSiteFilter), callSiteStringifier),
-  '');
+  const stackStringFromSST=  (_error, sst)=>
+    arrayJoin(
+      arrayMap(arrayFilter(sst, callSiteFilter), callSiteStringifier),
+      '');
 
 
-  // Mapping from error instance to the structured stack trace capturing the
-  // stack for that instance.
-  const ssts = new WeakMap();
+  /**
+   * @typedef {object} StructuredStackInfo
+   * @property {CallSite[]} callSites
+   * @property {undefined} [stackString]
+   */
+
+  /**
+   * @typedef {object} ParsedStackInfo
+   * @property {undefined} [callSites]
+   * @property {string} stackString
+   */
+
+  // Mapping from error instance to the stack for that instance.
+  // The stack info is either the structured stack trace
+  // or the generated tamed stack string
+  /** @type {WeakMap<Error, ParsedStackInfo | StructuredStackInfo} */
+  const stackInfos=  new WeakMap();
 
   // Use concise methods to obtain named functions without constructors.
-  const tamedMethods = {
+  const tamedMethods=  {
     // The optional `optFn` argument is for cutting off the bottom of
     // the stack --- for capturing the stack only above the topmost
     // call to that function. Since this isn't the "real" captureStackTrace
     // but instead calls the real one, if no other cutoff is provided,
     // we cut this one off.
-    captureStackTrace(error, optFn = tamedMethods.captureStackTrace) {
-      if (typeof originalCaptureStackTrace === 'function') {
+    captureStackTrace(error, optFn=  tamedMethods.captureStackTrace) {
+      if( typeof originalCaptureStackTrace===  'function') {
         // OriginalError.captureStackTrace is only on v8
         apply(originalCaptureStackTrace, OriginalError, [error, optFn]);
         return;
-      }
+       }
       reflectSet(error, 'stack', '');
-    },
+     },
     // Shim of proposed special power, to reside by default only
     // in the start compartment, for getting the stack traceback
     // string associated with an error.
     // See https://tc39.es/proposal-error-stacks/
     getStackString(error) {
-      if (!weakmapHas(ssts, error)) {
+      let stackInfo=  weakmapGet(stackInfos, error);
+
+      if( stackInfo===  undefined) {
+        // The following will call `prepareStackTrace()` synchronously
+        // which will populate stackInfos
         // eslint-disable-next-line no-void
         void error.stack;
-      }
-      const sst = weakmapGet(ssts, error);
-      if (!sst) {
-        return '';
-      }
-      return stackStringFromSST(error, sst);
-    },
+        stackInfo=  weakmapGet(stackInfos, error);
+        if( !stackInfo) {
+          stackInfo=  { stackString: ''};
+          weakmapSet(stackInfos, error, stackInfo);
+         }
+       }
+
+      // prepareStackTrace() may generate the stackString
+      // if errorTaming === 'unsafe'
+
+      if( stackInfo.stackString!==  undefined) {
+        return stackInfo.stackString;
+       }
+
+      const stackString=  stackStringFromSST(error, stackInfo.callSites);
+      weakmapSet(stackInfos, error, { stackString});
+
+      return stackString;
+     },
     prepareStackTrace(error, sst) {
-      weakmapSet(ssts, error, sst);
-      if (errorTaming === 'unsafe') {
-        const stackString = stackStringFromSST(error, sst);
-        return `${error}${stackString}`;
-      }
-      return '';
-    } };
+      if( errorTaming===  'unsafe') {
+        const stackString=  stackStringFromSST(error, sst);
+        weakmapSet(stackInfos, error, { stackString});
+        return  `${error}${stackString}`;
+       }else {
+        weakmapSet(stackInfos, error, { callSites: sst});
+        return '';
+       }
+     }};
 
 
   // A prepareFn is a prepareStackTrace function.
@@ -6837,29 +7295,29 @@ stackFiltering) =>
   // a system prepareFn previously obtained by reading
   // `Error.prepareStackTrace`.
 
-  const defaultPrepareFn = tamedMethods.prepareStackTrace;
+  const defaultPrepareFn=  tamedMethods.prepareStackTrace;
 
-  OriginalError.prepareStackTrace = defaultPrepareFn;
+  OriginalError.prepareStackTrace=  defaultPrepareFn;
 
   // A weakset branding some functions as system prepareFns, all of which
   // must be defined by this module, since they can receive an
   // unattenuated sst.
-  const systemPrepareFnSet = new WeakSet([defaultPrepareFn]);
+  const systemPrepareFnSet=  new WeakSet([defaultPrepareFn]);
 
-  const systemPrepareFnFor = (inputPrepareFn) => {
-    if (weaksetHas(systemPrepareFnSet, inputPrepareFn)) {
+  const systemPrepareFnFor=  (inputPrepareFn)=>{
+    if( weaksetHas(systemPrepareFnSet, inputPrepareFn)) {
       return inputPrepareFn;
-    }
+     }
     // Use concise methods to obtain named functions without constructors.
-    const systemMethods = {
+    const systemMethods=  {
       prepareStackTrace(error, sst) {
-        weakmapSet(ssts, error, sst);
+        weakmapSet(stackInfos, error, { callSites: sst});
         return inputPrepareFn(error, safeV8SST(sst));
-      } };
+       }};
 
     weaksetAdd(systemPrepareFnSet, systemMethods.prepareStackTrace);
     return systemMethods.prepareStackTrace;
-  };
+   };
 
   // Note `stackTraceLimit` accessor already defined by
   // tame-error-constructor.js
@@ -6868,31 +7326,31 @@ stackFiltering) =>
       value: tamedMethods.captureStackTrace,
       writable: true,
       enumerable: false,
-      configurable: true },
+      configurable: true},
 
     prepareStackTrace: {
       get() {
         return OriginalError.prepareStackTrace;
-      },
+       },
       set(inputPrepareStackTraceFn) {
-        if (typeof inputPrepareStackTraceFn === 'function') {
-          const systemPrepareFn = systemPrepareFnFor(inputPrepareStackTraceFn);
-          OriginalError.prepareStackTrace = systemPrepareFn;
-        } else {
-          OriginalError.prepareStackTrace = defaultPrepareFn;
-        }
-      },
+        if( typeof inputPrepareStackTraceFn===  'function') {
+          const systemPrepareFn=  systemPrepareFnFor(inputPrepareStackTraceFn);
+          OriginalError.prepareStackTrace=  systemPrepareFn;
+         }else {
+          OriginalError.prepareStackTrace=  defaultPrepareFn;
+         }
+       },
       enumerable: false,
-      configurable: true } });
+      configurable: true}});
 
 
 
   return tamedMethods.getStackString;
-};$h‍_once.tameV8ErrorConstructor(tameV8ErrorConstructor);
+ };$h‍_once.tameV8ErrorConstructor(tameV8ErrorConstructor);
 })
 ,
-// === functors[28] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_ERROR,TypeError,apply,construct,defineProperties,setPrototypeOf,getOwnPropertyDescriptor,NativeErrors,tameV8ErrorConstructor;$h‍_imports([["../commons.js", [["FERAL_ERROR", [$h‍_a => (FERAL_ERROR = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["setPrototypeOf", [$h‍_a => (setPrototypeOf = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]]]],["../whitelist.js", [["NativeErrors", [$h‍_a => (NativeErrors = $h‍_a)]]]],["./tame-v8-error-constructor.js", [["tameV8ErrorConstructor", [$h‍_a => (tameV8ErrorConstructor = $h‍_a)]]]]]);   
+// === functors[31] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_ERROR,TypeError,apply,construct,defineProperties,setPrototypeOf,getOwnPropertyDescriptor,defineProperty,NativeErrors,tameV8ErrorConstructor;$h‍_imports([["../commons.js", [["FERAL_ERROR", [$h‍_a => (FERAL_ERROR = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["setPrototypeOf", [$h‍_a => (setPrototypeOf = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]]]],["../whitelist.js", [["NativeErrors", [$h‍_a => (NativeErrors = $h‍_a)]]]],["./tame-v8-error-constructor.js", [["tameV8ErrorConstructor", [$h‍_a => (tameV8ErrorConstructor = $h‍_a)]]]]]);   
 
 
 
@@ -6904,85 +7362,77 @@ stackFiltering) =>
 
 
 
-// Present on at least FF. Proposed by Error-proposal. Not on SES whitelist
-// so grab it before it is removed.
-const stackDesc = getOwnPropertyDescriptor(FERAL_ERROR.prototype, 'stack');
-const stackGetter = stackDesc && stackDesc.get;
+
+// Present on at least FF and XS. Proposed by Error-proposal. The original
+// is dangerous, so tameErrorConstructor replaces it with a safe one.
+// We grab the original here before it gets replaced.
+const stackDesc=  getOwnPropertyDescriptor(FERAL_ERROR.prototype, 'stack');
+const stackGetter=  stackDesc&&  stackDesc.get;
 
 // Use concise methods to obtain named functions without constructors.
-const tamedMethods = {
+const tamedMethods=  {
   getStackString(error) {
-    if (typeof stackGetter === 'function') {
+    if( typeof stackGetter===  'function') {
       return apply(stackGetter, error, []);
-    } else if ('stack' in error) {
+     }else if( 'stack'in  error) {
       // The fallback is to just use the de facto `error.stack` if present
-      return `${error.stack}`;
-    }
+      return  `${error.stack}`;
+     }
     return '';
-  } };
+   }};
 
 
-function tameErrorConstructor(
-errorTaming = 'safe',
-stackFiltering = 'concise')
-{
-  if (errorTaming !== 'safe' && errorTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized errorTaming ${errorTaming}`);
-  }
-  if (stackFiltering !== 'concise' && stackFiltering !== 'verbose') {
-    throw new TypeError(`unrecognized stackFiltering ${stackFiltering}`);
-  }
-  const ErrorPrototype = FERAL_ERROR.prototype;
+function                tameErrorConstructor(
+  errorTaming=  'safe',
+  stackFiltering=  'concise')
+  {
+  if( errorTaming!==  'safe'&&  errorTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized errorTaming ${errorTaming}`);
+   }
+  if( stackFiltering!==  'concise'&&  stackFiltering!==  'verbose') {
+    throw new TypeError( `unrecognized stackFiltering ${stackFiltering}`);
+   }
+  const ErrorPrototype=  FERAL_ERROR.prototype;
 
-  const platform =
-  typeof FERAL_ERROR.captureStackTrace === 'function' ? 'v8' : 'unknown';
-  const { captureStackTrace: originalCaptureStackTrace } = FERAL_ERROR;
+  const platform=
+    typeof FERAL_ERROR.captureStackTrace===  'function'?  'v8':  'unknown';
+  const { captureStackTrace: originalCaptureStackTrace}=   FERAL_ERROR;
 
-  const makeErrorConstructor = (_ = {}) => {
+  const makeErrorConstructor=  (_=  {})=>  {
     // eslint-disable-next-line no-shadow
-    const ResultError = function Error(...rest) {
+    const ResultError=  function Error(...rest) {
       let error;
-      if (new.target === undefined) {
-        error = apply(FERAL_ERROR, this, rest);
-      } else {
-        error = construct(FERAL_ERROR, rest, new.target);
-      }
-      if (platform === 'v8') {
+      if( new.target===  undefined) {
+        error=  apply(FERAL_ERROR, this, rest);
+       }else {
+        error=  construct(FERAL_ERROR, rest, new.target);
+       }
+      if( platform===  'v8') {
         // TODO Likely expensive!
         apply(originalCaptureStackTrace, FERAL_ERROR, [error, ResultError]);
-      }
+       }
       return error;
-    };
+     };
     defineProperties(ResultError, {
-      length: { value: 1 },
+      length: { value: 1},
       prototype: {
         value: ErrorPrototype,
         writable: false,
         enumerable: false,
-        configurable: false } });
+        configurable: false}});
 
 
     return ResultError;
-  };
-  const InitialError = makeErrorConstructor({ powers: 'original' });
-  const SharedError = makeErrorConstructor({ powers: 'none' });
+   };
+  const InitialError=  makeErrorConstructor({ powers: 'original'});
+  const SharedError=  makeErrorConstructor({ powers: 'none'});
   defineProperties(ErrorPrototype, {
-    constructor: { value: SharedError }
-    /* TODO
-    stack: {
-      get() {
-        return '';
-      },
-      set(_) {
-        // ignore
-      },
-    },
-    */ });
+    constructor: { value: SharedError}});
 
 
-  for (const NativeError of NativeErrors) {
+  for( const NativeError of NativeErrors) {
     setPrototypeOf(NativeError, SharedError);
-  }
+   }
 
   // https://v8.dev/docs/stack-trace-api#compatibility advises that
   // programmers can "always" set `Error.stackTraceLimit`
@@ -6994,33 +7444,33 @@ stackFiltering = 'concise')
   defineProperties(InitialError, {
     stackTraceLimit: {
       get() {
-        if (typeof FERAL_ERROR.stackTraceLimit === 'number') {
+        if( typeof FERAL_ERROR.stackTraceLimit===  'number') {
           // FERAL_ERROR.stackTraceLimit is only on v8
           return FERAL_ERROR.stackTraceLimit;
-        }
+         }
         return undefined;
-      },
+       },
       set(newLimit) {
-        if (typeof newLimit !== 'number') {
+        if( typeof newLimit!==  'number') {
           // silently do nothing. This behavior doesn't precisely
           // emulate v8 edge-case behavior. But given the purpose
           // of this emulation, having edge cases err towards
           // harmless seems the safer option.
           return;
-        }
-        if (typeof FERAL_ERROR.stackTraceLimit === 'number') {
+         }
+        if( typeof FERAL_ERROR.stackTraceLimit===  'number') {
           // FERAL_ERROR.stackTraceLimit is only on v8
-          FERAL_ERROR.stackTraceLimit = newLimit;
+          FERAL_ERROR.stackTraceLimit=  newLimit;
           // We place the useless return on the next line to ensure
           // that anything we place after the if in the future only
           // happens if the then-case does not.
           // eslint-disable-next-line no-useless-return
           return;
-        }
-      },
+         }
+       },
       // WTF on v8 stackTraceLimit is enumerable
       enumerable: false,
-      configurable: true } });
+      configurable: true}});
 
 
 
@@ -7031,34 +7481,130 @@ stackFiltering = 'concise')
     stackTraceLimit: {
       get() {
         return undefined;
-      },
+       },
       set(_newLimit) {
         // do nothing
-      },
+       },
       enumerable: false,
-      configurable: true } });
+      configurable: true}});
 
 
 
-  let initialGetStackString = tamedMethods.getStackString;
-  if (platform === 'v8') {
-    initialGetStackString = tameV8ErrorConstructor(
-    FERAL_ERROR,
-    InitialError,
-    errorTaming,
-    stackFiltering);
+  if( platform===  'v8') {
+    // `SharedError.prepareStackTrace`, if it exists, must also be
+    // powerless. However, from what we've heard, depd expects to be able to
+    // assign to it without the assignment throwing. It is normally a function
+    // that returns a stack string to be magically added to error objects.
+    // However, as long as we're adding a lenient standin, we may as well
+    // accommodate any who expect to get a function they can call and get
+    // a string back. This prepareStackTrace is a do-nothing function that
+    // always returns the empty string.
+    defineProperties(SharedError, {
+      prepareStackTrace: {
+        get() {
+          return ()=>  '';
+         },
+        set(_prepareFn) {
+          // do nothing
+         },
+        enumerable: false,
+        configurable: true},
 
-  }
+      captureStackTrace: {
+        value: (errorish, _constructorOpt)=>  {
+          defineProperty(errorish, 'stack', {
+            value: ''});
+
+         },
+        writable: false,
+        enumerable: false,
+        configurable: true}});
+
+
+   }
+
+  let initialGetStackString=  tamedMethods.getStackString;
+  if( platform===  'v8') {
+    initialGetStackString=  tameV8ErrorConstructor(
+      FERAL_ERROR,
+      InitialError,
+      errorTaming,
+      stackFiltering);
+
+   }else if( errorTaming===  'unsafe') {
+    // v8 has too much magic around their 'stack' own property for it to
+    // coexist cleanly with this accessor. So only install it on non-v8
+
+    // Error.prototype.stack property as proposed at
+    // https://tc39.es/proposal-error-stacks/
+    // with the fix proposed at
+    // https://github.com/tc39/proposal-error-stacks/issues/46
+    // On others, this still protects from the override mistake,
+    // essentially like enable-property-overrides.js would
+    // once this accessor property itself is frozen, as will happen
+    // later during lockdown.
+    //
+    // However, there is here a change from the intent in the current
+    // state of the proposal. If experience tells us whether this change
+    // is a good idea, we should modify the proposal accordingly. There is
+    // much code in the world that assumes `error.stack` is a string. So
+    // where the proposal accommodates secure operation by making the
+    // property optional, we instead accommodate secure operation by
+    // having the secure form always return only the stable part, the
+    // stringified error instance, and omitting all the frame information
+    // rather than omitting the property.
+    defineProperties(ErrorPrototype, {
+      stack: {
+        get() {
+          return initialGetStackString(this);
+         },
+        set(newValue) {
+          defineProperties(this, {
+            stack: {
+              value: newValue,
+              writable: true,
+              enumerable: true,
+              configurable: true}});
+
+
+         }}});
+
+
+   }else {
+    // v8 has too much magic around their 'stack' own property for it to
+    // coexist cleanly with this accessor. So only install it on non-v8
+    defineProperties(ErrorPrototype, {
+      stack: {
+        get() {
+          // https://github.com/tc39/proposal-error-stacks/issues/46
+          // allows this to not add an unpleasant newline. Otherwise
+          // we should fix this.
+          return  `${this}`;
+         },
+        set(newValue) {
+          defineProperties(this, {
+            stack: {
+              value: newValue,
+              writable: true,
+              enumerable: true,
+              configurable: true}});
+
+
+         }}});
+
+
+   }
+
   return {
     '%InitialGetStackString%': initialGetStackString,
     '%InitialError%': InitialError,
-    '%SharedError%': SharedError };
+    '%SharedError%': SharedError};
 
-}$h‍_once.default(tameErrorConstructor);
+ }$h‍_once.default(     tameErrorConstructor);
 })
 ,
-// === functors[29] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_FUNCTION,Float32Array,Map,Set,String,getOwnPropertyDescriptor,getPrototypeOf,iterateArray,iterateMap,iterateSet,iterateString,matchAllRegExp,matchAllSymbol,regexpPrototype,InertCompartment;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["Float32Array", [$h‍_a => (Float32Array = $h‍_a)]],["Map", [$h‍_a => (Map = $h‍_a)]],["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["iterateArray", [$h‍_a => (iterateArray = $h‍_a)]],["iterateMap", [$h‍_a => (iterateMap = $h‍_a)]],["iterateSet", [$h‍_a => (iterateSet = $h‍_a)]],["iterateString", [$h‍_a => (iterateString = $h‍_a)]],["matchAllRegExp", [$h‍_a => (matchAllRegExp = $h‍_a)]],["matchAllSymbol", [$h‍_a => (matchAllSymbol = $h‍_a)]],["regexpPrototype", [$h‍_a => (regexpPrototype = $h‍_a)]]]],["./compartment-shim.js", [["InertCompartment", [$h‍_a => (InertCompartment = $h‍_a)]]]]]);   
+// === functors[32] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_FUNCTION,Float32Array,Map,Set,String,getOwnPropertyDescriptor,getPrototypeOf,iterateArray,iterateMap,iterateSet,iterateString,matchAllRegExp,matchAllSymbol,regexpPrototype,InertCompartment;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["Float32Array", [$h‍_a => (Float32Array = $h‍_a)]],["Map", [$h‍_a => (Map = $h‍_a)]],["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["iterateArray", [$h‍_a => (iterateArray = $h‍_a)]],["iterateMap", [$h‍_a => (iterateMap = $h‍_a)]],["iterateSet", [$h‍_a => (iterateSet = $h‍_a)]],["iterateString", [$h‍_a => (iterateString = $h‍_a)]],["matchAllRegExp", [$h‍_a => (matchAllRegExp = $h‍_a)]],["matchAllSymbol", [$h‍_a => (matchAllSymbol = $h‍_a)]],["regexpPrototype", [$h‍_a => (regexpPrototype = $h‍_a)]]]],["./compartment-shim.js", [["InertCompartment", [$h‍_a => (InertCompartment = $h‍_a)]]]]]);   
 
 
 
@@ -7084,14 +7630,14 @@ stackFiltering = 'concise')
  */
 function getConstructorOf(obj) {
   return getPrototypeOf(obj).constructor;
-}
+ }
 
 // getAnonymousIntrinsics uses a utility function to construct an arguments
 // object, since it cannot have one of its own and also be a const export.
 function makeArguments() {
   // eslint-disable-next-line prefer-rest-params
   return arguments;
-}
+ }
 
 /**
  * getAnonymousIntrinsics()
@@ -7100,81 +7646,83 @@ function makeArguments() {
  *
  * @returns {Object}
  */
-const getAnonymousIntrinsics = () => {
-  const InertFunction = FERAL_FUNCTION.prototype.constructor;
+const        getAnonymousIntrinsics=  ()=>  {
+  const InertFunction=  FERAL_FUNCTION.prototype.constructor;
 
   // 9.2.4.1 %ThrowTypeError%
 
-  const ThrowTypeError = getOwnPropertyDescriptor(makeArguments(), 'callee').
-  get;
+  const ThrowTypeError=  getOwnPropertyDescriptor(
+    makeArguments(),
+    'callee').
+    get;
 
   // 21.1.5.2 The %StringIteratorPrototype% Object
 
   // eslint-disable-next-line no-new-wrappers
-  const StringIteratorObject = iterateString(new String());
-  const StringIteratorPrototype = getPrototypeOf(StringIteratorObject);
+  const StringIteratorObject=  iterateString(new String());
+  const StringIteratorPrototype=  getPrototypeOf(StringIteratorObject);
 
   // 21.2.7.1 The %RegExpStringIteratorPrototype% Object
-  const RegExpStringIterator =
-  regexpPrototype[matchAllSymbol] && matchAllRegExp(/./);
-  const RegExpStringIteratorPrototype =
-  RegExpStringIterator && getPrototypeOf(RegExpStringIterator);
+  const RegExpStringIterator=
+    regexpPrototype[matchAllSymbol]&&  matchAllRegExp(/./);
+  const RegExpStringIteratorPrototype=
+    RegExpStringIterator&&  getPrototypeOf(RegExpStringIterator);
 
   // 22.1.5.2 The %ArrayIteratorPrototype% Object
 
   // eslint-disable-next-line no-array-constructor
-  const ArrayIteratorObject = iterateArray([]);
-  const ArrayIteratorPrototype = getPrototypeOf(ArrayIteratorObject);
+  const ArrayIteratorObject=  iterateArray([]);
+  const ArrayIteratorPrototype=  getPrototypeOf(ArrayIteratorObject);
 
   // 22.2.1 The %TypedArray% Intrinsic Object
 
-  const TypedArray = getPrototypeOf(Float32Array);
+  const TypedArray=  getPrototypeOf(Float32Array);
 
   // 23.1.5.2 The %MapIteratorPrototype% Object
 
-  const MapIteratorObject = iterateMap(new Map());
-  const MapIteratorPrototype = getPrototypeOf(MapIteratorObject);
+  const MapIteratorObject=  iterateMap(new Map());
+  const MapIteratorPrototype=  getPrototypeOf(MapIteratorObject);
 
   // 23.2.5.2 The %SetIteratorPrototype% Object
 
-  const SetIteratorObject = iterateSet(new Set());
-  const SetIteratorPrototype = getPrototypeOf(SetIteratorObject);
+  const SetIteratorObject=  iterateSet(new Set());
+  const SetIteratorPrototype=  getPrototypeOf(SetIteratorObject);
 
   // 25.1.2 The %IteratorPrototype% Object
 
-  const IteratorPrototype = getPrototypeOf(ArrayIteratorPrototype);
+  const IteratorPrototype=  getPrototypeOf(ArrayIteratorPrototype);
 
   // 25.2.1 The GeneratorFunction Constructor
 
   // eslint-disable-next-line no-empty-function
-  function* GeneratorFunctionInstance() {}
-  const GeneratorFunction = getConstructorOf(GeneratorFunctionInstance);
+  function* GeneratorFunctionInstance() { }
+  const GeneratorFunction=  getConstructorOf(GeneratorFunctionInstance);
 
   // 25.2.3 Properties of the GeneratorFunction Prototype Object
 
-  const Generator = GeneratorFunction.prototype;
+  const Generator=  GeneratorFunction.prototype;
 
   // 25.3.1 The AsyncGeneratorFunction Constructor
 
   // eslint-disable-next-line no-empty-function
-  async function* AsyncGeneratorFunctionInstance() {}
-  const AsyncGeneratorFunction = getConstructorOf(
-  AsyncGeneratorFunctionInstance);
+  async function* AsyncGeneratorFunctionInstance() { }
+  const AsyncGeneratorFunction=  getConstructorOf(
+    AsyncGeneratorFunctionInstance);
 
 
   // 25.3.2.2 AsyncGeneratorFunction.prototype
-  const AsyncGenerator = AsyncGeneratorFunction.prototype;
+  const AsyncGenerator=  AsyncGeneratorFunction.prototype;
   // 25.5.1 Properties of the AsyncGenerator Prototype Object
-  const AsyncGeneratorPrototype = AsyncGenerator.prototype;
-  const AsyncIteratorPrototype = getPrototypeOf(AsyncGeneratorPrototype);
+  const AsyncGeneratorPrototype=  AsyncGenerator.prototype;
+  const AsyncIteratorPrototype=  getPrototypeOf(AsyncGeneratorPrototype);
 
   // 25.7.1 The AsyncFunction Constructor
 
   // eslint-disable-next-line no-empty-function
-  async function AsyncFunctionInstance() {}
-  const AsyncFunction = getConstructorOf(AsyncFunctionInstance);
+  async function AsyncFunctionInstance() { }
+  const AsyncFunction=  getConstructorOf(AsyncFunctionInstance);
 
-  const intrinsics = {
+  const intrinsics=  {
     '%InertFunction%': InertFunction,
     '%ArrayIteratorPrototype%': ArrayIteratorPrototype,
     '%InertAsyncFunction%': AsyncFunction,
@@ -7191,15 +7739,23 @@ const getAnonymousIntrinsics = () => {
     '%StringIteratorPrototype%': StringIteratorPrototype,
     '%ThrowTypeError%': ThrowTypeError,
     '%TypedArray%': TypedArray,
-    '%InertCompartment%': InertCompartment };
+    '%InertCompartment%': InertCompartment};
 
 
   return intrinsics;
-};$h‍_once.getAnonymousIntrinsics(getAnonymousIntrinsics);
+ };$h‍_once.getAnonymousIntrinsics(getAnonymousIntrinsics);
 })
 ,
-// === functors[30] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Set,String,TypeError,WeakMap,WeakSet,arrayForEach,freeze,getOwnPropertyDescriptors,getPrototypeOf,isObject,objectHasOwnProperty,ownKeys,setAdd,setForEach,setHas,weakmapGet,weakmapSet,weaksetAdd,weaksetHas;$h‍_imports([["./commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["setForEach", [$h‍_a => (setForEach = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]]]);   
+// === functors[33] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Set,String,TypeError,WeakMap,WeakSet,apply,arrayForEach,defineProperty,freeze,getOwnPropertyDescriptor,getOwnPropertyDescriptors,getPrototypeOf,isInteger,isObject,objectHasOwnProperty,ownKeys,preventExtensions,setAdd,setForEach,setHas,toStringTagSymbol,typedArrayPrototype,weakmapGet,weakmapSet,weaksetAdd,weaksetHas,assert;$h‍_imports([["./commons.js", [["Set", [$h‍_a => (Set = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["WeakMap", [$h‍_a => (WeakMap = $h‍_a)]],["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["arrayForEach", [$h‍_a => (arrayForEach = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["isInteger", [$h‍_a => (isInteger = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["preventExtensions", [$h‍_a => (preventExtensions = $h‍_a)]],["setAdd", [$h‍_a => (setAdd = $h‍_a)]],["setForEach", [$h‍_a => (setForEach = $h‍_a)]],["setHas", [$h‍_a => (setHas = $h‍_a)]],["toStringTagSymbol", [$h‍_a => (toStringTagSymbol = $h‍_a)]],["typedArrayPrototype", [$h‍_a => (typedArrayPrototype = $h‍_a)]],["weakmapGet", [$h‍_a => (weakmapGet = $h‍_a)]],["weakmapSet", [$h‍_a => (weakmapSet = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+
+
+
+
+
+
+
+
 
 
 
@@ -7248,23 +7804,89 @@ const getAnonymousIntrinsics = () => {
  * @typedef {import('../index.js').Harden} Harden
  */
 
+// Obtain the string tag accessor of of TypedArray so we can indirectly use the
+// TypedArray brand check it employs.
+const typedArrayToStringTag=  getOwnPropertyDescriptor(
+  typedArrayPrototype,
+  toStringTagSymbol);
+
+assert(typedArrayToStringTag);
+const getTypedArrayToStringTag=  typedArrayToStringTag.get;
+assert(getTypedArrayToStringTag);
+
+// Exported for tests.
+/**
+ * Duplicates packages/marshal/src/helpers/passStyle-helpers.js to avoid a dependency.
+ *
+ * @param {unknown} object
+ */
+const        isTypedArray=  (object)=>{
+  // The object must pass a brand check or toStringTag will return undefined.
+  const tag=  apply(getTypedArrayToStringTag, object, []);
+  return tag!==  undefined;
+ };
+
+/**
+ * Tests if a property key is an integer-valued canonical numeric index.
+ * https://tc39.es/ecma262/#sec-canonicalnumericindexstring
+ *
+ * @param {string | symbol} propertyKey
+ */$h‍_once.isTypedArray(isTypedArray);
+const isCanonicalIntegerIndexString=  (propertyKey)=>{
+  const n=  +String(propertyKey);
+  return isInteger(n)&&  String(n)===  propertyKey;
+ };
+
+/**
+ * @template T
+ * @param {ArrayLike<T>} array
+ */
+const freezeTypedArray=  (array)=>{
+  preventExtensions(array);
+
+  // Downgrade writable expandos to readonly, even if non-configurable.
+  // We get each descriptor individually rather than using
+  // getOwnPropertyDescriptors in order to fail safe when encountering
+  // an obscure GraalJS issue where getOwnPropertyDescriptor returns
+  // undefined for a property that does exist.
+  arrayForEach(ownKeys(array), (/** @type {string | symbol} */ name)=>  {
+    const desc=  getOwnPropertyDescriptor(array, name);
+    assert(desc);
+    // TypedArrays are integer-indexed exotic objects, which define special
+    // treatment for property names in canonical numeric form:
+    // integers in range are permanently writable and non-configurable.
+    // https://tc39.es/ecma262/#sec-integer-indexed-exotic-objects
+    //
+    // This is analogous to the data of a hardened Map or Set,
+    // so we carve out this exceptional behavior but make all other
+    // properties non-configurable.
+    if( !isCanonicalIntegerIndexString(name)) {
+      defineProperty(array, name, {
+        ...desc,
+        writable: false,
+        configurable: false});
+
+     }
+   });
+ };
+
 /**
  * Create a `harden` function.
  *
  * @returns {Harden}
  */
-const makeHardener = () => {
-  const hardened = new WeakSet();
+const        makeHardener=  ()=>  {
+  const hardened=  new WeakSet();
 
-  const { harden } = {
+  const { harden}=   {
     /**
      * @template T
      * @param {T} root
      * @returns {T}
      */
     harden(root) {
-      const toFreeze = new Set();
-      const paths = new WeakMap();
+      const toFreeze=  new Set();
+      const paths=  new WeakMap();
 
       // If val is something we should be freezing but aren't yet,
       // add it to toFreeze.
@@ -7272,24 +7894,24 @@ const makeHardener = () => {
        * @param {any} val
        * @param {string} [path]
        */
-      function enqueue(val, path = undefined) {
-        if (!isObject(val)) {
+      function enqueue(val, path=  undefined) {
+        if( !isObject(val)) {
           // ignore primitives
           return;
-        }
-        const type = typeof val;
-        if (type !== 'object' && type !== 'function') {
+         }
+        const type=  typeof val;
+        if( type!==  'object'&&  type!==  'function') {
           // future proof: break until someone figures out what it should do
-          throw new TypeError(`Unexpected typeof: ${type}`);
-        }
-        if (weaksetHas(hardened, val) || setHas(toFreeze, val)) {
+          throw new TypeError( `Unexpected typeof: ${type}`);
+         }
+        if( weaksetHas(hardened, val)||  setHas(toFreeze, val)) {
           // Ignore if this is an exit, or we've already visited it
           return;
-        }
+         }
         // console.warn(`adding ${val} to toFreeze`, val);
         setAdd(toFreeze, val);
         weakmapSet(paths, val, path);
-      }
+       }
 
       /**
        * @param {any} obj
@@ -7302,23 +7924,28 @@ const makeHardener = () => {
         // Object are verified before being enqueued,
         // therefore this is a valid candidate.
         // Throws if this fails (strict mode).
-        freeze(obj);
+        // Also throws if the object is an ArrayBuffer or any TypedArray.
+        if( isTypedArray(obj)) {
+          freezeTypedArray(obj);
+         }else {
+          freeze(obj);
+         }
 
         // we rely upon certain commitments of Object.freeze and proxies here
 
         // get stable/immutable outbound links before a Proxy has a chance to do
         // something sneaky.
-        const path = weakmapGet(paths, obj) || 'unknown';
-        const descs = getOwnPropertyDescriptors(obj);
-        const proto = getPrototypeOf(obj);
-        enqueue(proto, `${path}.__proto__`);
+        const path=  weakmapGet(paths, obj)||  'unknown';
+        const descs=  getOwnPropertyDescriptors(obj);
+        const proto=  getPrototypeOf(obj);
+        enqueue(proto,  `${path}.__proto__`);
 
-        arrayForEach(ownKeys(descs), ( /** @type {string | symbol} */name) => {
-          const pathname = `${path}.${String(name)}`;
+        arrayForEach(ownKeys(descs), (/** @type {string | symbol} */ name)=>  {
+          const pathname=   `${path}.${String(name)}`;
           // The 'name' may be a symbol, and TypeScript doesn't like us to
           // index arbitrary symbols on objects, so we pretend they're just
           // strings.
-          const desc = descs[/** @type {string} */name];
+          const desc=  descs[/** @type {string} */  name];
           // getOwnPropertyDescriptors is guaranteed to return well-formed
           // descriptors, but they still inherit from Object.prototype. If
           // someone has poisoned Object.prototype to add 'value' or 'get'
@@ -7326,28 +7953,28 @@ const makeHardener = () => {
           // test could be confused. We use hasOwnProperty to be sure about
           // whether 'value' is present or not, which tells us for sure that
           // this is a data property.
-          if (objectHasOwnProperty(desc, 'value')) {
-            enqueue(desc.value, `${pathname}`);
-          } else {
-            enqueue(desc.get, `${pathname}(get)`);
-            enqueue(desc.set, `${pathname}(set)`);
-          }
-        });
-      }
+          if( objectHasOwnProperty(desc, 'value')) {
+            enqueue(desc.value,  `${pathname}`);
+           }else {
+            enqueue(desc.get,  `${pathname}(get)`);
+            enqueue(desc.set,  `${pathname}(set)`);
+           }
+         });
+       }
 
       function dequeue() {
         // New values added before forEach() has finished will be visited.
         setForEach(toFreeze, freezeAndTraverse);
-      }
+       }
 
       /** @param {any} value */
       function markHardened(value) {
         weaksetAdd(hardened, value);
-      }
+       }
 
       function commit() {
         setForEach(toFreeze, markHardened);
-      }
+       }
 
       enqueue(root);
       dequeue();
@@ -7355,15 +7982,15 @@ const makeHardener = () => {
       commit();
 
       return root;
-    } };
+     }};
 
 
   return harden;
-};$h‍_once.makeHardener(makeHardener);
+ };$h‍_once.makeHardener(makeHardener);
 })
 ,
-// === functors[31] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Date,TypeError,apply,construct,defineProperties;$h‍_imports([["./commons.js", [["Date", [$h‍_a => (Date = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]]]]]);   
+// === functors[34] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Date,TypeError,apply,construct,defineProperties;$h‍_imports([["./commons.js", [["Date", [$h‍_a => (Date = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["apply", [$h‍_a => (apply = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]]]]]);   
 
 
 
@@ -7373,18 +8000,18 @@ const makeHardener = () => {
 
 
 
-function tameDateConstructor(dateTaming = 'safe') {
-  if (dateTaming !== 'safe' && dateTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized dateTaming ${dateTaming}`);
-  }
-  const OriginalDate = Date;
-  const DatePrototype = OriginalDate.prototype;
+function                tameDateConstructor(dateTaming=  'safe') {
+  if( dateTaming!==  'safe'&&  dateTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized dateTaming ${dateTaming}`);
+   }
+  const OriginalDate=  Date;
+  const DatePrototype=  OriginalDate.prototype;
 
   // Use concise methods to obtain named functions without constructors.
-  const tamedMethods = {
+  const tamedMethods=  {
     now() {
       return NaN;
-    } };
+     }};
 
 
   // Tame the Date constructor.
@@ -7402,61 +8029,61 @@ function tameDateConstructor(dateTaming = 'safe') {
   //   * Date(anything) returned 'Invalid Date'
   //   * new Date() returns a Date object which stringifies to
   //     'Invalid Date'
-  const makeDateConstructor = ({ powers = 'none' } = {}) => {
+  const makeDateConstructor=  ({ powers=  'none'}=   {})=>  {
     let ResultDate;
-    if (powers === 'original') {
+    if( powers===  'original') {
       // eslint-disable-next-line no-shadow
-      ResultDate = function Date(...rest) {
-        if (new.target === undefined) {
+      ResultDate=  function Date(...rest) {
+        if( new.target===  undefined) {
           return apply(OriginalDate, undefined, rest);
-        }
+         }
         return construct(OriginalDate, rest, new.target);
-      };
-    } else {
+       };
+     }else {
       // eslint-disable-next-line no-shadow
-      ResultDate = function Date(...rest) {
-        if (new.target === undefined) {
+      ResultDate=  function Date(...rest) {
+        if( new.target===  undefined) {
           return 'Invalid Date';
-        }
-        if (rest.length === 0) {
-          rest = [NaN];
-        }
+         }
+        if( rest.length===  0) {
+          rest=  [NaN];
+         }
         return construct(OriginalDate, rest, new.target);
-      };
-    }
+       };
+     }
 
     defineProperties(ResultDate, {
-      length: { value: 7 },
+      length: { value: 7},
       prototype: {
         value: DatePrototype,
         writable: false,
         enumerable: false,
-        configurable: false },
+        configurable: false},
 
       parse: {
         value: Date.parse,
         writable: true,
         enumerable: false,
-        configurable: true },
+        configurable: true},
 
       UTC: {
         value: Date.UTC,
         writable: true,
         enumerable: false,
-        configurable: true } });
+        configurable: true}});
 
 
     return ResultDate;
-  };
-  const InitialDate = makeDateConstructor({ powers: 'original' });
-  const SharedDate = makeDateConstructor({ powers: 'none' });
+   };
+  const InitialDate=  makeDateConstructor({ powers: 'original'});
+  const SharedDate=  makeDateConstructor({ powers: 'none'});
 
   defineProperties(InitialDate, {
     now: {
       value: Date.now,
       writable: true,
       enumerable: false,
-      configurable: true } });
+      configurable: true}});
 
 
   defineProperties(SharedDate, {
@@ -7464,23 +8091,23 @@ function tameDateConstructor(dateTaming = 'safe') {
       value: tamedMethods.now,
       writable: true,
       enumerable: false,
-      configurable: true } });
+      configurable: true}});
 
 
 
   defineProperties(DatePrototype, {
-    constructor: { value: SharedDate } });
+    constructor: { value: SharedDate}});
 
 
   return {
     '%InitialDate%': InitialDate,
-    '%SharedDate%': SharedDate };
+    '%SharedDate%': SharedDate};
 
-}$h‍_once.default(tameDateConstructor);
+ }$h‍_once.default(     tameDateConstructor);
 })
 ,
-// === functors[32] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let TypeError,globalThis,getOwnPropertyDescriptor,defineProperty;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]]]]]);Object.defineProperty(tameDomains, 'name', {value: "tameDomains"});$h‍_once.tameDomains(tameDomains);   
+// === functors[35] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let TypeError,globalThis,getOwnPropertyDescriptor,defineProperty;$h‍_imports([["./commons.js", [["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]]]]]);Object.defineProperty(tameDomains, 'name', {value: "tameDomains"});$h‍_once.tameDomains(tameDomains);   
 
 
 
@@ -7489,29 +8116,29 @@ function tameDateConstructor(dateTaming = 'safe') {
 
 
 
-function tameDomains(domainTaming = 'safe') {
-  if (domainTaming !== 'safe' && domainTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized domainTaming ${domainTaming}`);
-  }
+function        tameDomains(domainTaming=  'safe') {
+  if( domainTaming!==  'safe'&&  domainTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized domainTaming ${domainTaming}`);
+   }
 
-  if (domainTaming === 'unsafe') {
+  if( domainTaming===  'unsafe') {
     return;
-  }
+   }
 
   // Protect against the hazard presented by Node.js domains.
-  if (typeof globalThis.process === 'object' && globalThis.process !== null) {
+  if( typeof globalThis.process===  'object'&&  globalThis.process!==  null) {
     // Check whether domains were initialized.
-    const domainDescriptor = getOwnPropertyDescriptor(
-    globalThis.process,
-    'domain');
+    const domainDescriptor=  getOwnPropertyDescriptor(
+      globalThis.process,
+      'domain');
 
-    if (domainDescriptor !== undefined && domainDescriptor.get !== undefined) {
+    if( domainDescriptor!==  undefined&&  domainDescriptor.get!==  undefined) {
       // The domain descriptor on Node.js initially has value: null, which
       // becomes a get, set pair after domains initialize.
       throw new TypeError(
-      `SES failed to lockdown, Node.js domains have been initialized (SES_NO_DOMAINS)`);
+         `SES failed to lockdown, Node.js domains have been initialized (SES_NO_DOMAINS)`);
 
-    }
+     }
     // Prevent domains from initializing.
     // This is clunky because the exception thrown from the domains package does
     // not direct the user's gaze toward a knowledge base about the problem.
@@ -7522,14 +8149,15 @@ function tameDomains(domainTaming = 'safe') {
       value: null,
       configurable: false,
       writable: false,
-      enumerable: false });
+      enumerable: false});
 
-  }
-}
+   }
+ }
 })
 ,
-// === functors[33] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_FUNCTION,SyntaxError,TypeError,defineProperties,getPrototypeOf,setPrototypeOf;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["setPrototypeOf", [$h‍_a => (setPrototypeOf = $h‍_a)]]]]]);   
+// === functors[36] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_FUNCTION,SyntaxError,TypeError,defineProperties,getPrototypeOf,setPrototypeOf,freeze;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["SyntaxError", [$h‍_a => (SyntaxError = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["setPrototypeOf", [$h‍_a => (setPrototypeOf = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]]]]]);   
+
 
 
 
@@ -7573,17 +8201,17 @@ function tameDomains(domainTaming = 'safe') {
  * %GeneratorFunction% %AsyncFunction% and %AsyncGeneratorFunction%, with
  * safe replacements that throw if invoked.
  */
-function tameFunctionConstructors() {
+function                tameFunctionConstructors() {
   try {
     // Verify that the method is not callable.
     // eslint-disable-next-line @endo/no-polymorphic-call
     FERAL_FUNCTION.prototype.constructor('return 1');
-  } catch (ignore) {
+   }catch( ignore) {
     // Throws, no need to patch.
-    return {};
-  }
+    return freeze({});
+   }
 
-  const newIntrinsics = {};
+  const newIntrinsics=  {};
 
   /*
    * The process to repair constructors:
@@ -7598,48 +8226,48 @@ function tameFunctionConstructors() {
     let FunctionInstance;
     try {
       // eslint-disable-next-line no-eval, no-restricted-globals
-      FunctionInstance = (0, eval)(declaration);
-    } catch (e) {
-      if (e instanceof SyntaxError) {
+      FunctionInstance=  (0, eval)(declaration);
+     }catch( e) {
+      if( e instanceof SyntaxError) {
         // Prevent failure on platforms where async and/or generators
         // are not supported.
         return;
-      }
+       }
       // Re-throw
       throw e;
-    }
-    const FunctionPrototype = getPrototypeOf(FunctionInstance);
+     }
+    const FunctionPrototype=  getPrototypeOf(FunctionInstance);
 
     // Prevents the evaluation of source when calling constructor on the
     // prototype of functions.
     // eslint-disable-next-line func-names
-    const InertConstructor = function () {
+    const InertConstructor=  function()  {
       throw new TypeError(
-      'Function.prototype.constructor is not a valid constructor.');
+        'Function.prototype.constructor is not a valid constructor.');
 
-    };
+     };
     defineProperties(InertConstructor, {
-      prototype: { value: FunctionPrototype },
+      prototype: { value: FunctionPrototype},
       name: {
         value: name,
         writable: false,
         enumerable: false,
-        configurable: true } });
+        configurable: true}});
 
 
 
     defineProperties(FunctionPrototype, {
-      constructor: { value: InertConstructor } });
+      constructor: { value: InertConstructor}});
 
 
     // Reconstructs the inheritance among the new tamed constructors
     // to mirror the original specified in normal JS.
-    if (InertConstructor !== FERAL_FUNCTION.prototype.constructor) {
+    if( InertConstructor!==  FERAL_FUNCTION.prototype.constructor) {
       setPrototypeOf(InertConstructor, FERAL_FUNCTION.prototype.constructor);
-    }
+     }
 
-    newIntrinsics[intrinsicName] = InertConstructor;
-  }
+    newIntrinsics[intrinsicName]=  InertConstructor;
+   }
 
   // Here, the order of operation is important: Function needs to be repaired
   // first since the other repaired constructors need to inherit from the
@@ -7647,27 +8275,27 @@ function tameFunctionConstructors() {
 
   repairFunction('Function', '%InertFunction%', '(function(){})');
   repairFunction(
-  'GeneratorFunction',
-  '%InertGeneratorFunction%',
-  '(function*(){})');
+    'GeneratorFunction',
+    '%InertGeneratorFunction%',
+    '(function*(){})');
 
   repairFunction(
-  'AsyncFunction',
-  '%InertAsyncFunction%',
-  '(async function(){})');
+    'AsyncFunction',
+    '%InertAsyncFunction%',
+    '(async function(){})');
 
   repairFunction(
-  'AsyncGeneratorFunction',
-  '%InertAsyncGeneratorFunction%',
-  '(async function*(){})');
+    'AsyncGeneratorFunction',
+    '%InertAsyncGeneratorFunction%',
+    '(async function*(){})');
 
 
   return newIntrinsics;
-}$h‍_once.default(tameFunctionConstructors);
+ }$h‍_once.default(     tameFunctionConstructors);
 })
 ,
-// === functors[34] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let WeakSet,defineProperty,freeze,functionPrototype,functionToString,stringEndsWith,weaksetAdd,weaksetHas;$h‍_imports([["./commons.js", [["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["functionPrototype", [$h‍_a => (functionPrototype = $h‍_a)]],["functionToString", [$h‍_a => (functionToString = $h‍_a)]],["stringEndsWith", [$h‍_a => (stringEndsWith = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]]]);   
+// === functors[37] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let WeakSet,defineProperty,freeze,functionPrototype,functionToString,stringEndsWith,weaksetAdd,weaksetHas;$h‍_imports([["./commons.js", [["WeakSet", [$h‍_a => (WeakSet = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["freeze", [$h‍_a => (freeze = $h‍_a)]],["functionPrototype", [$h‍_a => (functionPrototype = $h‍_a)]],["functionToString", [$h‍_a => (functionToString = $h‍_a)]],["stringEndsWith", [$h‍_a => (stringEndsWith = $h‍_a)]],["weaksetAdd", [$h‍_a => (weaksetAdd = $h‍_a)]],["weaksetHas", [$h‍_a => (weaksetHas = $h‍_a)]]]]]);   
 
 
 
@@ -7678,7 +8306,7 @@ function tameFunctionConstructors() {
 
 
 
-const nativeSuffix = ') { [native code] }';
+const nativeSuffix=  ') { [native code] }';
 
 // Note: Top level mutable state. Does not make anything worse, since the
 // patching of `Function.prototype.toString` is also globally stateful. We
@@ -7690,37 +8318,37 @@ let markVirtualizedNativeFunction;
  * Replace `Function.prototype.toString` with one that recognizes
  * shimmed functions as honorary native functions.
  */
-const tameFunctionToString = () => {
-  if (markVirtualizedNativeFunction === undefined) {
-    const virtualizedNativeFunctions = new WeakSet();
+const        tameFunctionToString=  ()=>  {
+  if( markVirtualizedNativeFunction===  undefined) {
+    const virtualizedNativeFunctions=  new WeakSet();
 
-    const tamingMethods = {
+    const tamingMethods=  {
       toString() {
-        const str = functionToString(this, []);
-        if (
-        stringEndsWith(str, nativeSuffix) ||
-        !weaksetHas(virtualizedNativeFunctions, this))
-        {
+        const str=  functionToString(this, []);
+        if(
+          stringEndsWith(str, nativeSuffix)||
+          !weaksetHas(virtualizedNativeFunctions, this))
+          {
           return str;
-        }
-        return `function ${this.name}() { [native code] }`;
-      } };
+         }
+        return  `function ${this.name}() { [native code] }`;
+       }};
 
 
     defineProperty(functionPrototype, 'toString', {
-      value: tamingMethods.toString });
+      value: tamingMethods.toString});
 
 
-    markVirtualizedNativeFunction = freeze((func) =>
-    weaksetAdd(virtualizedNativeFunctions, func));
+    markVirtualizedNativeFunction=  freeze((func)=>
+      weaksetAdd(virtualizedNativeFunctions, func));
 
-  }
+   }
   return markVirtualizedNativeFunction;
-};$h‍_once.tameFunctionToString(tameFunctionToString);
+ };$h‍_once.tameFunctionToString(tameFunctionToString);
 })
 ,
-// === functors[35] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Number,String,TypeError,defineProperty,getOwnPropertyNames,isObject,regexpExec,assert;$h‍_imports([["./commons.js", [["Number", [$h‍_a => (Number = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[38] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Number,String,TypeError,defineProperty,getOwnPropertyNames,isObject,regexpExec,assert;$h‍_imports([["./commons.js", [["Number", [$h‍_a => (Number = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["defineProperty", [$h‍_a => (defineProperty = $h‍_a)]],["getOwnPropertyNames", [$h‍_a => (getOwnPropertyNames = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["regexpExec", [$h‍_a => (regexpExec = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -7731,84 +8359,80 @@ const tameFunctionToString = () => {
 
 
 
-const { details: d, quote: q } = assert;
+const { Fail, quote: q}=   assert;
 
-const localePattern = /^(\w*[a-z])Locale([A-Z]\w*)$/;
+const localePattern=  /^(\w*[a-z])Locale([A-Z]\w*)$/;
 
 // Use concise methods to obtain named functions without constructor
 // behavior or `.prototype` property.
-const tamedMethods = {
+const tamedMethods=  {
   // See https://tc39.es/ecma262/#sec-string.prototype.localecompare
   localeCompare(that) {
-    if (this === null || this === undefined) {
+    if( this===  null||  this===  undefined) {
       throw new TypeError(
-      'Cannot localeCompare with null or undefined "this" value');
+        'Cannot localeCompare with null or undefined "this" value');
 
-    }
-    const s = `${this}`;
-    that = `${that}`;
-    if (s < that) {
+     }
+    const s=   `${this}`;
+    that=   `${that}`;
+    if( s<  that) {
       return -1;
-    }
-    if (s > that) {
+     }
+    if( s>  that) {
       return 1;
-    }
-    assert(s === that, d`expected ${q(s)} and ${q(that)} to compare`);
+     }
+    s===  that||  Fail `expected ${q(s)} and ${q(that)} to compare`;
     return 0;
-  },
+   },
 
   toString() {
-    return `${this}`;
-  } };
+    return  `${this}`;
+   }};
 
 
-const nonLocaleCompare = tamedMethods.localeCompare;
-const numberToString = tamedMethods.toString;
+const nonLocaleCompare=  tamedMethods.localeCompare;
+const numberToString=  tamedMethods.toString;
 
-function tameLocaleMethods(intrinsics, localeTaming = 'safe') {
-  if (localeTaming !== 'safe' && localeTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized localeTaming ${localeTaming}`);
-  }
-  if (localeTaming === 'unsafe') {
+function                tameLocaleMethods(intrinsics, localeTaming=  'safe') {
+  if( localeTaming!==  'safe'&&  localeTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized localeTaming ${localeTaming}`);
+   }
+  if( localeTaming===  'unsafe') {
     return;
-  }
+   }
 
   defineProperty(String.prototype, 'localeCompare', {
-    value: nonLocaleCompare });
+    value: nonLocaleCompare});
 
 
-  for (const intrinsicName of getOwnPropertyNames(intrinsics)) {
-    const intrinsic = intrinsics[intrinsicName];
-    if (isObject(intrinsic)) {
-      for (const methodName of getOwnPropertyNames(intrinsic)) {
-        const match = regexpExec(localePattern, methodName);
-        if (match) {
-          assert(
-          typeof intrinsic[methodName] === 'function',
-          d`expected ${q(methodName)} to be a function`);
-
-          const nonLocaleMethodName = `${match[1]}${match[2]}`;
-          const method = intrinsic[nonLocaleMethodName];
-          assert(
-          typeof method === 'function',
-          d`function ${q(nonLocaleMethodName)} not found`);
-
-          defineProperty(intrinsic, methodName, { value: method });
-        }
-      }
-    }
-  }
+  for( const intrinsicName of getOwnPropertyNames(intrinsics)) {
+    const intrinsic=  intrinsics[intrinsicName];
+    if( isObject(intrinsic)) {
+      for( const methodName of getOwnPropertyNames(intrinsic)) {
+        const match=  regexpExec(localePattern, methodName);
+        if( match) {
+          typeof intrinsic[methodName]===  'function'||
+            Fail `expected ${q(methodName)} to be a function`;
+          const nonLocaleMethodName=   `${match[1]}${match[2]}`;
+          const method=  intrinsic[nonLocaleMethodName];
+          typeof method===  'function'||
+            Fail `function ${q(nonLocaleMethodName)} not found`;
+          defineProperty(intrinsic, methodName, { value: method});
+         }
+       }
+     }
+   }
 
   // Numbers are special because toString accepts a radix instead of ignoring
   // all of the arguments that we would otherwise forward.
   defineProperty(Number.prototype, 'toLocaleString', {
-    value: numberToString });
+    value: numberToString});
 
-}$h‍_once.default(tameLocaleMethods);
+ }$h‍_once.default(     tameLocaleMethods);
 })
 ,
-// === functors[36] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let Math,TypeError,create,getOwnPropertyDescriptors,objectPrototype;$h‍_imports([["./commons.js", [["Math", [$h‍_a => (Math = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["objectPrototype", [$h‍_a => (objectPrototype = $h‍_a)]]]]]);   
+// === functors[39] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let Math,TypeError,create,getOwnPropertyDescriptors,objectPrototype;$h‍_imports([["./commons.js", [["Math", [$h‍_a => (Math = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["create", [$h‍_a => (create = $h‍_a)]],["getOwnPropertyDescriptors", [$h‍_a => (getOwnPropertyDescriptors = $h‍_a)]],["objectPrototype", [$h‍_a => (objectPrototype = $h‍_a)]]]]]);   
 
 
 
@@ -7816,28 +8440,27 @@ function tameLocaleMethods(intrinsics, localeTaming = 'safe') {
 
 
 
-function tameMathObject(mathTaming = 'safe') {
-  if (mathTaming !== 'safe' && mathTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized mathTaming ${mathTaming}`);
-  }
-  const originalMath = Math;
-  const initialMath = originalMath; // to follow the naming pattern
+function                tameMathObject(mathTaming=  'safe') {
+  if( mathTaming!==  'safe'&&  mathTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized mathTaming ${mathTaming}`);
+   }
+  const originalMath=  Math;
+  const initialMath=  originalMath; // to follow the naming pattern
 
-  const { random: _, ...otherDescriptors } = getOwnPropertyDescriptors(
-  originalMath);
+  const { random: _, ...otherDescriptors}=
+    getOwnPropertyDescriptors(originalMath);
 
-
-  const sharedMath = create(objectPrototype, otherDescriptors);
+  const sharedMath=  create(objectPrototype, otherDescriptors);
 
   return {
     '%InitialMath%': initialMath,
-    '%SharedMath%': sharedMath };
+    '%SharedMath%': sharedMath};
 
-}$h‍_once.default(tameMathObject);
+ }$h‍_once.default(     tameMathObject);
 })
 ,
-// === functors[37] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_REG_EXP,TypeError,construct,defineProperties,getOwnPropertyDescriptor,speciesSymbol;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["speciesSymbol", [$h‍_a => (speciesSymbol = $h‍_a)]]]]]);   
+// === functors[40] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_REG_EXP,TypeError,construct,defineProperties,getOwnPropertyDescriptor,speciesSymbol;$h‍_imports([["./commons.js", [["FERAL_REG_EXP", [$h‍_a => (FERAL_REG_EXP = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["construct", [$h‍_a => (construct = $h‍_a)]],["defineProperties", [$h‍_a => (defineProperties = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["speciesSymbol", [$h‍_a => (speciesSymbol = $h‍_a)]]]]]);   
 
 
 
@@ -7846,53 +8469,53 @@ function tameMathObject(mathTaming = 'safe') {
 
 
 
-function tameRegExpConstructor(regExpTaming = 'safe') {
-  if (regExpTaming !== 'safe' && regExpTaming !== 'unsafe') {
-    throw new TypeError(`unrecognized regExpTaming ${regExpTaming}`);
-  }
-  const RegExpPrototype = FERAL_REG_EXP.prototype;
+function                tameRegExpConstructor(regExpTaming=  'safe') {
+  if( regExpTaming!==  'safe'&&  regExpTaming!==  'unsafe') {
+    throw new TypeError( `unrecognized regExpTaming ${regExpTaming}`);
+   }
+  const RegExpPrototype=  FERAL_REG_EXP.prototype;
 
-  const makeRegExpConstructor = (_ = {}) => {
+  const makeRegExpConstructor=  (_=  {})=>  {
     // RegExp has non-writable static properties we need to omit.
-    const ResultRegExp = function RegExp(...rest) {
-      if (new.target === undefined) {
+    const ResultRegExp=  function RegExp(...rest) {
+      if( new.target===  undefined) {
         return FERAL_REG_EXP(...rest);
-      }
+       }
       return construct(FERAL_REG_EXP, rest, new.target);
-    };
+     };
 
     defineProperties(ResultRegExp, {
-      length: { value: 2 },
+      length: { value: 2},
       prototype: {
         value: RegExpPrototype,
         writable: false,
         enumerable: false,
-        configurable: false },
+        configurable: false},
 
-      [speciesSymbol]: getOwnPropertyDescriptor(FERAL_REG_EXP, speciesSymbol) });
+      [speciesSymbol]: getOwnPropertyDescriptor(FERAL_REG_EXP, speciesSymbol)});
 
     return ResultRegExp;
-  };
+   };
 
-  const InitialRegExp = makeRegExpConstructor();
-  const SharedRegExp = makeRegExpConstructor();
+  const InitialRegExp=  makeRegExpConstructor();
+  const SharedRegExp=  makeRegExpConstructor();
 
-  if (regExpTaming !== 'unsafe') {
+  if( regExpTaming!==  'unsafe') {
     delete RegExpPrototype.compile;
-  }
+   }
   defineProperties(RegExpPrototype, {
-    constructor: { value: SharedRegExp } });
+    constructor: { value: SharedRegExp}});
 
 
   return {
     '%InitialRegExp%': InitialRegExp,
-    '%SharedRegExp%': SharedRegExp };
+    '%SharedRegExp%': SharedRegExp};
 
-}$h‍_once.default(tameRegExpConstructor);
+ }$h‍_once.default(     tameRegExpConstructor);
 })
 ,
-// === functors[38] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let whitelist,FunctionInstance,isAccessorPermit,String,TypeError,arrayIncludes,getOwnPropertyDescriptor,getPrototypeOf,isObject,objectHasOwnProperty,ownKeys,stringSlice;$h‍_imports([["./whitelist.js", [["whitelist", [$h‍_a => (whitelist = $h‍_a)]],["FunctionInstance", [$h‍_a => (FunctionInstance = $h‍_a)]],["isAccessorPermit", [$h‍_a => (isAccessorPermit = $h‍_a)]]]],["./commons.js", [["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["stringSlice", [$h‍_a => (stringSlice = $h‍_a)]]]]]);   
+// === functors[41] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let whitelist,FunctionInstance,isAccessorPermit,Map,String,TypeError,arrayFilter,arrayIncludes,arrayMap,entries,getOwnPropertyDescriptor,getPrototypeOf,isObject,mapGet,objectHasOwnProperty,ownKeys,symbolKeyFor;$h‍_imports([["./whitelist.js", [["whitelist", [$h‍_a => (whitelist = $h‍_a)]],["FunctionInstance", [$h‍_a => (FunctionInstance = $h‍_a)]],["isAccessorPermit", [$h‍_a => (isAccessorPermit = $h‍_a)]]]],["./commons.js", [["Map", [$h‍_a => (Map = $h‍_a)]],["String", [$h‍_a => (String = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayIncludes", [$h‍_a => (arrayIncludes = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["entries", [$h‍_a => (entries = $h‍_a)]],["getOwnPropertyDescriptor", [$h‍_a => (getOwnPropertyDescriptor = $h‍_a)]],["getPrototypeOf", [$h‍_a => (getPrototypeOf = $h‍_a)]],["isObject", [$h‍_a => (isObject = $h‍_a)]],["mapGet", [$h‍_a => (mapGet = $h‍_a)]],["objectHasOwnProperty", [$h‍_a => (objectHasOwnProperty = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["symbolKeyFor", [$h‍_a => (symbolKeyFor = $h‍_a)]]]]]);   
 
 
 
@@ -7950,23 +8573,10 @@ function tameRegExpConstructor(regExpTaming = 'safe') {
 
 
 
-/**
- * asStringPropertyName()
- *
- * @param {string} path
- * @param {string | symbol} prop
- */
-function asStringPropertyName(path, prop) {
-  if (typeof prop === 'string') {
-    return prop;
-  }
 
-  if (typeof prop === 'symbol') {
-    return `@@${stringSlice(String(prop), 14, -1)}`;
-  }
 
-  throw new TypeError(`Unexpected property name type ${path} ${prop}`);
-}
+
+
 
 /**
  * whitelistIntrinsics()
@@ -7976,159 +8586,203 @@ function asStringPropertyName(path, prop) {
  * @param {Object} intrinsics
  * @param {(Object) => void} markVirtualizedNativeFunction
  */
-function whitelistIntrinsics(
-intrinsics,
-markVirtualizedNativeFunction)
-{
-  // These primities are allowed allowed for permits.
-  const primitives = ['undefined', 'boolean', 'number', 'string', 'symbol'];
+function                whitelistIntrinsics(
+  intrinsics,
+  markVirtualizedNativeFunction)
+  {
+  // These primitives are allowed allowed for permits.
+  const primitives=  ['undefined', 'boolean', 'number', 'string', 'symbol'];
+
+  // These symbols are allowed as well-known symbols
+  const wellKnownSymbolNames=  new Map(
+    intrinsics.Symbol?
+        arrayMap(
+          arrayFilter(
+            entries(whitelist.Symbol),
+            ([name, permit])=>
+              permit===  'symbol'&&
+              typeof intrinsics.Symbol[name]===  'symbol'),
+
+          ([name])=>  [intrinsics.Symbol[name],  `@@${name}`]):
+
+        []);
+
+
+  /**
+   * asStringPropertyName()
+   *
+   * @param {string} path
+   * @param {string | symbol} prop
+   */
+  function asStringPropertyName(path, prop) {
+    if( typeof prop===  'string') {
+      return prop;
+     }
+
+    const wellKnownSymbol=  mapGet(wellKnownSymbolNames, prop);
+
+    if( typeof prop===  'symbol') {
+      if( wellKnownSymbol) {
+        return wellKnownSymbol;
+       }else {
+        const registeredKey=  symbolKeyFor(prop);
+        if( registeredKey!==  undefined) {
+          return  `RegisteredSymbol(${registeredKey})`;
+         }else {
+          return  `Unique${String(prop)}`;
+         }
+       }
+     }
+
+    throw new TypeError( `Unexpected property name type ${path} ${prop}`);
+   }
 
   /*
    * visitPrototype()
    * Validate the object's [[prototype]] against a permit.
    */
   function visitPrototype(path, obj, protoName) {
-    if (!isObject(obj)) {
-      throw new TypeError(`Object expected: ${path}, ${obj}, ${protoName}`);
-    }
-    const proto = getPrototypeOf(obj);
+    if( !isObject(obj)) {
+      throw new TypeError( `Object expected: ${path}, ${obj}, ${protoName}`);
+     }
+    const proto=  getPrototypeOf(obj);
 
     // Null prototype.
-    if (proto === null && protoName === null) {
+    if( proto===  null&&  protoName===  null) {
       return;
-    }
+     }
 
     // Assert: protoName, if provided, is a string.
-    if (protoName !== undefined && typeof protoName !== 'string') {
-      throw new TypeError(`Malformed whitelist permit ${path}.__proto__`);
-    }
+    if( protoName!==  undefined&&  typeof protoName!==  'string') {
+      throw new TypeError( `Malformed whitelist permit ${path}.__proto__`);
+     }
 
     // If permit not specified, default to Object.prototype.
-    if (proto === intrinsics[protoName || '%ObjectPrototype%']) {
+    if( proto===  intrinsics[protoName||  '%ObjectPrototype%']) {
       return;
-    }
+     }
 
     // We can't clean [[prototype]], therefore abort.
     throw new TypeError(
-    `Unexpected intrinsic ${path}.__proto__ at ${protoName}`);
+       `Unexpected intrinsic ${path}.__proto__ at ${protoName}`);
 
-  }
+   }
 
   /*
    * isAllowedPropertyValue()
    * Whitelist a single property value against a permit.
    */
   function isAllowedPropertyValue(path, value, prop, permit) {
-    if (typeof permit === 'object') {
+    if( typeof permit===  'object') {
       // eslint-disable-next-line no-use-before-define
       visitProperties(path, value, permit);
       // The property is allowed.
       return true;
-    }
+     }
 
-    if (permit === false) {
+    if( permit===  false) {
       // A boolan 'false' permit specifies the removal of a property.
       // We require a more specific permit instead of allowing 'true'.
       return false;
-    }
+     }
 
-    if (typeof permit === 'string') {
+    if( typeof permit===  'string') {
       // A string permit can have one of two meanings:
 
-      if (prop === 'prototype' || prop === 'constructor') {
+      if( prop===  'prototype'||  prop===  'constructor') {
         // For prototype and constructor value properties, the permit
         // is the name of an intrinsic.
         // Assumption: prototype and constructor cannot be primitives.
         // Assert: the permit is the name of an intrinsic.
         // Assert: the property value is equal to that intrinsic.
 
-        if (objectHasOwnProperty(intrinsics, permit)) {
-          if (value !== intrinsics[permit]) {
-            throw new TypeError(`Does not match whitelist ${path}`);
-          }
+        if( objectHasOwnProperty(intrinsics, permit)) {
+          if( value!==  intrinsics[permit]) {
+            throw new TypeError( `Does not match whitelist ${path}`);
+           }
           return true;
-        }
-      } else {
+         }
+       }else {
         // For all other properties, the permit is the name of a primitive.
         // Assert: the permit is the name of a primitive.
         // Assert: the property value type is equal to that primitive.
 
         // eslint-disable-next-line no-lonely-if
-        if (arrayIncludes(primitives, permit)) {
+        if( arrayIncludes(primitives, permit)) {
           // eslint-disable-next-line valid-typeof
-          if (typeof value !== permit) {
+          if( typeof value!==  permit) {
             throw new TypeError(
-            `At ${path} expected ${permit} not ${typeof value}`);
+               `At ${path} expected ${permit} not ${typeof value}`);
 
-          }
+           }
           return true;
-        }
-      }
-    }
+         }
+       }
+     }
 
-    throw new TypeError(`Unexpected whitelist permit ${permit} at ${path}`);
-  }
+    throw new TypeError( `Unexpected whitelist permit ${permit} at ${path}`);
+   }
 
   /*
    * isAllowedProperty()
    * Check whether a single property is allowed.
    */
   function isAllowedProperty(path, obj, prop, permit) {
-    const desc = getOwnPropertyDescriptor(obj, prop);
+    const desc=  getOwnPropertyDescriptor(obj, prop);
 
     // Is this a value property?
-    if (objectHasOwnProperty(desc, 'value')) {
-      if (isAccessorPermit(permit)) {
-        throw new TypeError(`Accessor expected at ${path}`);
-      }
+    if( objectHasOwnProperty(desc, 'value')) {
+      if( isAccessorPermit(permit)) {
+        throw new TypeError( `Accessor expected at ${path}`);
+       }
       return isAllowedPropertyValue(path, desc.value, prop, permit);
-    }
-    if (!isAccessorPermit(permit)) {
-      throw new TypeError(`Accessor not expected at ${path}`);
-    }
-    return (
-      isAllowedPropertyValue(`${path}<get>`, desc.get, prop, permit.get) &&
-      isAllowedPropertyValue(`${path}<set>`, desc.set, prop, permit.set));
+     }
+    if( !isAccessorPermit(permit)) {
+      throw new TypeError( `Accessor not expected at ${path}`);
+     }
+    return(
+      isAllowedPropertyValue( `${path}<get>`,desc.get, prop, permit.get)&&
+      isAllowedPropertyValue( `${path}<set>`,desc.set, prop, permit.set));
 
-  }
+   }
 
   /*
    * getSubPermit()
    */
   function getSubPermit(obj, permit, prop) {
-    const permitProp = prop === '__proto__' ? '--proto--' : prop;
-    if (objectHasOwnProperty(permit, permitProp)) {
+    const permitProp=  prop===  '__proto__'?  '--proto--':  prop;
+    if( objectHasOwnProperty(permit, permitProp)) {
       return permit[permitProp];
-    }
+     }
 
-    if (typeof obj === 'function') {
+    if( typeof obj===  'function') {
       markVirtualizedNativeFunction(obj);
-      if (objectHasOwnProperty(FunctionInstance, permitProp)) {
+      if( objectHasOwnProperty(FunctionInstance, permitProp)) {
         return FunctionInstance[permitProp];
-      }
-    }
+       }
+     }
 
     return undefined;
-  }
+   }
 
   /*
    * visitProperties()
    * Visit all properties for a permit.
    */
   function visitProperties(path, obj, permit) {
-    if (obj === undefined) {
+    if( obj===  undefined) {
       return;
-    }
+     }
 
-    const protoName = permit['[[Proto]]'];
+    const protoName=  permit['[[Proto]]'];
     visitPrototype(path, obj, protoName);
 
-    for (const prop of ownKeys(obj)) {
-      const propString = asStringPropertyName(path, prop);
-      const subPath = `${path}.${propString}`;
-      const subPermit = getSubPermit(obj, permit, propString);
+    for( const prop of ownKeys(obj)) {
+      const propString=  asStringPropertyName(path, prop);
+      const subPath=   `${path}.${propString}`;
+      const subPermit=  getSubPermit(obj, permit, propString);
 
-      if (!subPermit || !isAllowedProperty(subPath, obj, prop, subPermit)) {
+      if( !subPermit||  !isAllowedProperty(subPath, obj, prop, subPermit)) {
         // Either the object lacks a permit or the object doesn't match the
         // permit.
         // If the permit is specifically false, not merely undefined,
@@ -8137,37 +8791,48 @@ markVirtualizedNativeFunction)
         // Any other disallowed property is one we have not audited and we log
         // that we are removing it so we know to look into it, as happens when
         // the language evolves new features to existing intrinsics.
-        if (subPermit !== false) {
+        if( subPermit!==  false) {
           // This call to `console.warn` is intentional. It is not a vestige of
           // a debugging attempt. See the comment at top of file for an
           // explanation.
           // eslint-disable-next-line @endo/no-polymorphic-call
-          console.warn(`Removing ${subPath}`);
-        }
+          console.warn( `Removing ${subPath}`);
+         }
         try {
           delete obj[prop];
-        } catch (err) {
-          if (prop in obj) {
+         }catch( err) {
+          if( prop in obj) {
+            if( typeof obj===  'function'&&  prop===  'prototype') {
+              obj.prototype=  undefined;
+              if( obj.prototype===  undefined) {
+                // eslint-disable-next-line @endo/no-polymorphic-call
+                console.warn( `Tolerating undeletable ${subPath} === undefined`);
+                // eslint-disable-next-line no-continue
+                continue;
+               }
+             }
             // eslint-disable-next-line @endo/no-polymorphic-call
-            console.error(`failed to delete ${subPath}`, err);
-          } else {
+            console.error( `failed to delete ${subPath}`,err);
+           }else {
             // eslint-disable-next-line @endo/no-polymorphic-call
-            console.error(`deleting ${subPath} threw`, err);
-          }
+            console.error( `deleting ${subPath} threw`,err);
+           }
           throw err;
-        }
-      }
-    }
-  }
+         }
+       }
+     }
+   }
 
   // Start path with 'intrinsics' to clarify that properties are not
   // removed from the global object by the whitelisting operation.
   visitProperties('intrinsics', intrinsics, whitelist);
-}$h‍_once.default(whitelistIntrinsics);
+ }$h‍_once.default(     whitelistIntrinsics);
 })
 ,
-// === functors[39] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let FERAL_FUNCTION,FERAL_EVAL,TypeError,arrayFilter,arrayMap,globalThis,is,ownKeys,stringSplit,enJoin,makeHardener,makeIntrinsicsCollector,whitelistIntrinsics,tameFunctionConstructors,tameDateConstructor,tameMathObject,tameRegExpConstructor,enablePropertyOverrides,tameLocaleMethods,setGlobalObjectConstantProperties,setGlobalObjectMutableProperties,makeSafeEvaluator,initialGlobalPropertyNames,tameFunctionToString,tameDomains,tameConsole,tameErrorConstructor,assert,makeAssert,makeEnvironmentCaptor,getAnonymousIntrinsics,makeCompartmentConstructor;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["FERAL_EVAL", [$h‍_a => (FERAL_EVAL = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["stringSplit", [$h‍_a => (stringSplit = $h‍_a)]]]],["./error/stringify-utils.js", [["enJoin", [$h‍_a => (enJoin = $h‍_a)]]]],["./make-hardener.js", [["makeHardener", [$h‍_a => (makeHardener = $h‍_a)]]]],["./intrinsics.js", [["makeIntrinsicsCollector", [$h‍_a => (makeIntrinsicsCollector = $h‍_a)]]]],["./whitelist-intrinsics.js", [["default", [$h‍_a => (whitelistIntrinsics = $h‍_a)]]]],["./tame-function-constructors.js", [["default", [$h‍_a => (tameFunctionConstructors = $h‍_a)]]]],["./tame-date-constructor.js", [["default", [$h‍_a => (tameDateConstructor = $h‍_a)]]]],["./tame-math-object.js", [["default", [$h‍_a => (tameMathObject = $h‍_a)]]]],["./tame-regexp-constructor.js", [["default", [$h‍_a => (tameRegExpConstructor = $h‍_a)]]]],["./enable-property-overrides.js", [["default", [$h‍_a => (enablePropertyOverrides = $h‍_a)]]]],["./tame-locale-methods.js", [["default", [$h‍_a => (tameLocaleMethods = $h‍_a)]]]],["./global-object.js", [["setGlobalObjectConstantProperties", [$h‍_a => (setGlobalObjectConstantProperties = $h‍_a)]],["setGlobalObjectMutableProperties", [$h‍_a => (setGlobalObjectMutableProperties = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]],["./whitelist.js", [["initialGlobalPropertyNames", [$h‍_a => (initialGlobalPropertyNames = $h‍_a)]]]],["./tame-function-tostring.js", [["tameFunctionToString", [$h‍_a => (tameFunctionToString = $h‍_a)]]]],["./tame-domains.js", [["tameDomains", [$h‍_a => (tameDomains = $h‍_a)]]]],["./error/tame-console.js", [["tameConsole", [$h‍_a => (tameConsole = $h‍_a)]]]],["./error/tame-error-constructor.js", [["default", [$h‍_a => (tameErrorConstructor = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]],["makeAssert", [$h‍_a => (makeAssert = $h‍_a)]]]],["./environment-options.js", [["makeEnvironmentCaptor", [$h‍_a => (makeEnvironmentCaptor = $h‍_a)]]]],["./get-anonymous-intrinsics.js", [["getAnonymousIntrinsics", [$h‍_a => (getAnonymousIntrinsics = $h‍_a)]]]],["./compartment-shim.js", [["makeCompartmentConstructor", [$h‍_a => (makeCompartmentConstructor = $h‍_a)]]]]]);   
+// === functors[42] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let FERAL_FUNCTION,FERAL_EVAL,TypeError,arrayFilter,arrayMap,globalThis,is,ownKeys,stringSplit,noEvalEvaluate,enJoin,makeHardener,makeIntrinsicsCollector,whitelistIntrinsics,tameFunctionConstructors,tameDateConstructor,tameMathObject,tameRegExpConstructor,enablePropertyOverrides,tameLocaleMethods,setGlobalObjectConstantProperties,setGlobalObjectMutableProperties,setGlobalObjectEvaluators,makeSafeEvaluator,initialGlobalPropertyNames,tameFunctionToString,tameDomains,tameConsole,tameErrorConstructor,assert,makeAssert,makeEnvironmentCaptor,getAnonymousIntrinsics,makeCompartmentConstructor;$h‍_imports([["./commons.js", [["FERAL_FUNCTION", [$h‍_a => (FERAL_FUNCTION = $h‍_a)]],["FERAL_EVAL", [$h‍_a => (FERAL_EVAL = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["arrayFilter", [$h‍_a => (arrayFilter = $h‍_a)]],["arrayMap", [$h‍_a => (arrayMap = $h‍_a)]],["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["is", [$h‍_a => (is = $h‍_a)]],["ownKeys", [$h‍_a => (ownKeys = $h‍_a)]],["stringSplit", [$h‍_a => (stringSplit = $h‍_a)]],["noEvalEvaluate", [$h‍_a => (noEvalEvaluate = $h‍_a)]]]],["./error/stringify-utils.js", [["enJoin", [$h‍_a => (enJoin = $h‍_a)]]]],["./make-hardener.js", [["makeHardener", [$h‍_a => (makeHardener = $h‍_a)]]]],["./intrinsics.js", [["makeIntrinsicsCollector", [$h‍_a => (makeIntrinsicsCollector = $h‍_a)]]]],["./whitelist-intrinsics.js", [["default", [$h‍_a => (whitelistIntrinsics = $h‍_a)]]]],["./tame-function-constructors.js", [["default", [$h‍_a => (tameFunctionConstructors = $h‍_a)]]]],["./tame-date-constructor.js", [["default", [$h‍_a => (tameDateConstructor = $h‍_a)]]]],["./tame-math-object.js", [["default", [$h‍_a => (tameMathObject = $h‍_a)]]]],["./tame-regexp-constructor.js", [["default", [$h‍_a => (tameRegExpConstructor = $h‍_a)]]]],["./enable-property-overrides.js", [["default", [$h‍_a => (enablePropertyOverrides = $h‍_a)]]]],["./tame-locale-methods.js", [["default", [$h‍_a => (tameLocaleMethods = $h‍_a)]]]],["./global-object.js", [["setGlobalObjectConstantProperties", [$h‍_a => (setGlobalObjectConstantProperties = $h‍_a)]],["setGlobalObjectMutableProperties", [$h‍_a => (setGlobalObjectMutableProperties = $h‍_a)]],["setGlobalObjectEvaluators", [$h‍_a => (setGlobalObjectEvaluators = $h‍_a)]]]],["./make-safe-evaluator.js", [["makeSafeEvaluator", [$h‍_a => (makeSafeEvaluator = $h‍_a)]]]],["./whitelist.js", [["initialGlobalPropertyNames", [$h‍_a => (initialGlobalPropertyNames = $h‍_a)]]]],["./tame-function-tostring.js", [["tameFunctionToString", [$h‍_a => (tameFunctionToString = $h‍_a)]]]],["./tame-domains.js", [["tameDomains", [$h‍_a => (tameDomains = $h‍_a)]]]],["./error/tame-console.js", [["tameConsole", [$h‍_a => (tameConsole = $h‍_a)]]]],["./error/tame-error-constructor.js", [["default", [$h‍_a => (tameErrorConstructor = $h‍_a)]]]],["./error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]],["makeAssert", [$h‍_a => (makeAssert = $h‍_a)]]]],["./environment-options.js", [["makeEnvironmentCaptor", [$h‍_a => (makeEnvironmentCaptor = $h‍_a)]]]],["./get-anonymous-intrinsics.js", [["getAnonymousIntrinsics", [$h‍_a => (getAnonymousIntrinsics = $h‍_a)]]]],["./compartment-shim.js", [["makeCompartmentConstructor", [$h‍_a => (makeCompartmentConstructor = $h‍_a)]]]]]);   
+
+
 
 
 
@@ -8222,7 +8887,7 @@ markVirtualizedNativeFunction)
 
 /** @typedef {import('../index.js').LockdownOptions} LockdownOptions */
 
-const { details: d, quote: q } = assert;
+const { Fail, details: d, quote: q}=   assert;
 
 /** @type {Error=} */
 let priorLockdown;
@@ -8234,7 +8899,7 @@ let priorLockdown;
  * @param {T} ref
  * @returns {T}
  */
-const harden = makeHardener();
+const harden=  makeHardener();
 
 /**
  * @callback Transform
@@ -8249,7 +8914,6 @@ const harden = makeHardener();
  * @param {Object} [options]
  * @param {Array<Transform>} [options.transforms]
  * @param {Array<Transform>} [options.__shimTransforms__]
- * @param {Object} [options.globalLexicals]
  */
 
 // TODO https://github.com/endojs/endo/issues/814
@@ -8258,42 +8922,42 @@ const harden = makeHardener();
 // only ever need to be called once and that simplifying lockdown will improve
 // the quality of audits.
 
-const assertDirectEvalAvailable = () => {
-  let allowed = false;
+const assertDirectEvalAvailable=  ()=>  {
+  let allowed=  false;
   try {
-    allowed = FERAL_FUNCTION(
-    'eval',
-    'SES_changed',
-    `\
+    allowed=  FERAL_FUNCTION(
+      'eval',
+      'SES_changed',
+       `\
         eval("SES_changed = true");
         return SES_changed;
       `)(
-    FERAL_EVAL, false);
+      FERAL_EVAL, false);
     // If we get here and SES_changed stayed false, that means the eval was sloppy
     // and indirect, which generally creates a new global.
     // We are going to throw an exception for failing to initialize SES, but
     // good neighbors clean up.
-    if (!allowed) {
+    if( !allowed) {
       delete globalThis.SES_changed;
-    }
-  } catch (_error) {
+     }
+   }catch( _error) {
     // We reach here if eval is outright forbidden by a Content Security Policy.
     // We allow this for SES usage that delegates the responsibility to isolate
     // guest code to production code generation.
-    allowed = true;
-  }
-  if (!allowed) {
+    allowed=  true;
+   }
+  if( !allowed) {
     throw new TypeError(
-    `SES cannot initialize unless 'eval' is the original intrinsic 'eval', suitable for direct-eval (dynamically scoped eval) (SES_DIRECT_EVAL)`);
+       `SES cannot initialize unless 'eval' is the original intrinsic 'eval', suitable for direct-eval (dynamically scoped eval) (SES_DIRECT_EVAL)`);
 
-  }
-};
+   }
+ };
 
 /**
  * @param {LockdownOptions} [options]
  * @returns {() => void} repairIntrinsics
  */
-const repairIntrinsics = (options = {}) => {
+const        repairIntrinsics=  (options=  {})=>  {
   // First time, absent options default to 'safe'.
   // Subsequent times, absent options default to first options.
   // Thus, all present options must agree with first options.
@@ -8319,59 +8983,62 @@ const repairIntrinsics = (options = {}) => {
   // [`stackFiltering` options](https://github.com/Agoric/SES-shim/blob/master/packages/ses/lockdown-options.md#stackfiltering-options)
   // for an explanation.
 
-  const {
-    getEnvironmentOption: getenv,
-    getCapturedEnvironmentOptionNames } =
-  makeEnvironmentCaptor(globalThis);
+  const { getEnvironmentOption: getenv, getCapturedEnvironmentOptionNames}=
+    makeEnvironmentCaptor(globalThis);
 
   const {
-    errorTaming = getenv('LOCKDOWN_ERROR_TAMING', 'safe'),
-    errorTrapping = getenv('LOCKDOWN_ERROR_TRAPPING', 'platform'),
-    regExpTaming = getenv('LOCKDOWN_REGEXP_TAMING', 'safe'),
-    localeTaming = getenv('LOCKDOWN_LOCALE_TAMING', 'safe'),
-    consoleTaming = getenv('LOCKDOWN_CONSOLE_TAMING', 'safe'),
-    overrideTaming = getenv('LOCKDOWN_OVERRIDE_TAMING', 'moderate'),
-    stackFiltering = getenv('LOCKDOWN_STACK_FILTERING', 'concise'),
-    domainTaming = getenv('LOCKDOWN_DOMAIN_TAMING', 'safe'),
-    overrideDebug = arrayFilter(
-    stringSplit(getenv('LOCKDOWN_OVERRIDE_DEBUG', ''), ','),
-    /** @param {string} debugName */
-    (debugName) => debugName !== ''),
+    errorTaming=  getenv('LOCKDOWN_ERROR_TAMING', 'safe'),
+    errorTrapping=  getenv('LOCKDOWN_ERROR_TRAPPING', 'platform'),
+    unhandledRejectionTrapping=  getenv(
+      'LOCKDOWN_UNHANDLED_REJECTION_TRAPPING',
+      'report'),
 
-    __allowUnsafeMonkeyPatching__ = getenv(
-    '__LOCKDOWN_ALLOW_UNSAFE_MONKEY_PATCHING__',
-    'safe'),
+    regExpTaming=  getenv('LOCKDOWN_REGEXP_TAMING', 'safe'),
+    localeTaming=  getenv('LOCKDOWN_LOCALE_TAMING', 'safe'),
+    consoleTaming=  getenv('LOCKDOWN_CONSOLE_TAMING', 'safe'),
+    overrideTaming=  getenv('LOCKDOWN_OVERRIDE_TAMING', 'moderate'),
+    stackFiltering=  getenv('LOCKDOWN_STACK_FILTERING', 'concise'),
+    domainTaming=  getenv('LOCKDOWN_DOMAIN_TAMING', 'safe'),
+    evalTaming=  getenv('LOCKDOWN_EVAL_TAMING', 'safeEval'),
+    overrideDebug=  arrayFilter(
+      stringSplit(getenv('LOCKDOWN_OVERRIDE_DEBUG', ''), ','),
+      /** @param {string} debugName */
+      (debugName)=>debugName!==  ''),
 
-    dateTaming = 'safe', // deprecated
-    mathTaming = 'safe', // deprecated
-    ...extraOptions } =
-  options;
+    dateTaming=  'safe', // deprecated
+    mathTaming=  'safe', // deprecated
+    ...extraOptions}=
+      options;
 
-  const capturedEnvironmentOptionNames = getCapturedEnvironmentOptionNames();
-  if (capturedEnvironmentOptionNames.length > 0) {
+  const capturedEnvironmentOptionNames=  getCapturedEnvironmentOptionNames();
+  if( capturedEnvironmentOptionNames.length>  0) {
     // eslint-disable-next-line @endo/no-polymorphic-call
     console.warn(
-    `SES Lockdown using options from environment variables ${enJoin(
-    arrayMap(capturedEnvironmentOptionNames, q),
-    'and')
-    }`);
+       `SES Lockdown using options from environment variables ${enJoin(
+        arrayMap(capturedEnvironmentOptionNames, q),
+        'and')
+        }`);
 
-  }
+   }
+
+  evalTaming===  'unsafeEval'||
+    evalTaming===  'safeEval'||
+    evalTaming===  'noEval'||
+    Fail `lockdown(): non supported option evalTaming: ${q(evalTaming)}`;
 
   // Assert that only supported options were passed.
   // Use Reflect.ownKeys to reject symbol-named properties as well.
-  const extraOptionsNames = ownKeys(extraOptions);
-  assert(
-  extraOptionsNames.length === 0,
-  d`lockdown(): non supported option ${q(extraOptionsNames)}`);
+  const extraOptionsNames=  ownKeys(extraOptions);
+  extraOptionsNames.length===  0||
+    Fail `lockdown(): non supported option ${q(extraOptionsNames)}`;
 
+  priorLockdown===  undefined||
+    // eslint-disable-next-line @endo/no-polymorphic-call
+    assert.fail(
+      d `Already locked down at ${priorLockdown} (SES_ALREADY_LOCKED_DOWN)`,
+      TypeError);
 
-  assert(
-  priorLockdown === undefined,
-  `Already locked down at ${priorLockdown} (SES_ALREADY_LOCKED_DOWN)`,
-  TypeError);
-
-  priorLockdown = new TypeError('Prior lockdown (SES_ALREADY_LOCKED_DOWN)');
+  priorLockdown=  new TypeError('Prior lockdown (SES_ALREADY_LOCKED_DOWN)');
   // Tease V8 to generate the stack string and release the closures the stack
   // trace retained:
   priorLockdown.stack;
@@ -8395,28 +9062,27 @@ const repairIntrinsics = (options = {}) => {
    * The specifics of what this tests for may change over time, but it
    * should be consistent with any setting of the lockdown options.
    */
-  const seemsToBeLockedDown = () => {
-    return (
-      globalThis.Function.prototype.constructor !== globalThis.Function &&
+  const seemsToBeLockedDown=  ()=>  {
+    return(
+      globalThis.Function.prototype.constructor!==  globalThis.Function&&
       // @ts-ignore harden is absent on globalThis type def.
-      typeof globalThis.harden === 'function' &&
+      typeof globalThis.harden===  'function'&&
       // @ts-ignore lockdown is absent on globalThis type def.
-      typeof globalThis.lockdown === 'function' &&
-      globalThis.Date.prototype.constructor !== globalThis.Date &&
-      typeof globalThis.Date.now === 'function' &&
+      typeof globalThis.lockdown===  'function'&&
+      globalThis.Date.prototype.constructor!==  globalThis.Date&&
+      typeof globalThis.Date.now===  'function'&&
       // @ts-ignore does not recognize that Date constructor is a special
       // Function.
       // eslint-disable-next-line @endo/no-polymorphic-call
       is(globalThis.Date.prototype.constructor.now(), NaN));
 
-  };
+   };
 
-  if (seemsToBeLockedDown()) {
-    // eslint-disable-next-line @endo/no-polymorphic-call
+  if( seemsToBeLockedDown()) {
     throw new TypeError(
-    `Already locked down but not by this SES instance (SES_MULTIPLE_INSTANCES)`);
+       `Already locked down but not by this SES instance (SES_MULTIPLE_INSTANCES)`);
 
-  }
+   }
 
   /**
    * 1. TAME powers & gather intrinsics first.
@@ -8424,13 +9090,10 @@ const repairIntrinsics = (options = {}) => {
 
   tameDomains(domainTaming);
 
-  const {
-    addIntrinsics,
-    completePrototypes,
-    finalIntrinsics } =
-  makeIntrinsicsCollector();
+  const { addIntrinsics, completePrototypes, finalIntrinsics}=
+    makeIntrinsicsCollector();
 
-  addIntrinsics({ harden });
+  addIntrinsics({ harden});
 
   addIntrinsics(tameFunctionConstructors());
 
@@ -8443,41 +9106,46 @@ const repairIntrinsics = (options = {}) => {
 
   completePrototypes();
 
-  const intrinsics = finalIntrinsics();
+  const intrinsics=  finalIntrinsics();
 
-  // Wrap console unless suppressed.
-  // At the moment, the console is considered a host power in the start
-  // compartment, and not a primordial. Hence it is absent from the whilelist
-  // and bypasses the intrinsicsCollector.
+  /**
+   * Wrap console unless suppressed.
+   * At the moment, the console is considered a host power in the start
+   * compartment, and not a primordial. Hence it is absent from the whilelist
+   * and bypasses the intrinsicsCollector.
+   *
+   * @type {((error: any) => string | undefined) | undefined}
+   */
   let optGetStackString;
-  if (errorTaming !== 'unsafe') {
-    optGetStackString = intrinsics['%InitialGetStackString%'];
-  }
-  const consoleRecord = tameConsole(
-  // @ts-ignore tameConsole does its own input validation
-  consoleTaming,
-  errorTrapping,
-  optGetStackString);
+  if( errorTaming!==  'unsafe') {
+    optGetStackString=  intrinsics['%InitialGetStackString%'];
+   }
+  const consoleRecord=  tameConsole(
+    // @ts-expect-error tameConsole does its own input validation
+    consoleTaming,
+    errorTrapping,
+    unhandledRejectionTrapping,
+    optGetStackString);
 
-  globalThis.console = /** @type {Console} */consoleRecord.console;
+  globalThis.console=  /** @type {Console} */  consoleRecord.console;
 
   // @ts-ignore assert is absent on globalThis type def.
-  if (errorTaming === 'unsafe' && globalThis.assert === assert) {
+  if( errorTaming===  'unsafe'&&  globalThis.assert===  assert) {
     // If errorTaming is 'unsafe' we replace the global assert with
     // one whose `details` template literal tag does not redact
     // unmarked substitution values. IOW, it blabs information that
     // was supposed to be secret from callers, as an aid to debugging
     // at a further cost in safety.
     // @ts-ignore assert is absent on globalThis type def.
-    globalThis.assert = makeAssert(undefined, true);
-  }
+    globalThis.assert=  makeAssert(undefined, true);
+   }
 
   // Replace *Locale* methods with their non-locale equivalents
   tameLocaleMethods(intrinsics, localeTaming);
 
   // Replace Function.prototype.toString with one that recognizes
   // shimmed functions as honorary native functions.
-  const markVirtualizedNativeFunction = tameFunctionToString();
+  const markVirtualizedNativeFunction=  tameFunctionToString();
 
   /**
    * 2. WHITELIST to standardize the environment.
@@ -8493,15 +9161,31 @@ const repairIntrinsics = (options = {}) => {
 
   setGlobalObjectConstantProperties(globalThis);
 
-  const { safeEvaluate } = makeSafeEvaluator({ globalObject: globalThis });
-
   setGlobalObjectMutableProperties(globalThis, {
     intrinsics,
     newGlobalPropertyNames: initialGlobalPropertyNames,
     makeCompartmentConstructor,
-    safeEvaluate,
-    markVirtualizedNativeFunction });
+    markVirtualizedNativeFunction});
 
+
+  if( evalTaming===  'noEval') {
+    setGlobalObjectEvaluators(
+      globalThis,
+      noEvalEvaluate,
+      markVirtualizedNativeFunction);
+
+   }else if( evalTaming===  'safeEval') {
+    const { safeEvaluate}=   makeSafeEvaluator({ globalObject: globalThis});
+    setGlobalObjectEvaluators(
+      globalThis,
+      safeEvaluate,
+      markVirtualizedNativeFunction);
+
+   }else if( evalTaming===  'unsafeEval') {
+    // Leave eval function and Function constructor of the initial compartment in-tact.
+    // Other compartments will not have access to these evaluators unless a guest program
+    // escapes containment.
+   }
 
   /**
    * 3. HARDEN to share the intrinsics.
@@ -8520,11 +9204,9 @@ const repairIntrinsics = (options = {}) => {
     // @ts-ignore enablePropertyOverrides does its own input validation
     enablePropertyOverrides(intrinsics, overrideTaming, overrideDebug);
 
-    if (__allowUnsafeMonkeyPatching__ !== 'unsafe') {
-      // Finally register and optionally freeze all the intrinsics. This
-      // must be the operation that modifies the intrinsics.
-      harden(intrinsics);
-    }
+    // Finally register and optionally freeze all the intrinsics. This
+    // must be the operation that modifies the intrinsics.
+    harden(intrinsics);
 
     // Reveal harden after lockdown.
     // Harden is dangerous before lockdown because hardening just
@@ -8534,26 +9216,26 @@ const repairIntrinsics = (options = {}) => {
     // scope signals whether such code should attempt to use harden in the
     // defense of its own API.
     // @ts-ignore harden not yet recognized on globalThis.
-    globalThis.harden = harden;
+    globalThis.harden=  harden;
 
     // Returning `true` indicates that this is a JS to SES transition.
     return true;
-  }
+   }
 
   return hardenIntrinsics;
-};$h‍_once.repairIntrinsics(repairIntrinsics);
+ };
 
 /**
  * @param {LockdownOptions} [options]
- */
-const lockdown = (options = {}) => {
-  const hardenIntrinsics = repairIntrinsics(options);
+ */$h‍_once.repairIntrinsics(repairIntrinsics);
+const        lockdown=  (options=  {})=>  {
+  const hardenIntrinsics=  repairIntrinsics(options);
   hardenIntrinsics();
-};$h‍_once.lockdown(lockdown);
+ };$h‍_once.lockdown(lockdown);
 })
 ,
-// === functors[40] ===
-(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,  }) => {   let globalThis,TypeError,assign,tameFunctionToString,getGlobalIntrinsics,lockdown,makeCompartmentConstructor,assert;$h‍_imports([["./src/commons.js", [["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]]]],["./src/tame-function-tostring.js", [["tameFunctionToString", [$h‍_a => (tameFunctionToString = $h‍_a)]]]],["./src/intrinsics.js", [["getGlobalIntrinsics", [$h‍_a => (getGlobalIntrinsics = $h‍_a)]]]],["./src/lockdown-shim.js", [["lockdown", [$h‍_a => (lockdown = $h‍_a)]]]],["./src/compartment-shim.js", [["makeCompartmentConstructor", [$h‍_a => (makeCompartmentConstructor = $h‍_a)]]]],["./src/error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
+// === functors[43] ===
+(({   imports: $h‍_imports,   liveVar: $h‍_live,   onceVar: $h‍_once,   importMeta: $h‍____meta,  }) => {   let globalThis,TypeError,assign,tameFunctionToString,getGlobalIntrinsics,lockdown,makeCompartmentConstructor,assert;$h‍_imports([["./src/commons.js", [["globalThis", [$h‍_a => (globalThis = $h‍_a)]],["TypeError", [$h‍_a => (TypeError = $h‍_a)]],["assign", [$h‍_a => (assign = $h‍_a)]]]],["./src/tame-function-tostring.js", [["tameFunctionToString", [$h‍_a => (tameFunctionToString = $h‍_a)]]]],["./src/intrinsics.js", [["getGlobalIntrinsics", [$h‍_a => (getGlobalIntrinsics = $h‍_a)]]]],["./src/lockdown-shim.js", [["lockdown", [$h‍_a => (lockdown = $h‍_a)]]]],["./src/compartment-shim.js", [["makeCompartmentConstructor", [$h‍_a => (makeCompartmentConstructor = $h‍_a)]]]],["./src/error/assert.js", [["assert", [$h‍_a => (assert = $h‍_a)]]]]]);   
 
 
 
@@ -8578,51 +9260,54 @@ const lockdown = (options = {}) => {
 /** getThis returns globalThis in sloppy mode or undefined in strict mode. */
 function getThis() {
   return this;
-}
+ }
 
-if (getThis()) {
-  throw new TypeError(`SES failed to initialize, sloppy mode (SES_NO_SLOPPY)`);
-}
+if( getThis()) {
+  throw new TypeError( `SES failed to initialize, sloppy mode (SES_NO_SLOPPY)`);
+ }
 
-const markVirtualizedNativeFunction = tameFunctionToString();
+const markVirtualizedNativeFunction=  tameFunctionToString();
 
-const Compartment = makeCompartmentConstructor(
-makeCompartmentConstructor,
-getGlobalIntrinsics(globalThis),
-markVirtualizedNativeFunction);
+const Compartment=  makeCompartmentConstructor(
+  makeCompartmentConstructor,
+  getGlobalIntrinsics(globalThis),
+  markVirtualizedNativeFunction);
 
 
 assign(globalThis, {
   lockdown,
   Compartment,
-  assert });
+  assert});
 })
 ,
 ]; // functors end
 
-  function cell(name, value = undefined) {
+  const cell = (name, value = undefined) => {
     const observers = [];
-    function set(newValue) {
-      value = newValue;
-      for (const observe of observers) {
+    return Object.freeze({
+      get: Object.freeze(() => {
+        return value;
+      }),
+      set: Object.freeze((newValue) => {
+        value = newValue;
+        for (const observe of observers) {
+          observe(value);
+        }
+      }),
+      observe: Object.freeze((observe) => {
+        observers.push(observe);
         observe(value);
-      }
-    }
-    function get() {
-      return value;
-    }
-    function observe(observe) {
-      observers.push(observe);
-      observe(value);
-    }
-    return { get, set, observe, enumerable: true };
-  }
+      }),
+      enumerable: true,
+    });
+  };
 
   const cells = [
     {
       globalThis: cell("globalThis"),
       Array: cell("Array"),
       Date: cell("Date"),
+      FinalizationRegistry: cell("FinalizationRegistry"),
       Float32Array: cell("Float32Array"),
       JSON: cell("JSON"),
       Map: cell("Map"),
@@ -8656,14 +9341,19 @@ assign(globalThis, {
       keys: cell("keys"),
       objectPrototype: cell("objectPrototype"),
       seal: cell("seal"),
+      preventExtensions: cell("preventExtensions"),
       setPrototypeOf: cell("setPrototypeOf"),
       values: cell("values"),
+      fromEntries: cell("fromEntries"),
       speciesSymbol: cell("speciesSymbol"),
       toStringTagSymbol: cell("toStringTagSymbol"),
       iteratorSymbol: cell("iteratorSymbol"),
       matchAllSymbol: cell("matchAllSymbol"),
+      unscopablesSymbol: cell("unscopablesSymbol"),
+      symbolKeyFor: cell("symbolKeyFor"),
+      symbolFor: cell("symbolFor"),
+      isInteger: cell("isInteger"),
       stringifyJson: cell("stringifyJson"),
-      fromEntries: cell("fromEntries"),
       defineProperty: cell("defineProperty"),
       apply: cell("apply"),
       construct: cell("construct"),
@@ -8685,6 +9375,7 @@ assign(globalThis, {
       weaksetPrototype: cell("weaksetPrototype"),
       functionPrototype: cell("functionPrototype"),
       promisePrototype: cell("promisePrototype"),
+      typedArrayPrototype: cell("typedArrayPrototype"),
       uncurryThis: cell("uncurryThis"),
       objectHasOwnProperty: cell("objectHasOwnProperty"),
       arrayFilter: cell("arrayFilter"),
@@ -8701,8 +9392,11 @@ assign(globalThis, {
       mapSet: cell("mapSet"),
       mapGet: cell("mapGet"),
       mapHas: cell("mapHas"),
+      mapDelete: cell("mapDelete"),
+      mapEntries: cell("mapEntries"),
       iterateMap: cell("iterateMap"),
       setAdd: cell("setAdd"),
+      setDelete: cell("setDelete"),
       setForEach: cell("setForEach"),
       setHas: cell("setHas"),
       iterateSet: cell("iterateSet"),
@@ -8730,12 +9424,15 @@ assign(globalThis, {
       promiseAll: cell("promiseAll"),
       promiseCatch: cell("promiseCatch"),
       promiseThen: cell("promiseThen"),
+      finalizationRegistryRegister: cell("finalizationRegistryRegister"),
+      finalizationRegistryUnregister: cell("finalizationRegistryUnregister"),
       getConstructorOf: cell("getConstructorOf"),
       immutableObject: cell("immutableObject"),
       isObject: cell("isObject"),
       isError: cell("isError"),
       FERAL_EVAL: cell("FERAL_EVAL"),
       FERAL_FUNCTION: cell("FERAL_FUNCTION"),
+      noEvalEvaluate: cell("noEvalEvaluate"),
     },
     {
     },
@@ -8753,14 +9450,22 @@ assign(globalThis, {
       assert: cell("assert"),
     },
     {
-      makeEvaluateFactory: cell("makeEvaluateFactory"),
+      makeEvalScopeKit: cell("makeEvalScopeKit"),
     },
     {
       isValidIdentifierName: cell("isValidIdentifierName"),
       getScopeConstants: cell("getScopeConstants"),
     },
     {
-      createScopeHandler: cell("createScopeHandler"),
+      makeEvaluate: cell("makeEvaluate"),
+    },
+    {
+      alwaysThrowHandler: cell("alwaysThrowHandler"),
+      strictScopeTerminatorHandler: cell("strictScopeTerminatorHandler"),
+      strictScopeTerminator: cell("strictScopeTerminator"),
+    },
+    {
+      createSloppyGlobalsScopeTerminator: cell("createSloppyGlobalsScopeTerminator"),
     },
     {
       getSourceURL: cell("getSourceURL"),
@@ -8799,8 +9504,10 @@ assign(globalThis, {
       whitelist: cell("whitelist"),
     },
     {
+      setGlobalObjectSymbolUnscopables: cell("setGlobalObjectSymbolUnscopables"),
       setGlobalObjectConstantProperties: cell("setGlobalObjectConstantProperties"),
       setGlobalObjectMutableProperties: cell("setGlobalObjectMutableProperties"),
+      setGlobalObjectEvaluators: cell("setGlobalObjectEvaluators"),
     },
     {
       makeAlias: cell("makeAlias"),
@@ -8843,7 +9550,9 @@ assign(globalThis, {
       makeCausalConsole: cell("makeCausalConsole"),
       filterConsole: cell("filterConsole"),
       consoleWhitelist: cell("consoleWhitelist"),
-      BASE_CONSOLE_LEVEL: cell("BASE_CONSOLE_LEVEL"),
+    },
+    {
+      makeRejectionHandlers: cell("makeRejectionHandlers"),
     },
     {
       tameConsole: cell("tameConsole"),
@@ -8860,6 +9569,7 @@ assign(globalThis, {
       getAnonymousIntrinsics: cell("getAnonymousIntrinsics"),
     },
     {
+      isTypedArray: cell("isTypedArray"),
       makeHardener: cell("makeHardener"),
     },
     {
@@ -8895,23 +9605,24 @@ assign(globalThis, {
   ];
 
 
-  const namespaces = cells.map(cells => Object.create(null, cells));
+  const namespaces = cells.map(cells => Object.freeze(Object.create(null, cells)));
 
   for (let index = 0; index < namespaces.length; index += 1) {
     cells[index]['*'] = cell('*', namespaces[index]);
   }
 
-  function observeImports(map, importName, importIndex) {
-    for (const [name, observers] of map.get(importName)) {
-      const cell = cells[importIndex][name];
-      if (cell === undefined) {
-        throw new ReferenceError(`Cannot import name ${name}`);
-      }
-      for (const observer of observers) {
-        cell.observe(observer);
-      }
+function observeImports(map, importName, importIndex) {
+  for (const [name, observers] of map.get(importName)) {
+    const cell = cells[importIndex][name];
+    if (cell === undefined) {
+      throw new ReferenceError(`Cannot import name ${name}`);
+    }
+    for (const observer of observers) {
+      cell.observe(observer);
     }
   }
+}
+
 
   functors[0]({
     imports(entries) {
@@ -8923,6 +9634,7 @@ assign(globalThis, {
       universalThis: cells[0].globalThis.set,
       Array: cells[0].Array.set,
       Date: cells[0].Date.set,
+      FinalizationRegistry: cells[0].FinalizationRegistry.set,
       Float32Array: cells[0].Float32Array.set,
       JSON: cells[0].JSON.set,
       Map: cells[0].Map.set,
@@ -8956,14 +9668,19 @@ assign(globalThis, {
       keys: cells[0].keys.set,
       objectPrototype: cells[0].objectPrototype.set,
       seal: cells[0].seal.set,
+      preventExtensions: cells[0].preventExtensions.set,
       setPrototypeOf: cells[0].setPrototypeOf.set,
       values: cells[0].values.set,
+      fromEntries: cells[0].fromEntries.set,
       speciesSymbol: cells[0].speciesSymbol.set,
       toStringTagSymbol: cells[0].toStringTagSymbol.set,
       iteratorSymbol: cells[0].iteratorSymbol.set,
       matchAllSymbol: cells[0].matchAllSymbol.set,
+      unscopablesSymbol: cells[0].unscopablesSymbol.set,
+      symbolKeyFor: cells[0].symbolKeyFor.set,
+      symbolFor: cells[0].symbolFor.set,
+      isInteger: cells[0].isInteger.set,
       stringifyJson: cells[0].stringifyJson.set,
-      fromEntries: cells[0].fromEntries.set,
       defineProperty: cells[0].defineProperty.set,
       apply: cells[0].apply.set,
       construct: cells[0].construct.set,
@@ -8985,6 +9702,7 @@ assign(globalThis, {
       weaksetPrototype: cells[0].weaksetPrototype.set,
       functionPrototype: cells[0].functionPrototype.set,
       promisePrototype: cells[0].promisePrototype.set,
+      typedArrayPrototype: cells[0].typedArrayPrototype.set,
       uncurryThis: cells[0].uncurryThis.set,
       objectHasOwnProperty: cells[0].objectHasOwnProperty.set,
       arrayFilter: cells[0].arrayFilter.set,
@@ -9001,8 +9719,11 @@ assign(globalThis, {
       mapSet: cells[0].mapSet.set,
       mapGet: cells[0].mapGet.set,
       mapHas: cells[0].mapHas.set,
+      mapDelete: cells[0].mapDelete.set,
+      mapEntries: cells[0].mapEntries.set,
       iterateMap: cells[0].iterateMap.set,
       setAdd: cells[0].setAdd.set,
+      setDelete: cells[0].setDelete.set,
       setForEach: cells[0].setForEach.set,
       setHas: cells[0].setHas.set,
       iterateSet: cells[0].iterateSet.set,
@@ -9030,13 +9751,17 @@ assign(globalThis, {
       promiseAll: cells[0].promiseAll.set,
       promiseCatch: cells[0].promiseCatch.set,
       promiseThen: cells[0].promiseThen.set,
+      finalizationRegistryRegister: cells[0].finalizationRegistryRegister.set,
+      finalizationRegistryUnregister: cells[0].finalizationRegistryUnregister.set,
       getConstructorOf: cells[0].getConstructorOf.set,
       immutableObject: cells[0].immutableObject.set,
       isObject: cells[0].isObject.set,
       isError: cells[0].isError.set,
       FERAL_EVAL: cells[0].FERAL_EVAL.set,
       FERAL_FUNCTION: cells[0].FERAL_FUNCTION.set,
+      noEvalEvaluate: cells[0].noEvalEvaluate.set,
     },
+    importMeta: {},
   });
   functors[1]({
     imports(entries) {
@@ -9046,6 +9771,7 @@ assign(globalThis, {
     },
     onceVar: {
     },
+    importMeta: {},
   });
   functors[2]({
     imports(entries) {
@@ -9059,6 +9785,7 @@ assign(globalThis, {
       bestEffortStringify: cells[2].bestEffortStringify.set,
       enJoin: cells[2].enJoin.set,
     },
+    importMeta: {},
   });
   functors[3]({
     imports(entries) {
@@ -9068,6 +9795,7 @@ assign(globalThis, {
     },
     onceVar: {
     },
+    importMeta: {},
   });
   functors[4]({
     imports(entries) {
@@ -9085,17 +9813,20 @@ assign(globalThis, {
       makeAssert: cells[4].makeAssert.set,
       assert: cells[4].assert.set,
     },
+    importMeta: {},
   });
   functors[5]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
+      observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
-      makeEvaluateFactory: cells[5].makeEvaluateFactory.set,
+      makeEvalScopeKit: cells[5].makeEvalScopeKit.set,
     },
+    importMeta: {},
   });
   functors[6]({
     imports(entries) {
@@ -9108,99 +9839,112 @@ assign(globalThis, {
       isValidIdentifierName: cells[6].isValidIdentifierName.set,
       getScopeConstants: cells[6].getScopeConstants.set,
     },
+    importMeta: {},
   });
   functors[7]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./scope-constants.js", 6);
     },
     liveVar: {
     },
     onceVar: {
-      createScopeHandler: cells[7].createScopeHandler.set,
+      makeEvaluate: cells[7].makeEvaluate.set,
     },
+    importMeta: {},
   });
   functors[8]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
+      observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
-      getSourceURL: cells[8].getSourceURL.set,
+      alwaysThrowHandler: cells[8].alwaysThrowHandler.set,
+      strictScopeTerminatorHandler: cells[8].strictScopeTerminatorHandler.set,
+      strictScopeTerminator: cells[8].strictScopeTerminator.set,
     },
+    importMeta: {},
   });
   functors[9]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./get-source-url.js", 8);
+      observeImports(map, "./strict-scope-terminator.js", 8);
     },
     liveVar: {
     },
     onceVar: {
-      rejectHtmlComments: cells[9].rejectHtmlComments.set,
-      evadeHtmlCommentTest: cells[9].evadeHtmlCommentTest.set,
-      rejectImportExpressions: cells[9].rejectImportExpressions.set,
-      evadeImportExpressionTest: cells[9].evadeImportExpressionTest.set,
-      rejectSomeDirectEvalExpressions: cells[9].rejectSomeDirectEvalExpressions.set,
-      mandatoryTransforms: cells[9].mandatoryTransforms.set,
-      applyTransforms: cells[9].applyTransforms.set,
+      createSloppyGlobalsScopeTerminator: cells[9].createSloppyGlobalsScopeTerminator.set,
     },
+    importMeta: {},
   });
   functors[10]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./make-evaluate-factory.js", 5);
-      observeImports(map, "./scope-constants.js", 6);
-      observeImports(map, "./scope-handler.js", 7);
-      observeImports(map, "./transforms.js", 9);
     },
     liveVar: {
     },
     onceVar: {
-      makeSafeEvaluator: cells[10].makeSafeEvaluator.set,
+      getSourceURL: cells[10].getSourceURL.set,
     },
+    importMeta: {},
   });
   functors[11]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./make-safe-evaluator.js", 10);
-      observeImports(map, "./transforms.js", 9);
+      observeImports(map, "./get-source-url.js", 10);
     },
     liveVar: {
     },
     onceVar: {
-      provideCompartmentEvaluator: cells[11].provideCompartmentEvaluator.set,
-      compartmentEvaluate: cells[11].compartmentEvaluate.set,
+      rejectHtmlComments: cells[11].rejectHtmlComments.set,
+      evadeHtmlCommentTest: cells[11].evadeHtmlCommentTest.set,
+      rejectImportExpressions: cells[11].rejectImportExpressions.set,
+      evadeImportExpressionTest: cells[11].evadeImportExpressionTest.set,
+      rejectSomeDirectEvalExpressions: cells[11].rejectSomeDirectEvalExpressions.set,
+      mandatoryTransforms: cells[11].mandatoryTransforms.set,
+      applyTransforms: cells[11].applyTransforms.set,
     },
+    importMeta: {},
   });
   functors[12]({
     imports(entries) {
       const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./eval-scope.js", 5);
+      observeImports(map, "./make-evaluate.js", 7);
+      observeImports(map, "./sloppy-globals-scope-terminator.js", 9);
+      observeImports(map, "./strict-scope-terminator.js", 8);
+      observeImports(map, "./transforms.js", 11);
     },
     liveVar: {
     },
     onceVar: {
-      makeEvalFunction: cells[12].makeEvalFunction.set,
+      makeSafeEvaluator: cells[12].makeSafeEvaluator.set,
     },
+    importMeta: {},
   });
   functors[13]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./make-safe-evaluator.js", 12);
+      observeImports(map, "./transforms.js", 11);
     },
     liveVar: {
     },
     onceVar: {
-      makeFunctionConstructor: cells[13].makeFunctionConstructor.set,
+      provideCompartmentEvaluator: cells[13].provideCompartmentEvaluator.set,
+      compartmentEvaluate: cells[13].compartmentEvaluate.set,
     },
+    importMeta: {},
   });
   functors[14]({
     imports(entries) {
@@ -9209,148 +9953,183 @@ assign(globalThis, {
     liveVar: {
     },
     onceVar: {
-      constantProperties: cells[14].constantProperties.set,
-      universalPropertyNames: cells[14].universalPropertyNames.set,
-      initialGlobalPropertyNames: cells[14].initialGlobalPropertyNames.set,
-      sharedGlobalPropertyNames: cells[14].sharedGlobalPropertyNames.set,
-      uniqueGlobalPropertyNames: cells[14].uniqueGlobalPropertyNames.set,
-      NativeErrors: cells[14].NativeErrors.set,
-      FunctionInstance: cells[14].FunctionInstance.set,
-      isAccessorPermit: cells[14].isAccessorPermit.set,
-      whitelist: cells[14].whitelist.set,
+      makeEvalFunction: cells[14].makeEvalFunction.set,
     },
+    importMeta: {},
   });
   functors[15]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./make-eval-function.js", 12);
-      observeImports(map, "./make-function-constructor.js", 13);
-      observeImports(map, "./whitelist.js", 14);
-    },
-    liveVar: {
-    },
-    onceVar: {
-      setGlobalObjectConstantProperties: cells[15].setGlobalObjectConstantProperties.set,
-      setGlobalObjectMutableProperties: cells[15].setGlobalObjectMutableProperties.set,
-    },
-  });
-  functors[16]({
-    imports(entries) {
-      const map = new Map(entries);
-      observeImports(map, "./commons.js", 0);
       observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
-      makeAlias: cells[16].makeAlias.set,
-      load: cells[16].load.set,
+      makeFunctionConstructor: cells[15].makeFunctionConstructor.set,
     },
+    importMeta: {},
+  });
+  functors[16]({
+    imports(entries) {
+      const map = new Map(entries);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      constantProperties: cells[16].constantProperties.set,
+      universalPropertyNames: cells[16].universalPropertyNames.set,
+      initialGlobalPropertyNames: cells[16].initialGlobalPropertyNames.set,
+      sharedGlobalPropertyNames: cells[16].sharedGlobalPropertyNames.set,
+      uniqueGlobalPropertyNames: cells[16].uniqueGlobalPropertyNames.set,
+      NativeErrors: cells[16].NativeErrors.set,
+      FunctionInstance: cells[16].FunctionInstance.set,
+      isAccessorPermit: cells[16].isAccessorPermit.set,
+      whitelist: cells[16].whitelist.set,
+    },
+    importMeta: {},
   });
   functors[17]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./module-load.js", 16);
+      observeImports(map, "./make-eval-function.js", 14);
+      observeImports(map, "./make-function-constructor.js", 15);
+      observeImports(map, "./whitelist.js", 16);
     },
     liveVar: {
     },
     onceVar: {
-      deferExports: cells[17].deferExports.set,
-      getDeferredExports: cells[17].getDeferredExports.set,
+      setGlobalObjectSymbolUnscopables: cells[17].setGlobalObjectSymbolUnscopables.set,
+      setGlobalObjectConstantProperties: cells[17].setGlobalObjectConstantProperties.set,
+      setGlobalObjectMutableProperties: cells[17].setGlobalObjectMutableProperties.set,
+      setGlobalObjectEvaluators: cells[17].setGlobalObjectEvaluators.set,
     },
+    importMeta: {},
   });
   functors[18]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./compartment-evaluate.js", 11);
       observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./module-proxy.js", 17);
     },
     liveVar: {
     },
     onceVar: {
-      makeThirdPartyModuleInstance: cells[18].makeThirdPartyModuleInstance.set,
-      makeModuleInstance: cells[18].makeModuleInstance.set,
+      makeAlias: cells[18].makeAlias.set,
+      load: cells[18].load.set,
     },
+    importMeta: {},
   });
   functors[19]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
       observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./module-instance.js", 18);
+      observeImports(map, "./module-load.js", 18);
     },
     liveVar: {
     },
     onceVar: {
-      link: cells[19].link.set,
-      instantiate: cells[19].instantiate.set,
+      deferExports: cells[19].deferExports.set,
+      getDeferredExports: cells[19].getDeferredExports.set,
     },
+    importMeta: {},
   });
   functors[20]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./compartment-evaluate.js", 11);
+      observeImports(map, "./compartment-evaluate.js", 13);
       observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./global-object.js", 15);
-      observeImports(map, "./make-safe-evaluator.js", 10);
-      observeImports(map, "./module-link.js", 19);
-      observeImports(map, "./module-load.js", 16);
-      observeImports(map, "./module-proxy.js", 17);
-      observeImports(map, "./scope-constants.js", 6);
-      observeImports(map, "./whitelist.js", 14);
+      observeImports(map, "./module-proxy.js", 19);
     },
     liveVar: {
     },
     onceVar: {
-      InertCompartment: cells[20].InertCompartment.set,
-      CompartmentPrototype: cells[20].CompartmentPrototype.set,
-      makeCompartmentConstructor: cells[20].makeCompartmentConstructor.set,
+      makeThirdPartyModuleInstance: cells[20].makeThirdPartyModuleInstance.set,
+      makeModuleInstance: cells[20].makeModuleInstance.set,
     },
+    importMeta: {},
   });
   functors[21]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./whitelist.js", 14);
+      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./module-instance.js", 20);
     },
     liveVar: {
     },
     onceVar: {
-      makeIntrinsicsCollector: cells[21].makeIntrinsicsCollector.set,
-      getGlobalIntrinsics: cells[21].getGlobalIntrinsics.set,
+      link: cells[21].link.set,
+      instantiate: cells[21].instantiate.set,
     },
+    importMeta: {},
   });
   functors[22]({
     imports(entries) {
       const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+      observeImports(map, "./compartment-evaluate.js", 13);
+      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./global-object.js", 17);
+      observeImports(map, "./make-safe-evaluator.js", 12);
+      observeImports(map, "./module-link.js", 21);
+      observeImports(map, "./module-load.js", 18);
+      observeImports(map, "./module-proxy.js", 19);
+      observeImports(map, "./whitelist.js", 16);
     },
     liveVar: {
     },
     onceVar: {
-      minEnablements: cells[22].minEnablements.set,
-      moderateEnablements: cells[22].moderateEnablements.set,
-      severeEnablements: cells[22].severeEnablements.set,
+      InertCompartment: cells[22].InertCompartment.set,
+      CompartmentPrototype: cells[22].CompartmentPrototype.set,
+      makeCompartmentConstructor: cells[22].makeCompartmentConstructor.set,
     },
+    importMeta: {},
   });
   functors[23]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./enablements.js", 22);
+      observeImports(map, "./whitelist.js", 16);
     },
     liveVar: {
     },
     onceVar: {
-      default: cells[23].default.set,
+      makeIntrinsicsCollector: cells[23].makeIntrinsicsCollector.set,
+      getGlobalIntrinsics: cells[23].getGlobalIntrinsics.set,
     },
+    importMeta: {},
   });
   functors[24]({
+    imports(entries) {
+      const map = new Map(entries);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      minEnablements: cells[24].minEnablements.set,
+      moderateEnablements: cells[24].moderateEnablements.set,
+      severeEnablements: cells[24].severeEnablements.set,
+    },
+    importMeta: {},
+  });
+  functors[25]({
+    imports(entries) {
+      const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+      observeImports(map, "./enablements.js", 24);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      default: cells[25].default.set,
+    },
+    importMeta: {},
+  });
+  functors[26]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
@@ -9359,122 +10138,110 @@ assign(globalThis, {
     liveVar: {
     },
     onceVar: {
-      makeEnvironmentCaptor: cells[24].makeEnvironmentCaptor.set,
+      makeEnvironmentCaptor: cells[26].makeEnvironmentCaptor.set,
     },
-  });
-  functors[25]({
-    imports(entries) {
-      const map = new Map(entries);
-      observeImports(map, "../commons.js", 0);
-      observeImports(map, "./internal-types.js", 1);
-      observeImports(map, "./types.js", 3);
-    },
-    liveVar: {
-    },
-    onceVar: {
-      makeLoggingConsoleKit: cells[25].makeLoggingConsoleKit.set,
-      makeCausalConsole: cells[25].makeCausalConsole.set,
-      filterConsole: cells[25].filterConsole.set,
-      consoleWhitelist: cells[25].consoleWhitelist.set,
-      BASE_CONSOLE_LEVEL: cells[25].BASE_CONSOLE_LEVEL.set,
-    },
-  });
-  functors[26]({
-    imports(entries) {
-      const map = new Map(entries);
-      observeImports(map, "../commons.js", 0);
-      observeImports(map, "./assert.js", 4);
-      observeImports(map, "./console.js", 25);
-      observeImports(map, "./internal-types.js", 1);
-      observeImports(map, "./types.js", 3);
-    },
-    liveVar: {
-    },
-    onceVar: {
-      tameConsole: cells[26].tameConsole.set,
-    },
+    importMeta: {},
   });
   functors[27]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "../commons.js", 0);
+      observeImports(map, "./internal-types.js", 1);
+      observeImports(map, "./types.js", 3);
     },
     liveVar: {
     },
     onceVar: {
-      filterFileName: cells[27].filterFileName.set,
-      shortenCallSiteString: cells[27].shortenCallSiteString.set,
-      tameV8ErrorConstructor: cells[27].tameV8ErrorConstructor.set,
+      makeLoggingConsoleKit: cells[27].makeLoggingConsoleKit.set,
+      makeCausalConsole: cells[27].makeCausalConsole.set,
+      filterConsole: cells[27].filterConsole.set,
+      consoleWhitelist: cells[27].consoleWhitelist.set,
     },
+    importMeta: {},
   });
   functors[28]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "../commons.js", 0);
-      observeImports(map, "../whitelist.js", 14);
-      observeImports(map, "./tame-v8-error-constructor.js", 27);
     },
     liveVar: {
     },
     onceVar: {
-      default: cells[28].default.set,
+      makeRejectionHandlers: cells[28].makeRejectionHandlers.set,
     },
+    importMeta: {},
   });
   functors[29]({
     imports(entries) {
       const map = new Map(entries);
-      observeImports(map, "./commons.js", 0);
-      observeImports(map, "./compartment-shim.js", 20);
+      observeImports(map, "../commons.js", 0);
+      observeImports(map, "./assert.js", 4);
+      observeImports(map, "./console.js", 27);
+      observeImports(map, "./internal-types.js", 1);
+      observeImports(map, "./types.js", 3);
+      observeImports(map, "./unhandled-rejection.js", 28);
     },
     liveVar: {
     },
     onceVar: {
-      getAnonymousIntrinsics: cells[29].getAnonymousIntrinsics.set,
+      tameConsole: cells[29].tameConsole.set,
     },
+    importMeta: {},
   });
   functors[30]({
     imports(entries) {
       const map = new Map(entries);
-      observeImports(map, "./commons.js", 0);
+      observeImports(map, "../commons.js", 0);
     },
     liveVar: {
     },
     onceVar: {
-      makeHardener: cells[30].makeHardener.set,
+      filterFileName: cells[30].filterFileName.set,
+      shortenCallSiteString: cells[30].shortenCallSiteString.set,
+      tameV8ErrorConstructor: cells[30].tameV8ErrorConstructor.set,
     },
+    importMeta: {},
   });
   functors[31]({
     imports(entries) {
       const map = new Map(entries);
-      observeImports(map, "./commons.js", 0);
+      observeImports(map, "../commons.js", 0);
+      observeImports(map, "../whitelist.js", 16);
+      observeImports(map, "./tame-v8-error-constructor.js", 30);
     },
     liveVar: {
     },
     onceVar: {
       default: cells[31].default.set,
     },
+    importMeta: {},
   });
   functors[32]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
+      observeImports(map, "./compartment-shim.js", 22);
     },
     liveVar: {
     },
     onceVar: {
-      tameDomains: cells[32].tameDomains.set,
+      getAnonymousIntrinsics: cells[32].getAnonymousIntrinsics.set,
     },
+    importMeta: {},
   });
   functors[33]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
+      observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
-      default: cells[33].default.set,
+      isTypedArray: cells[33].isTypedArray.set,
+      makeHardener: cells[33].makeHardener.set,
     },
+    importMeta: {},
   });
   functors[34]({
     imports(entries) {
@@ -9484,20 +10251,21 @@ assign(globalThis, {
     liveVar: {
     },
     onceVar: {
-      tameFunctionToString: cells[34].tameFunctionToString.set,
+      default: cells[34].default.set,
     },
+    importMeta: {},
   });
   functors[35]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
-      default: cells[35].default.set,
+      tameDomains: cells[35].tameDomains.set,
     },
+    importMeta: {},
   });
   functors[36]({
     imports(entries) {
@@ -9509,6 +10277,7 @@ assign(globalThis, {
     onceVar: {
       default: cells[36].default.set,
     },
+    importMeta: {},
   });
   functors[37]({
     imports(entries) {
@@ -9518,67 +10287,110 @@ assign(globalThis, {
     liveVar: {
     },
     onceVar: {
-      default: cells[37].default.set,
+      tameFunctionToString: cells[37].tameFunctionToString.set,
     },
+    importMeta: {},
   });
   functors[38]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./whitelist.js", 14);
+      observeImports(map, "./error/assert.js", 4);
     },
     liveVar: {
     },
     onceVar: {
       default: cells[38].default.set,
     },
+    importMeta: {},
   });
   functors[39]({
     imports(entries) {
       const map = new Map(entries);
       observeImports(map, "./commons.js", 0);
-      observeImports(map, "./compartment-shim.js", 20);
-      observeImports(map, "./enable-property-overrides.js", 23);
-      observeImports(map, "./environment-options.js", 24);
-      observeImports(map, "./error/assert.js", 4);
-      observeImports(map, "./error/stringify-utils.js", 2);
-      observeImports(map, "./error/tame-console.js", 26);
-      observeImports(map, "./error/tame-error-constructor.js", 28);
-      observeImports(map, "./get-anonymous-intrinsics.js", 29);
-      observeImports(map, "./global-object.js", 15);
-      observeImports(map, "./intrinsics.js", 21);
-      observeImports(map, "./make-hardener.js", 30);
-      observeImports(map, "./make-safe-evaluator.js", 10);
-      observeImports(map, "./tame-date-constructor.js", 31);
-      observeImports(map, "./tame-domains.js", 32);
-      observeImports(map, "./tame-function-constructors.js", 33);
-      observeImports(map, "./tame-function-tostring.js", 34);
-      observeImports(map, "./tame-locale-methods.js", 35);
-      observeImports(map, "./tame-math-object.js", 36);
-      observeImports(map, "./tame-regexp-constructor.js", 37);
-      observeImports(map, "./whitelist-intrinsics.js", 38);
-      observeImports(map, "./whitelist.js", 14);
     },
     liveVar: {
     },
     onceVar: {
-      repairIntrinsics: cells[39].repairIntrinsics.set,
-      lockdown: cells[39].lockdown.set,
+      default: cells[39].default.set,
     },
+    importMeta: {},
   });
   functors[40]({
     imports(entries) {
       const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      default: cells[40].default.set,
+    },
+    importMeta: {},
+  });
+  functors[41]({
+    imports(entries) {
+      const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+      observeImports(map, "./whitelist.js", 16);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      default: cells[41].default.set,
+    },
+    importMeta: {},
+  });
+  functors[42]({
+    imports(entries) {
+      const map = new Map(entries);
+      observeImports(map, "./commons.js", 0);
+      observeImports(map, "./compartment-shim.js", 22);
+      observeImports(map, "./enable-property-overrides.js", 25);
+      observeImports(map, "./environment-options.js", 26);
+      observeImports(map, "./error/assert.js", 4);
+      observeImports(map, "./error/stringify-utils.js", 2);
+      observeImports(map, "./error/tame-console.js", 29);
+      observeImports(map, "./error/tame-error-constructor.js", 31);
+      observeImports(map, "./get-anonymous-intrinsics.js", 32);
+      observeImports(map, "./global-object.js", 17);
+      observeImports(map, "./intrinsics.js", 23);
+      observeImports(map, "./make-hardener.js", 33);
+      observeImports(map, "./make-safe-evaluator.js", 12);
+      observeImports(map, "./tame-date-constructor.js", 34);
+      observeImports(map, "./tame-domains.js", 35);
+      observeImports(map, "./tame-function-constructors.js", 36);
+      observeImports(map, "./tame-function-tostring.js", 37);
+      observeImports(map, "./tame-locale-methods.js", 38);
+      observeImports(map, "./tame-math-object.js", 39);
+      observeImports(map, "./tame-regexp-constructor.js", 40);
+      observeImports(map, "./whitelist-intrinsics.js", 41);
+      observeImports(map, "./whitelist.js", 16);
+    },
+    liveVar: {
+    },
+    onceVar: {
+      repairIntrinsics: cells[42].repairIntrinsics.set,
+      lockdown: cells[42].lockdown.set,
+    },
+    importMeta: {},
+  });
+  functors[43]({
+    imports(entries) {
+      const map = new Map(entries);
       observeImports(map, "./src/commons.js", 0);
-      observeImports(map, "./src/compartment-shim.js", 20);
+      observeImports(map, "./src/compartment-shim.js", 22);
       observeImports(map, "./src/error/assert.js", 4);
-      observeImports(map, "./src/intrinsics.js", 21);
-      observeImports(map, "./src/lockdown-shim.js", 39);
-      observeImports(map, "./src/tame-function-tostring.js", 34);
+      observeImports(map, "./src/intrinsics.js", 23);
+      observeImports(map, "./src/lockdown-shim.js", 42);
+      observeImports(map, "./src/tame-function-tostring.js", 37);
     },
     liveVar: {
     },
     onceVar: {
     },
+    importMeta: {},
   });
+
+  return cells[cells.length - 1]['*'].get();
 })();

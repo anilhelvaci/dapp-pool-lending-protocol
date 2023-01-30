@@ -1,12 +1,12 @@
 import { makeAsyncIterableFromNotifier as iterateNotifier } from "@agoric/notifier";
 import React, { useEffect } from "react";
-import { setApproved, setConnected } from "../../store";
+import { setApproved, setConnected } from "../../store.js";
 
 import {
   activateWebSocket,
   deactivateWebSocket,
   getActiveSocket,
-} from "./fetch-websocket";
+} from "./fetch-websocket.js";
 import { makeCapTP } from "@endo/captp";
 import { Far } from "@endo/far";
 

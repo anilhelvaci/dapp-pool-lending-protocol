@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 /* global process */
-import dappConstants from '../../generated/websocketConstants';
+import dappConstants from '../../generated/websocketConstants.js';
 
 const { API_URL, BRIDGE_URL, CONTRACT_NAME } = dappConstants;
 

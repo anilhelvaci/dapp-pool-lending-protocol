@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import '@endo/eventual-send/shim';
-import 'json5';
+import '@endo/eventual-send/shim.js';
+// import 'json5';
 import React from 'react';
 import { render } from 'react-dom';
 

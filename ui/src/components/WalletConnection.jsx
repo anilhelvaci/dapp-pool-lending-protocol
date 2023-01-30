@@ -3,7 +3,7 @@ import React, { useCallback } from 'react';
 import { E } from '@endo/eventual-send';
 
 import { dappConfig } from '../utils/config';
-import { setApproved, setConnected } from '../store';
+import { setApproved, setConnected } from '../store.js';
 
 // Create a wrapper for agoric-wallet-connection that is specific to
 // the app's instance of React.

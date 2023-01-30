@@ -1,14 +1,14 @@
 import React from 'react';
 
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/styles';
 
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../components/AppHeader.js';
 
-import LendingPool from '../components/lendingPool/LendingPool';
-import Snackbar from '@material-ui/core/Snackbar';
-import Alert from '@material-ui/lab/Alert';
+import LendingPool from '../components/lendingPool/LendingPool.jsx';
+import { Snackbar } from '@material-ui/core';
+import { Alert } from '@material-ui/lab';
 import { useApplicationContext } from '../contexts/Application.jsx';
 import { setSnackbarState } from '../store.js';
 
