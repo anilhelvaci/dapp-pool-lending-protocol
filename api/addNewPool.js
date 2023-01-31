@@ -30,6 +30,8 @@ const addNewPool = async (homeP, { pathResolve }) => {
     home,
   } = await makeSoloHelpers(homeP);
 
+  const { initAmmPool } = await makeAmmPoolInitializer({ homeP });
+
   console.log('Getting stuff from ag-solo...');
   const [{ value: lendingPoolCF }, { value: priceAuthFacetCF }, { value: timer }, { value: faucetInstalltion }] = await Promise.all([
     getValueFromScracth(LENDING_POOL_CREATOR_FACET_ID),
@@ -38,7 +40,7 @@ const addNewPool = async (homeP, { pathResolve }) => {
     getValueFromBoard(LENDING_POOL_FAUCET_INSTALL_BOARD_ID),
   ]);
 
-  await startFaucetIfCustom(home, config, faucetInstalltion);
+  await startFaucetIfCustom(home, config, faucetInstalltion, initAmmPool);
 
   const [
     { istBrand },

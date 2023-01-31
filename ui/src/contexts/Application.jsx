@@ -98,7 +98,7 @@ function watchLoan(id, dispatch, offerStatus) {
   async function watch() {
     let loanNotifier;
     try {
-      const notifiers = await E(walletP).getPublicNotifiers(id);
+      const notifiers = await E(walletP).getUINotifier(id);
       ({ loanNotifier } = notifiers);
     } catch (err) {
       console.error('Could not get notifiers', id, err);

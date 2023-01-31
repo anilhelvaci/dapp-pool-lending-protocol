@@ -2,25 +2,26 @@ import lendingPoolDefaults from '@agoric/dapp-treasury-ui/src/generated/lendingP
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
 import newPoolConfig from './newPoolConfig.js';
 import { E } from '@endo/far';
+import { makeSoloHelpers } from 'contract/test/lendingPool/helpers.js';
 
 const setAssetPrice = async (homeP) => {
-  const home = await homeP;
-  const { scratch, board } = home;
-  const { assetConfig: { keyword } } = newPoolConfig;
+  const {
+    getIstBrandAndIssuer,
+    getValueFromScracth,
+    getBrandAndIssuerFromBoard,
+  } = await makeSoloHelpers(homeP);
+
+  const { keyword } = newPoolConfig;
 
   const NEW_PRICE_VAL = 240n;
-
-  const {
-    ASSET_ISSUER_BOARD_ID,
-    ASSET_USD_PRICE_AUTH_ID,
-    USD_ISSUER_BOARD_ID,
-  } = lendingPoolDefaults;
+  const ASSET_IST_PRICE_AUTH_ID = `${keyword}_IST_PRICE_AUTH_ID`;
+  const ASSET_ISSUER_BOARD_ID = `${keyword}_ISSUER_BOARD_ID`;
 
   console.log('Getting priceAuthority...');
-  const [priceAuth, brandIn, brandOut] = await Promise.all([
-    E(scratch).get(ASSET_USD_PRICE_AUTH_ID),
-    E(E(board).getValue(ASSET_ISSUER_BOARD_ID)).getBrand(),
-    E(E(board).getValue(USD_ISSUER_BOARD_ID)).getBrand(),
+  const [{ value: priceAuth }, { brand: brandIn }, { istBrand: brandOut }] = await Promise.all([
+    getValueFromScracth(lendingPoolDefaults[ASSET_IST_PRICE_AUTH_ID]),
+    getBrandAndIssuerFromBoard(lendingPoolDefaults[ASSET_ISSUER_BOARD_ID]),
+    getIstBrandAndIssuer(),
   ]);
 
   console.log(`Setting ${keyword}/USD price to ${NEW_PRICE_VAL}...`);

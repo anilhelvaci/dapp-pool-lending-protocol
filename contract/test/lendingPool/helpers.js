@@ -747,7 +747,7 @@ export const getSpaces = () => {
   return { produce, consume, installation, instance, brand };
 };
 
-export const startFaucetIfCustom = async (home, config, installation) => {
+export const startFaucetIfCustom = async (home, config, installation, initAmmPool) => {
   console.log('Start faucet if custom...');
   if (!config.issuerId || !config.assetId) {
     const faucet = await E(home.zoe).startInstance(installation, undefined, {
@@ -775,6 +775,11 @@ export const startFaucetIfCustom = async (home, config, installation) => {
       [NEW_ASSET_INSTANCE_BOARD_ID]: INSTANCE_BOARD_ID
     };
     console.log('Config', config);
+
+    console.log(`Adding ${config.keyword}/IST pool to AMM...`);
+    await initAmmPool(config);
+
+    console.log('Done');
   }
 };
 

@@ -88,16 +88,14 @@ export default async function addVanToPool(homeP) {
     harden(paymentKeywordRecord)
   );
 
+  console.log('Getting protocol payment...');
+  const [protocolPayment, protocolPurse] = await Promise.all([
+    E(depositOfferSeat).getPayout('Protocol'),
+    E(wallet).getPurse(protocolPursePetname)
+  ]);
 
-
-  // console.log('Getting protocol payment...');
-  // const [protocolPayment, protocolPurse] = await Promise.all([
-  //   E(depositOfferSeat).getPayout('Protocol'),
-  //   E(wallet).getPurse(protocolPursePetname)
-  // ]);
-
-  // console.log('Depositing protocol...')
-  // await E(protocolPurse).deposit(protocolPayment);
+  console.log('Depositing protocol...')
+  await E(protocolPurse).deposit(protocolPayment);
 
   console.log('Done...');
 }

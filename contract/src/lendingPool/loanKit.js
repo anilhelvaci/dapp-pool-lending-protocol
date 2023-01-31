@@ -55,7 +55,7 @@ const wrapLoan = innerLoan => {
 export const makeLoanKit = (inner, assetNotifier) => {
   const { loan, loanUpdater } = wrapLoan(inner);
   return harden({
-    publicNotifiers: {
+    uiNotifier: {
       assetNotifier,
       loanNotifier: loan.getNotifier(),
     },

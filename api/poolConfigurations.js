@@ -13,9 +13,9 @@ const config = {
     assetId: VAN_ASSET_INSTANCE_BOARD_ID,
     keyword: 'VAN',
     riskControls: {
-      borrowable: false,
-      usableAsCol: false,
-      limitValue: 1_000n,
+      borrowable: true,
+      usableAsCol: true,
+      limitValue: 100_000n,
     },
     displayInfo: {
       decimalPlaces: 8,
@@ -31,9 +31,9 @@ const config = {
     assetId: PAN_ASSET_INSTANCE_BOARD_ID,
     keyword: 'PAN',
     riskControls: {
-      borrowable: false,
-      usableAsCol: false,
-      limitValue: 5_000n,
+      borrowable: true,
+      usableAsCol: true,
+      limitValue: 100_000n,
     },
     displayInfo: {
       decimalPlaces: 8,

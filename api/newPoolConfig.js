@@ -11,8 +11,8 @@ export default {
   },
   priceOutInUnits: 150n,
   riskControls: {
-    borrowable: false,
-    usableAsCol: false,
-    limitValue: 5_000n,
+    borrowable: true,
+    usableAsCol: true,
+    limitValue: 100_000n,
   },
 };
