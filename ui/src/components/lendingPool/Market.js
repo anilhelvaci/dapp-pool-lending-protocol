@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { TableCell, Typography } from '@material-ui/core';
-import { StyledTableRow } from './StyledTableComponents';
+import { StyledTableRow } from './StyledTableComponents.js';
 import {
   getAmountOut,
   ceilMultiplyBy,
   makeRatioFromAmounts, invertRatio,
-} from '@agoric/zoe/src/contractSupport';
+} from '@agoric/zoe/src/contractSupport/index.js';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@endo/nat';
 import { makeDisplayFunctions } from '../helpers.js';

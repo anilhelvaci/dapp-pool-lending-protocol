@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApplicationContext } from '../../contexts/Application.jsx';
-import { Table, TableBody, TableContainer, TableHead, TableRow } from '@material-ui/core';
-import Paper from '@material-ui/core/Paper';
+import { Table, TableBody, TableContainer, TableHead, TableRow, Paper } from '@material-ui/core';
 import { StyledTableCell } from './StyledTableComponents.js';
 import LoanItem from './LoanItem.js';
 import LoanManagementDialog from './LoanManagementDialog.js';

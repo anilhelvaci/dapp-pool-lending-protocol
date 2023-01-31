@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/styles';
 import PurseSelector from './PurseSelector.js';
-import Divider from '@material-ui/core/Divider';
-import { TextField } from '@material-ui/core';
+import { TextField, Grid, Typography, Divider, Button } from '@material-ui/core';
 import { invertRatio, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
-import Button from '@material-ui/core/Button';
 import { makeNatAmountInput } from '@agoric/ui-components';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { filterPursesByBrand, makeDisplayFunctions, sortPurses } from '../helpers.js';

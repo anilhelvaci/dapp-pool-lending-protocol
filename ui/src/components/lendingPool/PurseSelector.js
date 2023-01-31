@@ -1,8 +1,7 @@
 import React from 'react';
 
 import { TextField, MenuItem } from '@material-ui/core';
-
-import { displayPetname } from '../helpers';
+import { displayPetname } from '../helpers.js';
 
 const PurseSelector = ({ purses, purse, setPurse, label, isDisabled }) => (
   <TextField

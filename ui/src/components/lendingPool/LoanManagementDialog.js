@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DialogContent, DialogTitle, useStyles } from './Dialog.js';
-import Dialog from '@material-ui/core/Dialog';
+import { Dialog } from '@material-ui/core';
 import LoanManagementTabLayout from './LoanManagementTabLayout.js';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { makeDisplayFunctions } from '../helpers.js';

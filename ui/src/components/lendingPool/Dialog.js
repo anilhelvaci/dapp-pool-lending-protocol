@@ -9,7 +9,7 @@ import {
   IconButton,
   Typography
 } from '@material-ui/core';
-import { CloseIcon } from '@material-ui/icons';
+import { Close as CloseIcon } from '@material-ui/icons';
 import PoolTabsLayout from './PoolTabLayout.js';
 
 const styles = (theme) => ({

@@ -357,18 +357,6 @@ export const start = async (zcf, privateArgs) => {
     return result;
   };
 
-  /**
-   *
-   * @returns {Promise<Array>}
-   */
-  const getMarkets = async () => {
-    return harden(
-      Promise.all(
-        [...poolTypes.entries()].map(getPmAttributes),
-      ),
-    );
-  };
-
   const makeUpdateRiskControlsInvitation = () => {
     /**
      * @type OfferHandler
@@ -399,7 +387,6 @@ export const start = async (zcf, privateArgs) => {
     makeBorrowInvitation,
     makeRedeemInvitation,
     makeDepositInvitation,
-    getMarkets,
     getPoolNotifier: () => poolNotifier,
     getGovernanceBrand: () => govBrand,
     getGovernanceIssuer: () => govIssuer,

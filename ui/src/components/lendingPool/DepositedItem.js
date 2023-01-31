@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyledTableRow } from './StyledTableComponents';
+import { StyledTableRow } from './StyledTableComponents.js';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { TableCell, Typography } from '@material-ui/core';
 import { filterPursesByBrand, makeDisplayFunctions } from '../helpers.js';

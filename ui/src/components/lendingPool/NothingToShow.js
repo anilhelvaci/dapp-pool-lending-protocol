@@ -1,8 +1,7 @@
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import NotInterestedIcon from '@material-ui/icons/NotInterested';
-import Typography from '@material-ui/core/Typography';
-import Paper from '@material-ui/core/Paper';
+import { makeStyles } from '@material-ui/styles';
+import { NotInterested as NotInterestedIcon } from '@material-ui/icons';
+import { Typography, Paper } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
   container: {

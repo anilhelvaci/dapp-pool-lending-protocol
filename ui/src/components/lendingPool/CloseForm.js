@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import Typography from '@material-ui/core/Typography';
-import Grid from '@material-ui/core/Grid';
-import { DividerColorPrimary } from './CustomUIComponents';
-import { TextField } from '@material-ui/core';
+import { DividerColorPrimary } from './CustomUIComponents.js';
+import { TextField, Typography, Grid, Button } from '@material-ui/core';
 import PurseSelector from './PurseSelector.js';
-import { makeStyles } from '@material-ui/core/styles';
-import Button from '@material-ui/core/Button';
+import { makeStyles } from '@material-ui/styles';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { filterPursesByBrand, makeDisplayFunctions, sortPurses } from '../helpers.js';
 import { floorMultiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';

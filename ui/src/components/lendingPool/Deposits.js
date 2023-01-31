@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { useApplicationContext } from '../../contexts/Application';
-import { Table, TableBody, TableContainer, TableHead, TableRow, Typography } from '@material-ui/core';
-import Paper from '@material-ui/core/Paper';
+import { useApplicationContext } from '../../contexts/Application.jsx';
+import {
+  Table,
+  TableBody,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Paper} from '@material-ui/core';
 import { StyledTableCell } from './StyledTableComponents.js';
 import DepositedItem from './DepositedItem.js';
 import RedeemDialog from './RedeemDialog.js';

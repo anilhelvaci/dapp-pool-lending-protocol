@@ -180,9 +180,8 @@ const setupLendingPool = async (dispatch, zoe, board, instanceID) => {
   const instance = await E(board).getValue(instanceID);
   const lendingPoolPublicFacetP = E(zoe).getPublicFacet(instance);
   /** @type { ERef<VaultFactory> } */
-  const [lendingPoolPublicFacet, markets, poolNotifier] = await Promise.all([
+  const [lendingPoolPublicFacet, poolNotifier] = await Promise.all([
     lendingPoolPublicFacetP,
-    E(lendingPoolPublicFacetP).getMarkets(),
     E(lendingPoolPublicFacetP).getPoolNotifier(),
   ]);
 

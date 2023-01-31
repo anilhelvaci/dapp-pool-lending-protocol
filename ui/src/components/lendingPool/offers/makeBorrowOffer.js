@@ -1,5 +1,5 @@
 import { E } from "@endo/far";
-import lendingPoolDefaults from "../../../generated/lendingPoolDefaults";
+import lendingPoolDefaults from "../../../generated/lendingPoolDefaults.js";
 import { OperationType } from '../../../constants.js';
 
 const makeBorrowOffer = async (

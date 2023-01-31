@@ -1,8 +1,7 @@
 import { E } from "@endo/far";
-import lendingPoolDefaults from "../../../generated/lendingPoolDefaults";
-import { floorMultiplyBy, oneMinus } from "@agoric/zoe/src/contractSupport/ratio";
+import lendingPoolDefaults from "../../../generated/lendingPoolDefaults.js";
+import { floorMultiplyBy, oneMinus, makeRatio, ratiosSame } from "@agoric/zoe/src/contractSupport/ratio.js";
 import { OperationType } from '../../../constants.js';
-import { makeRatio, ratiosSame } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 const makeRedeemOffer = async (
   {

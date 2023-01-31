@@ -102,7 +102,8 @@
     ],
     "rules": {
       "react/prop-types": "off",
-      "react/react-in-jsx-scope": "off"
+      "react/react-in-jsx-scope": "off",
+      "quotes": [2, "single", { "avoidEscape": true }]
     },
     "env": {
       "browser": true,

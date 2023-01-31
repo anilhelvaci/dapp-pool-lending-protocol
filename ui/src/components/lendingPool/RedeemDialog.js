@@ -1,9 +1,8 @@
-import Dialog from '@material-ui/core/Dialog';
 import React from 'react';
 import { DialogContent, DialogTitle, useStyles } from './Dialog.js';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { makeDisplayFunctions } from '../helpers.js';
-import { Typography } from '@material-ui/core';
+import { Typography, Dialog } from '@material-ui/core';
 import RedeemForm from './RedeemForm.js';
 
 const RedeemDialog = ({ open, handleClose, market }) => {

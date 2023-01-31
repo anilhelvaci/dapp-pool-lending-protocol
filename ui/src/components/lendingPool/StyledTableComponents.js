@@ -1,4 +1,4 @@
-import { withStyles } from "@material-ui/core/styles";
+import { withStyles } from "@material-ui/styles";
 import { TableCell, TableRow } from "@material-ui/core";
 
 export const StyledTableCell = withStyles((theme) => ({

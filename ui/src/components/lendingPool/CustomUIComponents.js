@@ -1,5 +1,5 @@
-import { withStyles } from '@material-ui/core/styles';
-import MuiDivider from '@material-ui/core/Divider';
+import { withStyles } from '@material-ui/styles';
+import { Divider as MuiDivider } from '@material-ui/core';
 
 export const DividerColorPrimary = withStyles((theme) => ({
   root: {

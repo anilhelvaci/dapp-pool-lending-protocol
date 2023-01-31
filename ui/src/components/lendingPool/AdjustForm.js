@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/styles';
 import PurseSelector from './PurseSelector.js';
-import { TextField } from '@material-ui/core';
+import { TextField, Grid, Typography, Button } from '@material-ui/core';
 import { getAmountOut, invertRatio, makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
-import Button from '@material-ui/core/Button';
 import { makeNatAmountInput } from '@agoric/ui-components';
 import { useApplicationContext } from '../../contexts/Application.jsx';
 import { filterPursesByBrand, getTotalBalanceAmount, makeDisplayFunctions, sortPurses } from '../helpers.js';
@@ -16,7 +13,7 @@ import AdjustActionChooser from './AdjustActionChooser.js';
 import { AdjustActions } from '../../constants.js';
 import makeAdjustOffer from './offers/makeAdjustOffer.js';
 import { setSnackbarState } from '../../store.js';
-import { DividerColorPrimary } from './CustomUIComponents';
+import { DividerColorPrimary } from './CustomUIComponents.js';
 
 const useStyles = makeStyles((theme) => ({
   root: {

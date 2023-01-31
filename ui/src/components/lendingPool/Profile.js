@@ -7,7 +7,7 @@ import { floorMultiplyBy, getAmountOut } from '@agoric/zoe/src/contractSupport/i
 import { AmountMath } from '@agoric/ertp';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
-import { MonetizationIcon } from '@material-ui/icons';
+import { MonetizationOn as MonetizationIcon } from '@material-ui/icons';
 import { List } from '@material-ui/core';
 import { calculateCurrentDebt } from '@agoric/run-protocol/src/interest-math.js';
 import { LoanStatus } from '../../constants.js';

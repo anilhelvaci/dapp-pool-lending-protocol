@@ -11,7 +11,6 @@
   ],
   "devDependencies": {
     "@endo/init": "^0.5.33",
-    "ses": "0.15.7",
     "@typescript-eslint/parser": "^4.19.0",
     "eslint": "^7.23.0",
     "eslint-config-airbnb": "^18.0.1",

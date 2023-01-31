@@ -1,19 +1,16 @@
 import React, { useState } from "react";
-import { useApplicationContext } from "../../contexts/Application";
-import { filterPursesByBrand, makeDisplayFunctions, sortPurses } from "../helpers";
+import { useApplicationContext } from "../../contexts/Application.jsx";
+import { filterPursesByBrand, makeDisplayFunctions, sortPurses } from "../helpers.js";
 import { makeNatAmountInput } from "@agoric/ui-components";
 import { TextField } from "@material-ui/core";
-import PurseSelector from "./PurseSelector";
+import PurseSelector from "./PurseSelector.js";
 import { AmountMath } from "@agoric/ertp";
-import { makeStyles } from "@material-ui/core/styles";
-import Divider from "@material-ui/core/Divider";
-import Grid from "@material-ui/core/Grid";
+import { makeStyles } from "@material-ui/styles";
+import { Divider, Grid, Typography, Button } from "@material-ui/core";
 import { floorDivideBy, floorMultiplyBy, invertRatio } from "@agoric/zoe/src/contractSupport/ratio.js";
-import Typography from "@material-ui/core/Typography";
-import { makeRatio } from "@agoric/zoe/src/contractSupport/ratio";
-import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat";
-import Button from "@material-ui/core/Button";
-import makeDepositOffer from "./offers/makeDepositOffer";
+import { makeRatio } from "@agoric/zoe/src/contractSupport/ratio.js";
+import { parseAsNat } from "@agoric/ui-components/dist/display/natValue/parseAsNat.js";
+import makeDepositOffer from "./offers/makeDepositOffer.js";
 import { setSnackbarState } from '../../store.js';
 
 const useStyles = makeStyles((theme) => ({
