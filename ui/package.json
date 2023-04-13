@@ -129,6 +129,6 @@
   },
   "prettier": {
     "trailingComma": "all",
-    "singleQuote": false
+    "singleQuote": true
   }
 }

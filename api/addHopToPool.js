@@ -74,14 +74,14 @@ const addHopToPool = async homeP => {
     harden(paymentKeywordRecord)
   );
 
-  console.log('Getting protocol payment...');
-  const [protocolPayment, protocolPurse] = await Promise.all([
-    E(depositOfferSeat).getPayout('Protocol'),
-    E(home.wallet).getPurse(['LendingPool', 'AgHOP'])
-  ]);
-
-  console.log('Depositing protocol...')
-  await E(protocolPurse).deposit(protocolPayment);
+  // console.log('Getting protocol payment...');
+  // const [protocolPayment, protocolPurse] = await Promise.all([
+  //   E(depositOfferSeat).getPayout('Protocol'),
+  //   E(home.wallet).getPurse(['LendingPool', 'AgHOP'])
+  // ]);
+  //
+  // console.log('Depositing protocol...')
+  // await E(protocolPurse).deposit(protocolPayment);
 
   console.log('Done...');
 };

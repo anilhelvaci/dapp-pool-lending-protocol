@@ -83,7 +83,7 @@ Open 7 terminal windows
 
    ```shell
    cd dapp-pool-lending-protocol
-   ./api/initProtocol.sh
+   ./api/scenarioScripts/initProtocol.sh
    ```
 7. UI
 
